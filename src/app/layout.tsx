@@ -24,7 +24,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th" className={`${plexThai.variable} ${inter.variable}`}>
+    <html
+      lang="th"
+      data-scroll-behavior="smooth"
+      className={`${plexThai.variable} ${inter.variable}`}
+    >
       <body className="min-h-screen bg-white text-[#0F0F0F] antialiased flex flex-col">
         {children}
       </body>

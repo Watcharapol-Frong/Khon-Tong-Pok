@@ -63,3 +63,19 @@ a {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* thin, subtle scrollbar for internally-scrolling panes (e.g. the job board's locked-layout card list) */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 15, 15, 0.18) transparent;
+}
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(15, 15, 15, 0.18);
+  border-radius: 999px;
+}

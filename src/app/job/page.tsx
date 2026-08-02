@@ -44,7 +44,7 @@ export default function JobBoardPage() {
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col gap-6 pb-[clamp(40px,6vw,56px)] lg:flex-row lg:items-stretch lg:pb-8">
-          <aside className="w-full flex-shrink-0 lg:h-full lg:w-[30%] lg:overflow-y-auto lg:pr-1">
+          <aside className="thin-scrollbar w-full flex-shrink-0 lg:h-full lg:w-[30%] lg:overflow-y-auto lg:pr-1">
             <JobFilterSidebar filters={filters} />
           </aside>
 
@@ -71,8 +71,8 @@ export default function JobBoardPage() {
               </label>
             </div>
 
-            <div className="min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
-              <div className="flex flex-col gap-4 pb-2">
+            <div className="thin-scrollbar min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+              <div className="flex flex-col gap-4 pb-6">
                 {sortedJobs.map((job) => (
                   <JobCardWide key={job.title + job.company} job={job} />
                 ))}
