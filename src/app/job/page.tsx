@@ -57,18 +57,21 @@ export default function JobBoardPage() {
           </aside>
 
           <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col lg:h-full lg:w-[70%]">
-            <div className="mb-3 flex flex-shrink-0 flex-wrap items-center justify-between gap-3 lg:mb-4">
-              <div className="flex items-center gap-2 text-xs text-[#8A8A8A]">
+            <div className="mb-3 flex flex-shrink-0 items-center justify-between gap-2 lg:mb-4 lg:gap-3">
+              <div className="flex min-w-0 items-center gap-1.5 text-[11px] whitespace-nowrap text-[#8A8A8A] sm:gap-2 sm:text-xs">
                 <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#0F0F0F]" />
-                พบ {filteredJobs.length} ตำแหน่งงานที่ตรงกับเงื่อนไข
+                <span>
+                  พบ {filteredJobs.length} <span className="hidden sm:inline">ตำแหน่งงานที่ตรงกับเงื่อนไข</span>
+                  <span className="sm:hidden">ตำแหน่ง</span>
+                </span>
               </div>
 
-              <label className="flex items-center gap-2 text-xs text-[#5C5C5C]">
-                เรียงตาม
+              <label className="flex flex-shrink-0 items-center gap-1.5 text-[11px] whitespace-nowrap text-[#5C5C5C] sm:gap-2 sm:text-xs">
+                <span className="hidden sm:inline">เรียงตาม</span>
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value as SortValue)}
-                  className="rounded-[10px] border border-[rgba(15,15,15,0.15)] bg-white px-3 py-[7px] font-sans text-xs font-bold text-[#0F0F0F]"
+                  className="min-w-0 rounded-lg border border-[rgba(15,15,15,0.15)] bg-white px-2 py-[5px] font-sans text-[11px] font-bold text-[#0F0F0F] sm:rounded-[10px] sm:px-3 sm:py-[7px] sm:text-xs"
                 >
                   {SORT_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
