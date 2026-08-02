@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 
 const NAV_LINKS = [
-  { label: "หางาน", href: "/#job-matching" },
+  { label: "หางาน", href: "/job" },
   { label: "วิธีใช้งาน", href: "/#how-it-works" },
 ];
 
