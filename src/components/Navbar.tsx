@@ -24,7 +24,7 @@ export function Navbar() {
   const closeMenu = () => setMenuOpen(false);
 
   return (
-    <div className="sticky top-[26px] z-40 px-4 sm:px-6 md:px-8">
+    <div className="sticky top-0 z-40 bg-white/85 px-4 pt-[26px] pb-3 backdrop-blur-sm sm:px-6 md:px-8">
       <div className="relative mx-auto max-w-[900px]">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-full bg-[#F5F5F5] py-[10px] pr-5 pl-[22px]">
           <Link href="/" className="flex flex-shrink-0 items-center gap-[10px]">

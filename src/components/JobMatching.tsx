@@ -37,30 +37,30 @@ export function JobMatching() {
         เล่นเกมประเมินทักษะ 10 นาที เพื่อปลดล็อก % Match ส่วนบุคคลกับทุกตำแหน่งงาน
       </div>
 
-      <div
-        className="grid gap-4 overflow-x-auto pb-2"
-        style={{
-          gridAutoFlow: "column",
-          gridTemplateRows: "repeat(2, auto)",
-          gridAutoColumns: "min(320px, 80vw)",
-          scrollSnapType: "x proximity",
-        }}
-      >
-        {filteredJobs.map((job) => (
-          <div key={job.title + job.company} style={{ scrollSnapAlign: "start" }}>
-            <JobCard job={job} />
-          </div>
-        ))}
+      <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollSnapType: "x proximity" }}>
+        <div
+          className="grid flex-shrink-0 gap-4"
+          style={{
+            gridAutoFlow: "column",
+            gridTemplateRows: "repeat(2, auto)",
+            gridAutoColumns: "min(320px, 80vw)",
+          }}
+        >
+          {filteredJobs.map((job) => (
+            <div key={job.title + job.company} style={{ scrollSnapAlign: "start" }}>
+              <JobCard job={job} />
+            </div>
+          ))}
+        </div>
 
         {filteredJobs.length > 0 && (
           <Link
             href="/job"
             style={{ scrollSnapAlign: "start" }}
-            className="flex h-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[rgba(15,15,15,0.2)] bg-[#FAFAFA] p-5 text-center transition-colors hover:border-[rgba(15,15,15,0.4)]"
+            className="flex w-[120px] flex-shrink-0 flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-[rgba(15,15,15,0.2)] bg-[#FAFAFA] p-3 text-center transition-colors hover:border-[rgba(15,15,15,0.4)]"
           >
-            <span className="text-2xl">→</span>
-            <span className="text-sm font-extrabold">ดูงานทั้งหมด</span>
-            <span className="text-[11px] text-[#8A8A8A]">ไปหน้ารวมตำแหน่งงาน พร้อมตัวกรองแบบเต็ม</span>
+            <span className="text-lg">→</span>
+            <span className="text-xs font-extrabold">ดูงานทั้งหมด</span>
           </Link>
         )}
       </div>
