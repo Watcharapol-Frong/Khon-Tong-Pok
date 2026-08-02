@@ -15,7 +15,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "คนตรงปก — พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ",
+  title: "คนตรงปก (KhonTongPok) — พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ",
 };
 
 export default function RootLayout({

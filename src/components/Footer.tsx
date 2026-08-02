@@ -17,7 +17,7 @@ export function Footer() {
         <div className="min-w-[220px] flex-[1_1_260px]">
           <div className="mb-3.5 flex items-center gap-2.5">
             <div className="h-[30px] w-[30px] flex-shrink-0 rounded-lg bg-white" />
-            <div className="text-lg font-extrabold tracking-[-0.02em]">คนตรงปก</div>
+            <div className="text-lg font-extrabold tracking-[-0.02em]">คนตรงปก <span className="text-xs font-normal opacity-70">(KhonTongPok)</span></div>
           </div>
           <div className="max-w-[280px] text-[13px] leading-[1.7] text-[#9A9A9A]">
             พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ <br />
@@ -45,7 +45,7 @@ export function Footer() {
         </div>
       </div>
       <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-center gap-3 pt-5">
-        <div className="text-[13px] text-[#8A8A8A]">© 2026 คนตรงปก · พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ</div>
+        <div className="text-[13px] text-[#8A8A8A]">© 2026 คนตรงปก (KhonTongPok) · พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ</div>
       </div>
     </div>
   );
