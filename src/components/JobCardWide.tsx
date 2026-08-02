@@ -5,15 +5,43 @@ function fullSalaryLabel(job: Job) {
   return `฿${job.salaryMin.toLocaleString()} - ฿${job.salaryMax.toLocaleString()}`;
 }
 
-export function JobCardWide({ job }: { job: Job }) {
+export function JobCardWide({
+  job,
+  isVerified = false,
+  matchRate = 92,
+}: {
+  job: Job;
+  isVerified?: boolean;
+  matchRate?: number;
+}) {
   return (
-    <div className="flex cursor-pointer flex-col rounded-xl border border-[rgba(15,15,15,0.1)] bg-white p-3.5 transition-colors hover:border-[rgba(15,15,15,0.3)] sm:rounded-2xl sm:p-5">
-      <div className="mb-1 flex items-start justify-between gap-2">
-        <div className="min-w-0 truncate text-sm font-extrabold tracking-[-0.01em] sm:text-base">
-          {job.title}
+    <div className="flex cursor-pointer flex-col rounded-xl border border-[rgba(15,15,15,0.1)] bg-white p-3.5 transition-all hover:border-[rgba(15,15,15,0.3)] shadow-xs sm:rounded-2xl sm:p-5">
+      <div className="mb-1.5 flex items-start justify-between gap-2">
+        <div className="min-w-0 truncate">
+          <div className="mb-1 flex items-center gap-2">
+            {isVerified ? (
+              <span className="rounded-md bg-[#3BF55C] px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold text-[#0F0F0F] whitespace-nowrap">
+                <span className="hidden sm:inline">Match </span>{matchRate}%
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1 rounded-md bg-[#FAFAFA] border border-[rgba(15,15,15,0.12)] px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold text-[#8A8A8A] whitespace-nowrap"
+                title="เข้าสู่ระบบหรือทำมินิเกมเพื่อปลดล็อก Match Rate จริง"
+              >
+                <span className="hidden sm:inline">Match </span>xx%
+              </span>
+            )}
+            <h3 className="min-w-0 truncate text-sm font-extrabold tracking-[-0.01em] text-[#0F0F0F] sm:text-base">
+              {job.title}
+            </h3>
+          </div>
+          <div className="truncate text-[11px] text-[#8A8A8A] sm:text-xs">
+            {job.company}
+          </div>
         </div>
+
         <div className="flex flex-shrink-0 flex-col items-end gap-1">
-          <div className="text-[11px] font-extrabold whitespace-nowrap sm:text-xs">
+          <div className="text-[11px] font-extrabold whitespace-nowrap sm:text-xs text-[#0F0F0F]">
             {fullSalaryLabel(job)}
           </div>
           {job.interviewNote && (
@@ -23,10 +51,8 @@ export function JobCardWide({ job }: { job: Job }) {
           )}
         </div>
       </div>
-      <div className="mb-2.5 truncate text-[11px] text-[#8A8A8A] sm:mb-3.5 sm:text-xs">
-        {job.company}
-      </div>
-      <div className="mb-2.5 flex flex-wrap gap-1.5 sm:mb-3.5">
+
+      <div className="my-2.5 flex flex-wrap gap-1.5 sm:my-3">
         {job.skillTags.map((tag) => (
           <span
             key={tag.label}
@@ -38,7 +64,7 @@ export function JobCardWide({ job }: { job: Job }) {
         ))}
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 border-t border-[rgba(15,15,15,0.06)] pt-2.5">
         <div className="min-w-0 truncate text-[10px] text-[#8A8A8A] sm:text-[11px]">
           {job.hardSkills}
         </div>

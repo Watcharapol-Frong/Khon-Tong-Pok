@@ -41,7 +41,7 @@ export function RadarChart({
 
   const cx = size / 2;
   const cy = size / 2;
-  const labelPad = showLabels ? Math.max(34, size * 0.14) : size * 0.06;
+  const labelPad = showLabels ? Math.max(28, size * 0.18) : size * 0.06;
   const radius = size / 2 - labelPad;
   const angleFor = (i: number) => -Math.PI / 2 + i * ((2 * Math.PI) / n);
   const levels = [0.2, 0.4, 0.6, 0.8, 1];
@@ -69,8 +69,8 @@ export function RadarChart({
 
   const labels = chartData.map((d, i) => {
     const a = angleFor(i);
-    const lx = cx + (radius + labelPad * 0.62) * Math.cos(a);
-    const ly = cy + (radius + labelPad * 0.62) * Math.sin(a);
+    const lx = cx + (radius + labelPad * 0.55) * Math.cos(a);
+    const ly = cy + (radius + labelPad * 0.55) * Math.sin(a);
     let anchor: "start" | "middle" | "end" = "middle";
     let translateX = "-50%";
     if (Math.cos(a) > 0.35) {
@@ -102,9 +102,9 @@ export function RadarChart({
         ? "rgba(255,255,255,0.16)"
         : "rgba(255,255,255,0.10)";
   const labelColor = isMono ? "#0F0F0F" : isDoodle ? "#16130E" : isNeon ? "#F5F2FF" : "#CBE3E0";
-  const labelSize = Math.max(9, Math.round(size / 26));
+  const labelSize = Math.max(9, Math.round(size / 28));
   const dotR = Math.max(2.5, size / 85);
-  const labelMaxWidth = Math.max(52, Math.round(size * 0.24));
+  const labelMaxWidth = Math.max(68, Math.round(size * 0.28));
   const textAlignFor: Record<string, "left" | "center" | "right"> = {
     start: "left",
     middle: "center",

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { JobCardWide } from "@/components/JobCardWide";
 import { JobFilterBar } from "@/components/JobFilterBar";
@@ -20,6 +21,16 @@ export default function JobBoardPage() {
   const filters = useJobFilters();
   const { filteredJobs } = filters;
   const [sort, setSort] = useState<SortValue>("relevance");
+  const [isVerified, setIsVerified] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const verified = localStorage.getItem("ktp_profile_verified");
+      if (verified === "true") {
+        setIsVerified(true);
+      }
+    }
+  }, []);
 
   const sortedJobs = useMemo(() => {
     if (sort === "salary-desc") return [...filteredJobs].sort((a, b) => b.salaryMax - a.salaryMax);
@@ -35,13 +46,24 @@ export default function JobBoardPage() {
           navbar so only the card list (and the sidebar, if it overflows)
           scrolls internally — the heading, filter bar, and sort row stay put. */}
       <div className="mx-auto flex h-[calc(100vh-100px)] w-full max-w-[1240px] flex-col px-[clamp(20px,4vw,48px)]">
-        <div className="flex-shrink-0 pt-4 pb-3 lg:pt-6 lg:pb-4">
-          <div className="mb-[6px] text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
-            JOB BOARD
+        <div className="flex-shrink-0 pt-4 pb-3 lg:pt-6 lg:pb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="mb-[6px] text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
+              JOB BOARD
+            </div>
+            <h1 className="m-0 text-[clamp(20px,3vw,36px)] font-extrabold tracking-[-0.02em] lg:text-2xl">
+              ตำแหน่งงานทั้งหมด
+            </h1>
           </div>
-          <h1 className="m-0 text-[clamp(20px,3vw,36px)] font-extrabold tracking-[-0.02em] lg:text-2xl">
-            ตำแหน่งงานทั้งหมด
-          </h1>
+
+          {!isVerified && (
+            <Link
+              href="/onboarding"
+              className="inline-flex items-center gap-2 rounded-full border border-[rgba(15,15,15,0.12)] bg-[#FAFAFA] px-4 py-2 text-xs font-bold text-[#0F0F0F] transition-all hover:bg-[#0F0F0F] hover:text-white"
+            >
+              <span>เข้าทำแบบประเมินเพื่อปลดล็อก Match Rate % จริง</span>
+            </Link>
+          )}
         </div>
 
         {/* Mobile/tablet: compact search + quick tabs + popup filter panel, same
@@ -84,8 +106,13 @@ export default function JobBoardPage() {
 
             <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
               <div className="flex flex-col gap-4 pb-6">
-                {sortedJobs.map((job) => (
-                  <JobCardWide key={job.title + job.company} job={job} />
+                {sortedJobs.map((job, idx) => (
+                  <JobCardWide
+                    key={job.title + job.company}
+                    job={job}
+                    isVerified={isVerified}
+                    matchRate={96 - (idx % 5) * 3}
+                  />
                 ))}
               </div>
 

@@ -12,14 +12,14 @@ export const metadata: Metadata = {
 const FLOW_STEPS = [
   {
     n: "01",
-    title: "ยินยอมให้ใช้ข้อมูล",
-    desc: "ก่อนเริ่ม ระบบอธิบายชัดเจนว่าจะนำพฤติกรรมการเล่นไปวิเคราะห์เป็นทักษะ 6 ด้านอย่างไร และใครเห็นได้บ้าง คุณกดยืนยันเองก่อนทุกครั้ง",
+    title: "ยินยอมให้ใช้ข้อมูล & เลือกสถานะ",
+    desc: "ก่อนเริ่ม ระบบอธิบายชัดเจนว่าจะนำพฤติกรรมการเล่นไปวิเคราะห์เป็นทักษะ 6 ด้านอย่างไร และให้คุณเลือกกลุ่มเป้าหมายเพื่อปรับแต่งด่านให้ตรงกับตัวตนของคุณ",
     color: "#FF6E5C",
   },
   {
     n: "02",
-    title: "เล่นมินิเกม 10 นาที",
-    desc: "ชุดมินิเกมสั้นๆ ไม่ต้องมีความรู้เฉพาะทาง ไม่มีคำตอบท่องจำ วัดสไตล์การคิดและการตัดสินใจจริงของคุณ",
+    title: "เล่นมินิเกม 4 ด่าน 10 นาที",
+    desc: "ชุดมินิเกมสั้นๆ ไม่ต้องมีความรู้เฉพาะทาง ไม่มีคำตอบท่องจำ วัดสไตล์การคิดและการตัดสินใจจริงของคุณในแต่ละสภาวะ",
     color: "#3BF55C",
   },
   {
@@ -30,7 +30,7 @@ const FLOW_STEPS = [
   },
   {
     n: "04",
-    title: "ยืนยันผล แล้วดูงานที่แมตช์",
+    title: "ปลดล็อก Smart Profile & งานที่แมตช์",
     desc: "ก่อนบันทึกจริง ระบบให้คุณยืนยัน/แก้ไขทักษะที่สรุปออกมาเสมอ จากนั้นปลดล็อกตำแหน่งงานที่แมตช์กับตัวตนของคุณทันที",
     color: "#F5D949",
   },
@@ -67,9 +67,12 @@ export default function GamePage() {
               จากนั้นคุยกับ AI สั้นๆ เพื่อดึงประสบการณ์ทำงานของคุณออกมา ให้ HR เห็นจุดเด่นจริงตั้งแต่วันแรก
             </p>
             <div className="mb-[18px] flex flex-wrap justify-center gap-3 md:justify-start">
-              <span className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white">
-                เริ่มเล่นเกมตอนนี้
-              </span>
+              <Link
+                href="/onboarding"
+                className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white transition-transform active:scale-95"
+              >
+                เริ่มเล่นเกมตอนนี้ →
+              </Link>
               <Link
                 href="/"
                 className="cursor-pointer rounded-full border-[1.5px] border-[#0F0F0F] bg-white px-7 py-[15px] text-[15px] font-bold text-[#0F0F0F]"
