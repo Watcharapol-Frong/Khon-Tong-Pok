@@ -41,12 +41,12 @@ export default function JobBoardPage() {
         </div>
 
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          <aside className="w-full flex-shrink-0 lg:sticky lg:top-[110px] lg:w-[30%]">
+          <aside className="w-full flex-shrink-0 lg:sticky lg:top-[104px] lg:w-[30%]">
             <JobFilterSidebar filters={filters} />
           </aside>
 
           <div className="min-w-0 w-full lg:w-[70%]">
-            <div className="mb-[18px] flex flex-wrap items-center justify-between gap-3">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-[#8A8A8A]">
                 <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#0F0F0F]" />
                 พบ {filteredJobs.length} ตำแหน่งงานที่ตรงกับเงื่อนไข

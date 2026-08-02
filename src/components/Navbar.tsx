@@ -24,7 +24,7 @@ export function Navbar() {
   const closeMenu = () => setMenuOpen(false);
 
   return (
-    <div className="sticky top-0 z-40 bg-white/85 px-4 pt-[26px] pb-3 backdrop-blur-sm sm:px-6 md:px-8">
+    <div className="sticky top-0 z-40 bg-white px-4 pt-[26px] pb-3 sm:px-6 md:px-8">
       <div className="relative mx-auto max-w-[900px]">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-full bg-[#F5F5F5] py-[10px] pr-5 pl-[22px]">
           <Link href="/" className="flex flex-shrink-0 items-center gap-[10px]">
@@ -51,9 +51,12 @@ export function Navbar() {
               >
                 สำหรับองค์กร
               </Link>
-              <span className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]">
+              <Link
+                href="/login"
+                className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
+              >
                 เข้าสู่ระบบ
-              </span>
+              </Link>
               <Link
                 href="/game"
                 className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
@@ -116,9 +119,13 @@ export function Navbar() {
               >
                 สำหรับองค์กร
               </Link>
-              <span className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]">
+              <Link
+                href="/login"
+                onClick={closeMenu}
+                className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
+              >
                 เข้าสู่ระบบ
-              </span>
+              </Link>
             </motion.div>
           )}
         </AnimatePresence>
