@@ -33,17 +33,17 @@ export default function JobBoardPage() {
       {/* Below lg, this whole block scrolls with the page as normal. From lg up,
           it's pinned to the viewport height under the navbar so only the card
           list (and the sidebar, if it overflows) scrolls internally. */}
-      <div className="mx-auto flex w-full max-w-[1240px] flex-col px-[clamp(20px,4vw,48px)] lg:h-[calc(100vh-104px)]">
-        <div className="flex-shrink-0 pt-[clamp(40px,6vw,56px)] pb-6">
+      <div className="mx-auto flex w-full max-w-[1240px] flex-col px-[clamp(20px,4vw,48px)] lg:h-[calc(100vh-100px)]">
+        <div className="flex-shrink-0 pt-[clamp(24px,4vw,56px)] pb-4 lg:pt-6 lg:pb-4">
           <div className="mb-[6px] text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
             JOB BOARD
           </div>
-          <h1 className="m-0 text-[clamp(24px,3.4vw,36px)] font-extrabold tracking-[-0.02em]">
+          <h1 className="m-0 text-[clamp(22px,3vw,36px)] font-extrabold tracking-[-0.02em] lg:text-2xl">
             ตำแหน่งงานทั้งหมด
           </h1>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-6 pb-[clamp(40px,6vw,56px)] lg:flex-row lg:items-stretch lg:pb-8">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 pb-[clamp(40px,6vw,56px)] lg:flex-row lg:items-stretch lg:pb-6">
           <aside className="thin-scrollbar w-full flex-shrink-0 lg:h-full lg:w-[30%] lg:overflow-y-auto lg:pr-1">
             <JobFilterSidebar filters={filters} />
           </aside>
