@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Footer } from "@/components/Footer";
 import { JobCardWide } from "@/components/JobCardWide";
+import { JobFilterBar } from "@/components/JobFilterBar";
 import { JobFilterSidebar } from "@/components/JobFilterSidebar";
 import { Navbar } from "@/components/Navbar";
 import { useJobFilters } from "@/hooks/useJobFilters";
@@ -43,8 +44,15 @@ export default function JobBoardPage() {
           </h1>
         </div>
 
+        {/* Mobile/tablet: compact search + quick tabs + popup filter panel, same
+            pattern as the homepage, to save vertical space. Desktop keeps the
+            always-expanded locked sidebar. */}
+        <div className="flex-shrink-0 lg:hidden">
+          <JobFilterBar filters={filters} />
+        </div>
+
         <div className="flex min-h-0 flex-1 flex-col gap-6 pb-[clamp(40px,6vw,56px)] lg:flex-row lg:items-stretch lg:pb-6">
-          <aside className="thin-scrollbar w-full flex-shrink-0 lg:h-full lg:w-[30%] lg:overflow-y-auto lg:pr-1">
+          <aside className="thin-scrollbar hidden flex-shrink-0 lg:block lg:h-full lg:w-[30%] lg:overflow-y-auto lg:pr-1">
             <JobFilterSidebar filters={filters} />
           </aside>
 
