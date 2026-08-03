@@ -5,41 +5,7 @@ import Link from "next/link";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
-
-const GAMES_DATA = [
-  {
-    id: 1,
-    title: "เกม: Crypto/Sneaker Drop",
-    subtitle: "BART Test — Risk Tolerance & Decision Making",
-    icon: "👟",
-    desc: "กด 'ปั๊มราคาราคา/มูลค่า' เพื่อเพิ่มคะแนนความเสี่ยง หากปั๊มมากเกินไป สินค้าจะแตก/หลุดมือ! เลือกจังหวะ Cash Out ที่ดีที่สุด",
-    color: "#FF6E5C",
-  },
-  {
-    id: 2,
-    title: "เกม: Matcha Bar Barista Rush",
-    subtitle: "WCST Test — Learning Agility & Cognitive Flexibility",
-    desc: "จับคู่สูตรชาเขียวตามกติกาของร้าน โดยกติกาจะแอบเปลี่ยนกะทันหัน ปรับตัวและเรียนรู้รูปแบบใหม่ให้เร็วที่สุด",
-    icon: "🍵",
-    color: "#3BF55C",
-  },
-  {
-    id: 3,
-    title: "เกม: Doomscroll Shield",
-    subtitle: "Flanker Task — Focus & Distractor Filtering",
-    desc: "กดทิศทางลูกศรตรงกลางให้ถูกต้อง โดยไม่เสียสมาธิตัวรบกวนขนาบข้าง (Doomscroll distractions)",
-    icon: "🛡️",
-    color: "#4D7CFF",
-  },
-  {
-    id: 4,
-    title: "เกม: E-Sport Squad Quest",
-    subtitle: "PGG Game — Collaboration Mindset & Resource Sharing",
-    desc: "ตัดสินใจจัดสรรเหรียญลงกองกลางของทีมร่วมกับผู้เล่น AI เพื่อประโยชน์สูงสุดของทีมเวิร์ก",
-    icon: "🎮",
-    color: "#F5D949",
-  },
-];
+import { GAME_STAGES as GAMES_DATA } from "@/lib/data";
 
 export default function PlayPage() {
   const [currentStage, setCurrentStage] = useState(0); // 0 to 3

@@ -1,4 +1,4 @@
-import type { AxisChip, FaqItem, Job, RadarAxisDatum, Step } from "./types";
+import type { AxisChip, FaqItem, GameStage, Job, RadarAxisDatum, Step } from "./types";
 
 export const RADAR_DATA: RadarAxisDatum[] = [
   { axis: "Learning Agility", value: 78 },
@@ -39,6 +39,41 @@ export const STEPS: Step[] = [
   },
 ];
 
+export const GAME_STAGES: GameStage[] = [
+  {
+    id: 1,
+    title: "เกม: Crypto/Sneaker Drop",
+    subtitle: "BART Test — Risk Tolerance & Decision Making",
+    icon: "👟",
+    desc: "กด 'ปั๊มราคาราคา/มูลค่า' เพื่อเพิ่มคะแนนความเสี่ยง หากปั๊มมากเกินไป สินค้าจะแตก/หลุดมือ! เลือกจังหวะ Cash Out ที่ดีที่สุด",
+    color: "#FF6E5C",
+  },
+  {
+    id: 2,
+    title: "เกม: Matcha Bar Barista Rush",
+    subtitle: "WCST Test — Learning Agility & Cognitive Flexibility",
+    desc: "จับคู่สูตรชาเขียวตามกติกาของร้าน โดยกติกาจะแอบเปลี่ยนกะทันหัน ปรับตัวและเรียนรู้รูปแบบใหม่ให้เร็วที่สุด",
+    icon: "🍵",
+    color: "#3BF55C",
+  },
+  {
+    id: 3,
+    title: "เกม: Doomscroll Shield",
+    subtitle: "Flanker Task — Focus & Distractor Filtering",
+    desc: "กดทิศทางลูกศรตรงกลางให้ถูกต้อง โดยไม่เสียสมาธิตัวรบกวนขนาบข้าง (Doomscroll distractions)",
+    icon: "🛡️",
+    color: "#4D7CFF",
+  },
+  {
+    id: 4,
+    title: "เกม: E-Sport Squad Quest",
+    subtitle: "PGG Game — Collaboration Mindset & Resource Sharing",
+    desc: "ตัดสินใจจัดสรรเหรียญลงกองกลางของทีมร่วมกับผู้เล่น AI เพื่อประโยชน์สูงสุดของทีมเวิร์ก",
+    icon: "🎮",
+    color: "#F5D949",
+  },
+];
+
 export const FAQ_DATA: FaqItem[] = [
   {
     q: "ต้องมีประสบการณ์หรือเรซูเม่มาก่อนไหม?",
@@ -63,6 +98,25 @@ export const FAQ_DATA: FaqItem[] = [
   {
     q: "หลังสมัครงานแล้ว ติดตามความคืบหน้ายังไง?",
     a: "มีหน้าติดตามสถานะแบบเรียลไทม์ (สมัครแล้ว → ผ่านด่านแรก → รอสัมภาษณ์ → ได้รับข้อเสนองาน) พร้อมแจ้งเตือนผ่านอีเมล และคุย/นัดสัมภาษณ์กับ HR ได้ในระบบโดยตรง ไม่ต้องออกไปใช้ช่องทางอื่น",
+  },
+];
+
+export const COMPANY_FAQ_DATA: FaqItem[] = [
+  {
+    q: "ระบบช่วยคัดกรอง Candidate ยังไงบ้าง?",
+    a: "ผู้สมัครทุกคนเล่นมินิเกม Neuroscience 4 ด่านเพื่อวัด Soft Skill 6 มิติ แล้วระบบจะจัดอันดับ Match Rate ให้อัตโนมัติตามเกณฑ์ที่คุณตั้งไว้สำหรับแต่ละตำแหน่ง ลดเวลาไล่อ่านเรซูเม่ทีละใบ",
+  },
+  {
+    q: "Blind Review คืออะไร ช่วยลดอคติได้จริงไหม?",
+    a: "ในรอบพิจารณาแรก ทีมคุณจะเห็นแค่กราฟทักษะ 6 ด้านและ Hard Skill ของผู้สมัคร โดยไม่เห็นชื่อ รูปภาพ หรือข้อมูลที่อาจนำไปสู่อคติ ข้อมูลติดต่อจะเปิดเผยก็ต่อเมื่อคุณกดนัดสัมภาษณ์เท่านั้น",
+  },
+  {
+    q: "ใช้เวลานานแค่ไหนกว่าจะเห็นผู้สมัครที่ตรงสเปค?",
+    a: "หลังประกาศตำแหน่งงาน ระบบจะเริ่มจัดอันดับผู้สมัครที่ Match Rate สูงให้ทันทีที่มีคนเล่นเกมและยื่นใบสมัคร พร้อมเหตุผลประกอบการแนะนำทุกครั้ง ไม่ใช่แค่ตัวเลขคะแนนลอยๆ",
+  },
+  {
+    q: "ต้องมีทีม HR ขนาดใหญ่หรือระบบ ATS เดิมไหม?",
+    a: "ไม่จำเป็น แพลตฟอร์มออกแบบให้ทีม HR ขนาดเล็กใช้งานได้ทันทีโดยไม่ต้องเชื่อมต่อระบบเดิม พร้อมหน้าติดตามสถานะผู้สมัครแบบเรียลไทม์ในที่เดียว",
   },
 ];
 

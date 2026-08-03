@@ -3,17 +3,16 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FAQ_DATA } from "@/lib/data";
+import type { FaqItem } from "@/lib/types";
 
-export function Faq() {
+export function Faq({ title = "คำถามที่พบบ่อย", items = FAQ_DATA }: { title?: string; items?: FaqItem[] }) {
   const [openFaq, setOpenFaq] = useState(0);
 
   return (
     <div className="mx-auto w-full max-w-[1240px] px-[clamp(20px,4vw,48px)] pt-[clamp(24px,4vw,40px)] pb-[clamp(40px,6vw,56px)]">
-      <h2 className="mb-7 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">
-        คำถามที่พบบ่อย
-      </h2>
+      <h2 className="mb-7 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">{title}</h2>
       <div className="flex flex-col gap-px overflow-hidden rounded-2xl border border-[rgba(15,15,15,0.08)] bg-[rgba(15,15,15,0.08)]">
-        {FAQ_DATA.map((faq, i) => {
+        {items.map((faq, i) => {
           const open = openFaq === i;
           return (
             <div key={faq.q} className="bg-white">

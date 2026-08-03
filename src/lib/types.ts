@@ -35,3 +35,12 @@ export type AxisChip = {
 export type FaqItem = { q: string; a: string };
 
 export type Step = { n: string; title: string; desc: string; color: string };
+
+export type GameStage = {
+  id: number;
+  title: string;
+  subtitle: string;
+  desc: string;
+  icon: string;
+  color: string;
+};
