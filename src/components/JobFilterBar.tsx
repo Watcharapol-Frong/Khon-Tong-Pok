@@ -43,7 +43,7 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
   } = filters;
 
   return (
-    <div className="relative mb-5 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[10px]">
+    <div className="mb-5 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[10px]">
       <div className="flex max-w-full flex-wrap items-center gap-[10px]">
         <div className="relative min-w-[200px] flex-[1_1_260px]">
           <input
@@ -58,16 +58,16 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
           </span>
         </div>
 
-        <div className="relative min-w-0 flex-[1_1_auto] overflow-hidden">
-          <div className="no-scrollbar flex max-w-full items-center gap-1.5 overflow-x-auto pr-6">
-            <span
-              onClick={() => setFilterPanelOpen((v) => !v)}
-              className="sticky left-0 z-[2] flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-[10px] bg-[#0F0F0F] px-[14px] py-[9px] text-xs font-extrabold whitespace-nowrap text-white"
-            >
-              🎛️ กรองผลลัพธ์
-              {hasActiveFilters && <span className="h-[7px] w-[7px] rounded-full bg-[#3BF55C]" />}
-            </span>
-            <div className="sticky left-[110px] z-[2] h-4 w-px flex-shrink-0 bg-[rgba(15,15,15,0.1)]" />
+        <div className="flex min-w-0 flex-[1_1_auto] items-center gap-1.5">
+          <span
+            onClick={() => setFilterPanelOpen((v) => !v)}
+            className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-[10px] bg-[#0F0F0F] px-[14px] py-[9px] text-xs font-extrabold whitespace-nowrap text-white"
+          >
+            🎛️ กรองผลลัพธ์
+            {hasActiveFilters && <span className="h-[7px] w-[7px] rounded-full bg-[#3BF55C]" />}
+          </span>
+          <div className="h-4 w-px flex-shrink-0 bg-[rgba(15,15,15,0.1)]" />
+          <div className="no-scrollbar flex min-w-0 items-center gap-1.5 overflow-x-auto">
             {CATEGORY_TABS.map((tab) => {
               const active = category === tab.key;
               return (
@@ -86,19 +86,19 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
               );
             })}
           </div>
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-r from-transparent to-[#FAFAFA]" />
         </div>
       </div>
 
       <AnimatePresence>
         {filterPanelOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-[calc(100%+8px)] right-[10px] left-[10px] z-30 rounded-2xl border border-[rgba(15,15,15,0.08)] bg-[#F5F5F5] p-[18px] shadow-[0_12px_32px_rgba(15,15,15,0.14)]"
+            className="mt-[10px] overflow-hidden rounded-2xl border border-[rgba(15,15,15,0.08)] bg-[#F5F5F5]"
           >
+            <div className="p-[18px]">
             <div className="mb-[14px] flex items-center justify-between border-b border-[rgba(15,15,15,0.1)] pb-3">
               <div className="text-[13px] font-extrabold">ตัวกรองการค้นหาอย่างละเอียด</div>
               <span
@@ -208,6 +208,7 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
               >
                 ตกลง
               </span>
+            </div>
             </div>
           </motion.div>
         )}

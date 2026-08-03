@@ -42,10 +42,7 @@ export default function JobBoardPage() {
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
       <Navbar />
 
-      {/* Locked at every breakpoint: pinned to the viewport height under the
-          navbar so only the card list (and the sidebar, if it overflows)
-          scrolls internally — the heading, filter bar, and sort row stay put. */}
-      <div className="mx-auto flex h-[calc(100vh-100px)] w-full max-w-[1240px] flex-col px-[clamp(20px,4vw,48px)]">
+      <div className="mx-auto flex w-full max-w-[1240px] flex-col px-[clamp(20px,4vw,48px)]">
         <div className="flex-shrink-0 pt-4 pb-3 lg:pt-6 lg:pb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="mb-[6px] text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
@@ -68,17 +65,17 @@ export default function JobBoardPage() {
 
         {/* Mobile/tablet: compact search + quick tabs + popup filter panel, same
             pattern as the homepage, to save vertical space. Desktop keeps the
-            always-expanded locked sidebar. */}
+            always-expanded sidebar. */}
         <div className="flex-shrink-0 lg:hidden">
           <JobFilterBar filters={filters} />
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:items-stretch lg:pb-6">
-          <aside className="thin-scrollbar hidden flex-shrink-0 lg:block lg:h-full lg:w-[30%] lg:overflow-y-auto lg:pr-1">
+        <div className="flex flex-col gap-6 pb-10 lg:flex-row lg:items-start">
+          <aside className="hidden flex-shrink-0 lg:sticky lg:top-[104px] lg:block lg:w-[30%]">
             <JobFilterSidebar filters={filters} />
           </aside>
 
-          <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col lg:h-full lg:w-[70%]">
+          <div className="flex w-full min-w-0 flex-1 flex-col lg:w-[70%]">
             <div className="mb-3 flex flex-shrink-0 items-center justify-between gap-2 lg:mb-4 lg:gap-3">
               <div className="flex min-w-0 items-center gap-1.5 text-[11px] whitespace-nowrap text-[#8A8A8A] sm:gap-2 sm:text-xs">
                 <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#0F0F0F]" />
@@ -104,24 +101,22 @@ export default function JobBoardPage() {
               </label>
             </div>
 
-            <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
-              <div className="flex flex-col gap-4 pb-6">
-                {sortedJobs.map((job, idx) => (
-                  <JobCardWide
-                    key={job.title + job.company}
-                    job={job}
-                    isVerified={isVerified}
-                    matchRate={96 - (idx % 5) * 3}
-                  />
-                ))}
-              </div>
-
-              {filteredJobs.length === 0 && (
-                <div className="p-8 text-center text-[13px] text-[#8A8A8A]">
-                  ไม่พบตำแหน่งงานที่ตรงกับเงื่อนไข ลองปรับตัวกรองใหม่
-                </div>
-              )}
+            <div className="flex flex-col gap-4">
+              {sortedJobs.map((job, idx) => (
+                <JobCardWide
+                  key={job.title + job.company}
+                  job={job}
+                  isVerified={isVerified}
+                  matchRate={96 - (idx % 5) * 3}
+                />
+              ))}
             </div>
+
+            {filteredJobs.length === 0 && (
+              <div className="p-8 text-center text-[13px] text-[#8A8A8A]">
+                ไม่พบตำแหน่งงานที่ตรงกับเงื่อนไข ลองปรับตัวกรองใหม่
+              </div>
+            )}
           </div>
         </div>
       </div>

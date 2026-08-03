@@ -21,8 +21,8 @@ function CheckboxGroup({
 }) {
   return (
     <div>
-      <div className="mb-2.5 text-[11px] font-extrabold">{label}</div>
-      <div className="flex flex-col gap-2">
+      <div className="mb-2 text-[11px] font-extrabold">{label}</div>
+      <div className="flex flex-col gap-1.5">
         {options.map((opt) => (
           <label key={opt.value} className="flex cursor-pointer items-center gap-2 text-xs">
             <input
@@ -71,19 +71,19 @@ export function JobFilterSidebar({ filters }: { filters: JobFilters }) {
   } = filters;
 
   return (
-    <div className="rounded-2xl border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-5">
-      <div className="relative mb-5">
+    <div className="rounded-xl border border-[rgba(15,15,15,0.08)] p-4">
+      <div className="relative mb-4">
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="✨ ค้นหางานด้วย AI หรือทักษะ..."
-          className="w-full rounded-xl border border-[rgba(15,15,15,0.1)] bg-white py-[11px] pr-4 pl-4 font-sans text-[13px] text-[#0F0F0F] outline-none"
+          className="w-full rounded-lg border border-[rgba(15,15,15,0.1)] bg-white py-2 pr-3 pl-3 font-sans text-[13px] text-[#0F0F0F] outline-none"
         />
       </div>
 
-      <div className="mb-5">
-        <div className="mb-2.5 text-[11px] font-extrabold">หมวดหมู่</div>
+      <div className="mb-4">
+        <div className="mb-2 text-[11px] font-extrabold">หมวดหมู่</div>
         <div className="flex flex-wrap gap-1.5">
           {CATEGORY_TABS.map((tab) => {
             const active = category === tab.key;
@@ -91,7 +91,7 @@ export function JobFilterSidebar({ filters }: { filters: JobFilters }) {
               <span
                 key={tab.key}
                 onClick={() => setCategory(tab.key)}
-                className="cursor-pointer rounded-[10px] px-3 py-[7px] text-xs font-bold whitespace-nowrap"
+                className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-bold whitespace-nowrap"
                 style={{
                   background: active ? "#0F0F0F" : "#FFFFFF",
                   color: active ? "#FFFFFF" : "#5C5C5C",
@@ -105,7 +105,7 @@ export function JobFilterSidebar({ filters }: { filters: JobFilters }) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-5 border-t border-[rgba(15,15,15,0.1)] pt-5">
+      <div className="flex flex-col gap-4 border-t border-[rgba(15,15,15,0.08)] pt-4">
         <MultiSelectDropdown
           label="สถานที่ทำงาน"
           summary={locationSummary}
@@ -127,12 +127,12 @@ export function JobFilterSidebar({ filters }: { filters: JobFilters }) {
         />
 
         <div>
-          <div className="mb-2.5 text-[11px] font-extrabold">เงินเดือน (บาท)</div>
+          <div className="mb-2 text-[11px] font-extrabold">เงินเดือน (บาท)</div>
           <div className="flex items-center gap-1.5">
             <select
               value={salaryMin}
               onChange={(e) => setSalaryMin(Number(e.target.value))}
-              className="min-w-0 flex-1 rounded-[10px] border border-[rgba(15,15,15,0.15)] bg-white px-1.5 py-[9px] font-sans text-[11px]"
+              className="min-w-0 flex-1 rounded-lg border border-[rgba(15,15,15,0.15)] bg-white px-1.5 py-2 font-sans text-[11px]"
             >
               {SALARY_MIN_OPTIONS.map((v) => (
                 <option key={v} value={v}>
@@ -144,7 +144,7 @@ export function JobFilterSidebar({ filters }: { filters: JobFilters }) {
             <select
               value={salaryMax}
               onChange={(e) => setSalaryMax(e.target.value === "all" ? "all" : Number(e.target.value))}
-              className="min-w-0 flex-[1.3] rounded-[10px] border border-[rgba(15,15,15,0.15)] bg-white px-1.5 py-[9px] font-sans text-[11px]"
+              className="min-w-0 flex-[1.3] rounded-lg border border-[rgba(15,15,15,0.15)] bg-white px-1.5 py-2 font-sans text-[11px]"
             >
               {SALARY_MAX_OPTIONS.map((v) => (
                 <option key={v} value={v}>
@@ -179,7 +179,7 @@ export function JobFilterSidebar({ filters }: { filters: JobFilters }) {
       {hasActiveFilters && (
         <button
           onClick={resetFilters}
-          className="mt-5 w-full cursor-pointer rounded-[10px] border-t border-[rgba(15,15,15,0.1)] pt-4 text-center text-xs font-bold text-[#5C5C5C]"
+          className="mt-4 w-full cursor-pointer border-t border-[rgba(15,15,15,0.08)] pt-3 text-center text-xs font-bold text-[#5C5C5C]"
         >
           ↺ ล้างตัวกรองทั้งหมด
         </button>
