@@ -103,13 +103,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleConfirmProfileAndGoToJobs}
-              className="w-full sm:w-auto text-center cursor-pointer rounded-full bg-[#0F0F0F] px-6 py-3 text-xs font-extrabold text-white transition-all hover:bg-[#3BF55C] hover:text-[#0F0F0F] active:scale-[0.98] shadow-sm"
-            >
-              ยืนยันโปรไฟล์ & ค้นหางานที่ Match
-            </button>
           </div>
         </div>
 
@@ -394,6 +387,45 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Bottom CTA — Next Step in Flow */}
+      <div className="mx-auto w-full max-w-[1400px] px-3 sm:px-[clamp(20px,4vw,56px)] pb-[clamp(48px,7vw,80px)]">
+        <div className="rounded-[28px] bg-[#F5F5F5] p-[clamp(32px,5vw,52px)] text-center">
+          <div className="mb-2 text-xs font-bold tracking-[0.06em] text-[#8A8A8A] uppercase">ขั้นตอนถัดไป</div>
+          <h2 className="mb-2 text-[clamp(20px,2.8vw,28px)] font-extrabold tracking-[-0.02em]">
+            สร้าง Resume เพื่อยื่นสมัครงาน
+          </h2>
+          <p className="mx-auto mb-8 max-w-[520px] text-sm leading-[1.7] text-[#5C5C5C]">
+            เลือกสร้างแบบทั่วไป หรือให้น้องตรงปกช่วยรวมข้อมูลตัวตนและทักษะจาก Smart Profile ลงไปด้วย — ได้ Resume ที่บอกว่าคุณเป็นใคร ไม่ใช่แค่ทำอะไรมา
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              className="relative cursor-pointer rounded-full bg-[#0F0F0F] px-7 py-4 text-[14px] font-extrabold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+            >
+              ✦ ให้น้องตรงปกช่วยสร้าง
+              <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold tracking-wide">Premium</span>
+            </button>
+            <button
+              type="button"
+              className="cursor-pointer rounded-full border-[1.5px] border-[#0F0F0F] bg-white px-7 py-[15px] text-[14px] font-bold text-[#0F0F0F] transition-all hover:bg-[#0F0F0F] hover:text-white active:scale-[0.98]"
+            >
+              สร้างแบบทั่วไป
+            </button>
+            <label className="cursor-pointer rounded-full border-[1.5px] border-[rgba(15,15,15,0.2)] bg-white px-7 py-[15px] text-[14px] font-bold text-[#5C5C5C] transition-all hover:border-[#0F0F0F] hover:text-[#0F0F0F] active:scale-[0.98]">
+              📎 อัปโหลด Resume ที่มีอยู่
+              <input type="file" accept=".pdf,.doc,.docx" className="sr-only" />
+            </label>
+          </div>
+          <button
+            type="button"
+            onClick={handleConfirmProfileAndGoToJobs}
+            className="mt-4 cursor-pointer text-[12px] font-semibold text-[#AAAAAA] underline-offset-2 hover:text-[#5C5C5C] hover:underline transition-colors"
+          >
+            ข้ามไปดู Job Board ก่อน →
+          </button>
         </div>
       </div>
 

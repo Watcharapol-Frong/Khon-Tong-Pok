@@ -53,7 +53,7 @@ const STEPS: StepItem[] = [
   },
   {
     step: 3,
-    title: "AI Decoder",
+    title: "น้องตรงปก",
     href: "/decoder",
     icon: (active, done) => (
       <svg
