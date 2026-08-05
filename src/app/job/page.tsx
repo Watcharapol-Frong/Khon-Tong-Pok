@@ -55,7 +55,7 @@ export default function JobBoardPage() {
 
           {!isVerified && (
             <Link
-              href="/onboarding"
+              href="/login"
               className="inline-flex items-center gap-2 rounded-full border border-[rgba(15,15,15,0.12)] bg-[#FAFAFA] px-4 py-2 text-xs font-bold text-[#0F0F0F] transition-all hover:bg-[#0F0F0F] hover:text-white"
             >
               <span>เข้าทำแบบประเมินเพื่อปลดล็อก Match Rate % จริง</span>

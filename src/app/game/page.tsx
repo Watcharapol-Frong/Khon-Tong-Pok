@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
-import { AXIS_CHIPS, GAME_STAGES, STEPS } from "@/lib/data";
+import { StrategyPanel } from "@/components/StrategyPanel";
+import { GAME_STAGES, STEPS } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "ประเมินด้วยมินิเกม — คนตรงปก (KhonTongPok)",
@@ -32,19 +33,19 @@ export default function GamePage() {
           </div>
 
           <h1 className="mb-6 text-[clamp(32px,6vw,56px)] leading-[1.15] font-extrabold tracking-[-0.03em]">
-            เล่นเกม 4 ด่าน
+            พิสูจน์ศักยภาพจริง
             <br />
-            แทนการเขียนเรซูเม่
+            เหนือกว่าแค่เรซูเม่
           </h1>
 
           <p className="mx-auto mb-8 max-w-[600px] text-[clamp(14px,1.8vw,16px)] leading-[1.7] text-[#4A4A4A]">
-            ชุดมินิเกมประสาทวิทยาศาสตร์ (Neuroscience Games) ที่ออกแบบมาเพื่อดึงจุดเด่นและสไตล์การทำงานจริงของคุณ
-            ไม่ใช่คำตอบท่องจำในเรซูเม่ ใช้เวลารวมไม่ถึง 10 นาที ไม่ต้องมีประสบการณ์มาก่อนก็เล่นได้
+            ชุดมินิเกมประสาทวิทยาศาสตร์ (Neuroscience Games) ที่วัดตัวตนและสไตล์การทำงานจริงของคุณ
+            ไม่ต้องมีเรซูเม่ก่อนก็เริ่มได้ หลังประเมินเสร็จระบบช่วยสร้างหรืออัปโหลดเรซูเม่เพื่อยื่นสมัครได้เลย
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/onboarding"
+              href="/login"
               className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white transition-all hover:opacity-90 active:scale-95"
             >
               เริ่มเล่นเกมเลย →
@@ -62,10 +63,10 @@ export default function GamePage() {
       {/* 4 mini-games */}
       <div className="mx-auto w-full max-w-[1240px] border-t border-[rgba(15,15,15,0.08)] px-[clamp(20px,4vw,48px)] py-[clamp(40px,6vw,64px)]">
         <h2 className="mb-2 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">
-          มินิเกมทั้ง 4 ด่าน
+          มินิเกมของเรา
         </h2>
         <p className="mb-8 max-w-[560px] text-sm leading-[1.7] text-[#5C5C5C]">
-          แต่ละด่านออกแบบจากแบบทดสอบทางจิตวิทยาที่ใช้จริงในงานวิจัย เพื่อวัดพฤติกรรมของคุณแบบเรียลไทม์
+          แต่ละเกมพัฒนาจากแบบทดสอบทางจิตวิทยาและประสาทวิทยาศาสตร์ที่ใช้จริงในงานวิจัย มาตรฐานการวัดผลแต่ละด้านกำหนดไว้ชัดเจน เพื่อให้ผลลัพธ์ที่ได้สะท้อนพฤติกรรมจริง ไม่ใช่คำตอบที่เตรียมมา
         </p>
         <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
           {GAME_STAGES.map((game) => (
@@ -90,29 +91,7 @@ export default function GamePage() {
       </div>
 
       {/* What it measures */}
-      <div className="mx-auto w-full max-w-[1240px] px-[clamp(20px,4vw,48px)] pt-[clamp(24px,4vw,40px)] pb-[clamp(64px,8vw,100px)]">
-        <div className="rounded-[28px] bg-[#0F0F0F] p-[clamp(32px,5vw,52px)] text-white">
-          <div className="mb-[18px] inline-flex items-center gap-2 text-xs font-bold tracking-[0.08em] text-[#9A9A9A] uppercase">
-            ผลลัพธ์ที่ได้
-          </div>
-          <h2 className="mb-3 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">
-            วัดศักยภาพ 6 มิติจากพฤติกรรมจริง
-          </h2>
-          <p className="mb-[30px] max-w-[640px] text-sm leading-[1.7] text-[#B5B5B5]">
-            หลังเล่นจบ AI จะแปลงพฤติกรรมการเล่นของคุณเป็น Radar Chart และ AI Feedback Report แบบเจาะลึก
-            ก่อนบันทึกจริงคุณจะได้ยืนยัน/แก้ไขทักษะที่สรุปออกมาเสมอ
-          </p>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-px overflow-hidden rounded-2xl bg-[rgba(255,255,255,0.12)]">
-            {AXIS_CHIPS.map((a) => (
-              <div key={a.en} className="min-w-0 bg-[#0F0F0F] p-[18px]">
-                <div className="mb-[10px] h-2.5 w-2.5 rounded-full" style={{ background: a.color }} />
-                <div className="text-sm font-bold text-white">{a.en}</div>
-                <div className="mt-1 text-xs text-[#8A8A8A]">{a.th}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <StrategyPanel />
 
       {/* After the game */}
       <div className="mx-auto w-full max-w-[1240px] border-t border-[rgba(15,15,15,0.08)] px-[clamp(20px,4vw,48px)] py-[clamp(40px,6vw,64px)]">
@@ -145,7 +124,7 @@ export default function GamePage() {
             ใช้เวลาไม่ถึง 10 นาที ไม่ต้องมีประสบการณ์ก็เริ่มได้ แล้วปลดล็อกตำแหน่งงานที่แมตช์กับตัวตนจริงของคุณ
           </p>
           <Link
-            href="/onboarding"
+            href="/register"
             className="inline-block cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white transition-all hover:opacity-90 active:scale-95"
           >
             เริ่มเล่นเกมเลย →

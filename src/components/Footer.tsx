@@ -21,7 +21,7 @@ export function Footer() {
           </div>
           <div className="max-w-[280px] text-[13px] leading-[1.7] text-[#9A9A9A]">
             พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ <br />
-            แพลตฟอร์มจ้างงานที่ให้ตัวตนและทักษะพูดแทนเรซูเม่
+            ประเมินศักยภาพก่อน ระบบช่วยสร้างเรซูเม่ได้เลย
           </div>
         </div>
         <div
@@ -46,6 +46,11 @@ export function Footer() {
       </div>
       <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-center gap-3 pt-5">
         <div className="text-[13px] text-[#8A8A8A]">© 2026 คนตรงปก (KhonTongPok) · พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ</div>
+      </div>
+      <div className="mx-auto mt-4 flex max-w-[1240px] items-center justify-center">
+        <div className="rounded-full border border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.06)] px-4 py-1.5 text-center text-[11px] text-[#666666]">
+          🚧 Prototype Only — ข้อมูล ตัวเลข และเนื้อหาทั้งหมดในเว็บไซต์นี้เป็น Mockup เพื่อการนำเสนอเท่านั้น ไม่ใช่บริการจริง
+        </div>
       </div>
     </div>
   );

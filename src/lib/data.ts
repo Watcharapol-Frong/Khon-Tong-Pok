@@ -21,8 +21,8 @@ export const AXIS_CHIPS: AxisChip[] = [
 export const STEPS: Step[] = [
   {
     n: "01",
-    title: "เล่นเกมแทนเขียนเรซูเม่",
-    desc: "มินิเกมประสาทวิทยาศาสตร์สั่นๆ เพื่อประเมินดึงจุดเด่นและสไตล์การทำงานจริง ไม่ใช่คำตอบท่องจำ",
+    title: "เล่นเกมประเมินศักยภาพ",
+    desc: "ไม่ต้องมีเรซูเม่ก่อนก็เริ่มได้ เล่นมินิเกมเพื่อวัดตัวตนและสไตล์การทำงานจริง จากนั้นระบบช่วยสร้างหรืออัปโหลดเรซูเม่เพื่อยื่นสมัครได้เลย",
     color: "#FF6E5C",
   },
   {
@@ -42,42 +42,42 @@ export const STEPS: Step[] = [
 export const GAME_STAGES: GameStage[] = [
   {
     id: 1,
-    title: "เกม: Crypto/Sneaker Drop",
-    subtitle: "BART Test — Risk Tolerance & Decision Making",
-    icon: "👟",
-    desc: "กด 'ปั๊มราคาราคา/มูลค่า' เพื่อเพิ่มคะแนนความเสี่ยง หากปั๊มมากเกินไป สินค้าจะแตก/หลุดมือ! เลือกจังหวะ Cash Out ที่ดีที่สุด",
+    title: "BART — Balloon Analogue Risk Task",
+    subtitle: "วัด: Risk Tolerance & Decision Making under Uncertainty",
+    icon: "🎈",
+    desc: "ประเมินว่าคุณรับความเสี่ยงได้มากแค่ไหน และตัดสินใจอย่างไรเมื่อมีสิ่งล่อใจที่ยิ่งเสี่ยงยิ่งได้รับรางวัลมาก แต่ผิดพลาดครั้งเดียวก็หมด วัด Risk Tolerance, Impulse Control และ Expected Value Reasoning",
     color: "#FF6E5C",
   },
   {
     id: 2,
-    title: "เกม: Matcha Bar Barista Rush",
-    subtitle: "WCST Test — Learning Agility & Cognitive Flexibility",
-    desc: "จับคู่สูตรชาเขียวตามกติกาของร้าน โดยกติกาจะแอบเปลี่ยนกะทันหัน ปรับตัวและเรียนรู้รูปแบบใหม่ให้เร็วที่สุด",
-    icon: "🍵",
+    title: "WCST — Wisconsin Card Sorting Test",
+    subtitle: "วัด: Learning Agility & Cognitive Flexibility",
+    desc: "ประเมินว่าคุณเรียนรู้กฎใหม่และปรับกลยุทธ์ได้เร็วแค่ไหนเมื่อกติกาเปลี่ยนกะทันหันโดยไม่มีคำเตือน วัด Rule Shifting, Feedback-based Learning และ Perseveration (ความดื้อรั้นต่อกฎเดิม)",
+    icon: "🃏",
     color: "#3BF55C",
   },
   {
     id: 3,
-    title: "เกม: Doomscroll Shield",
-    subtitle: "Flanker Task — Focus & Distractor Filtering",
-    desc: "กดทิศทางลูกศรตรงกลางให้ถูกต้อง โดยไม่เสียสมาธิตัวรบกวนขนาบข้าง (Doomscroll distractions)",
-    icon: "🛡️",
+    title: "Flanker Task — Eriksen Flanker Test",
+    subtitle: "วัด: Attentional Focus & Distractor Filtering",
+    desc: "ประเมินความสามารถในการโฟกัสและกรองสิ่งรบกวนออกจากงานหลัก วัด Selective Attention, Inhibitory Control และ Reaction Time under Conflict",
+    icon: "🎯",
     color: "#4D7CFF",
   },
   {
     id: 4,
-    title: "เกม: E-Sport Squad Quest",
-    subtitle: "PGG Game — Collaboration Mindset & Resource Sharing",
-    desc: "ตัดสินใจจัดสรรเหรียญลงกองกลางของทีมร่วมกับผู้เล่น AI เพื่อประโยชน์สูงสุดของทีมเวิร์ก",
-    icon: "🎮",
+    title: "PGG — Public Goods Game",
+    subtitle: "วัด: Collaboration Mindset & Prosocial Behavior",
+    desc: "ประเมินว่าคุณตัดสินใจจัดสรรทรัพยากรร่วมกับผู้อื่นอย่างไรเมื่อผลลัพธ์ขึ้นอยู่กับความร่วมมือของทั้งทีม วัด Cooperation Level, Trust และ Social Preference",
+    icon: "🤝",
     color: "#F5D949",
   },
 ];
 
 export const FAQ_DATA: FaqItem[] = [
   {
-    q: "ต้องมีประสบการณ์หรือเรซูเม่มาก่อนไหม?",
-    a: "ไม่จำเป็น ชุดมินิเกมของเราวัดตัวตนและวิธีคิด ไม่ใช่ความรู้เฉพาะทาง ส่วนขั้นตอนถัดไปคุณเลือกได้ว่าจะอัปโหลดเรซูเม่ให้ AI สรุป หรือคุยกับ AI ตรงๆ แบบไม่มีเอกสารก็ได้",
+    q: "ต้องมีเรซูเม่ก่อนสมัครไหม?",
+    a: "ไม่จำเป็น คุณเริ่มต้นด้วยมินิเกมและ AI Decoder ได้เลยโดยไม่ต้องมีเรซูเม่ล่วงหน้า หลังประเมินเสร็จระบบจะช่วยสร้างเรซูเม่ให้แบบเร็ว หรืออัปโหลดเรซูเม่ที่มีอยู่แล้วก็ได้ ยิ่งมีเรซูเม่ยิ่งช่วยให้โปรไฟล์สมบูรณ์และ Match Rate แม่นยำขึ้น แต่ไม่มีก็สมัครงานได้",
   },
   {
     q: "เล่นเกมและคุยกับ AI ใช้เวลานานแค่ไหน?",
@@ -104,7 +104,7 @@ export const FAQ_DATA: FaqItem[] = [
 export const COMPANY_FAQ_DATA: FaqItem[] = [
   {
     q: "ระบบช่วยคัดกรอง Candidate ยังไงบ้าง?",
-    a: "ผู้สมัครทุกคนเล่นมินิเกม Neuroscience 4 ด่านเพื่อวัด Soft Skill 6 มิติ แล้วระบบจะจัดอันดับ Match Rate ให้อัตโนมัติตามเกณฑ์ที่คุณตั้งไว้สำหรับแต่ละตำแหน่ง ลดเวลาไล่อ่านเรซูเม่ทีละใบ",
+    a: "ผู้สมัครเล่นมินิเกมประสาทวิทยาศาสตร์ (Neuroscience Games) เพื่อวัด Soft Skill 6 มิติจากพฤติกรรมจริง จากนั้นระบบจัดอันดับ Match Rate ให้อัตโนมัติตามเกณฑ์ที่คุณตั้งไว้สำหรับแต่ละตำแหน่ง HR เห็นโปรไฟล์ทักษะและเรซูเม่ควบคู่กัน ช่วยลดเวลาคัดกรองเบื้องต้น",
   },
   {
     q: "Blind Review คืออะไร ช่วยลดอคติได้จริงไหม?",

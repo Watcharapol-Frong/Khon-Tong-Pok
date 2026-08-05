@@ -3,8 +3,7 @@ import Link from "next/link";
 import { Faq } from "@/components/Faq";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
-import { RadarChart } from "@/components/RadarChart";
-import { AXIS_CHIPS, COMPANY_FAQ_DATA, RADAR_DATA } from "@/lib/data";
+import { COMPANY_FAQ_DATA } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "สำหรับองค์กร — คนตรงปก (KhonTongPok)",
@@ -19,7 +18,7 @@ const FEATURES = [
   {
     icon: "🎮",
     title: "วัด Soft Skill จากพฤติกรรมจริง",
-    desc: "ผู้สมัครเล่นมินิเกม Neuroscience 4 ด่าน แทนการกรอกแบบสอบถามที่ตอบตามความคาดหวังของ HR",
+    desc: "ผู้สมัครเล่นมินิเกมประสาทวิทยาศาสตร์ (Neuroscience Games) ที่พัฒนาจากมาตรฐานงานวิจัย วัดจากพฤติกรรมจริง ไม่ใช่คำตอบที่เตรียมมา",
   },
   {
     icon: "🧭",
@@ -73,7 +72,72 @@ export default function CompanyPage() {
         />
 
         <div className="relative mx-auto flex w-full max-w-[1240px] flex-wrap items-center gap-[clamp(28px,4vw,64px)] px-[clamp(20px,4vw,48px)] pt-[clamp(48px,8vw,88px)] pb-[clamp(28px,4vw,44px)]">
-          <div className="min-w-0 flex-[1_1_440px]">
+
+          {/* HR Dashboard Card — left */}
+          <div className="relative flex min-w-[280px] flex-[1_1_340px] justify-center">
+            <div className="w-full max-w-[460px] overflow-hidden rounded-[24px] border border-[rgba(15,15,15,0.1)] bg-white shadow-[0_4px_32px_rgba(15,15,15,0.06)]">
+              {/* Header bar */}
+              <div className="flex items-center justify-between border-b border-[rgba(15,15,15,0.08)] bg-[#FAFAFA] px-5 py-3">
+                <div>
+                  <div className="text-[11px] font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">HR Dashboard</div>
+                  <div className="text-[13px] font-extrabold text-[#0F0F0F]">Frontend Developer · 14 ผู้สมัคร</div>
+                </div>
+                <div className="rounded-full bg-[#3BF55C] px-3 py-1 text-[11px] font-bold text-[#0F0F0F]">Live</div>
+              </div>
+
+              {/* Sort bar */}
+              <div className="flex items-center gap-2 border-b border-[rgba(15,15,15,0.06)] px-5 py-2 text-[11px] text-[#8A8A8A]">
+                <span>เรียงตาม</span>
+                <span className="font-bold text-[#0F0F0F]">Match Rate ↓</span>
+                <span className="ml-auto">Blind Review Mode 🕶️</span>
+              </div>
+
+              {/* Candidate rows */}
+              {[
+                { id: "A12F", role: "Frontend Dev", match: 92, skills: ["Learning Agility", "Critical Thinking"], highlight: true },
+                { id: "B7K9", role: "Frontend Dev", match: 84, skills: ["Risk Tolerance", "Collaboration"], highlight: false },
+                { id: "C3MX", role: "Frontend Dev", match: 71, skills: ["Resilience", "Decision Making"], highlight: false },
+              ].map((c) => (
+                <div
+                  key={c.id}
+                  className={`flex items-center gap-3 border-b border-[rgba(15,15,15,0.06)] px-5 py-3 ${c.highlight ? "bg-[#F5FFF7]" : ""}`}
+                >
+                  {/* Anonymous avatar */}
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#F0F0F0] text-[11px] font-extrabold text-[#5A5A5A]">
+                    #{c.id}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-extrabold text-[#0F0F0F]">Candidate #{c.id}</span>
+                      {c.highlight && <span className="rounded-full bg-[#3BF55C] px-2 py-0.5 text-[10px] font-bold text-[#0F0F0F]">Top Match</span>}
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap gap-1">
+                      {c.skills.map((s) => (
+                        <span key={s} className="rounded bg-[#F0F0F0] px-1.5 py-0.5 text-[10px] text-[#5A5A5A]">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Match score */}
+                  <div className="flex-shrink-0 text-right">
+                    <div className="text-[15px] font-extrabold text-[#0F0F0F]">{c.match}%</div>
+                    <div className="text-[10px] text-[#8A8A8A]">Match</div>
+                  </div>
+                  {/* Action */}
+                  <button className="flex-shrink-0 rounded-full border border-[rgba(15,15,15,0.15)] px-3 py-1.5 text-[11px] font-bold text-[#0F0F0F] hover:bg-[#0F0F0F] hover:text-white transition-colors">
+                    นัด
+                  </button>
+                </div>
+              ))}
+
+              {/* Footer hint */}
+              <div className="px-5 py-3 text-center text-[11px] text-[#AAAAAA]">
+                ชื่อจริงและข้อมูลติดต่อเปิดเผยเมื่อนัดสัมภาษณ์เท่านั้น
+              </div>
+            </div>
+          </div>
+
+          {/* Text — right */}
+          <div className="min-w-0 flex-[1_1_400px]">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[rgba(15,15,15,0.12)] bg-[#FAFAFA] px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
               <span>✨ For Enterprises &amp; HR</span>
             </div>
@@ -81,7 +145,7 @@ export default function CompanyPage() {
             <h1 className="mb-[22px] text-[clamp(36px,6vw,60px)] leading-[1.08] font-extrabold tracking-[-0.03em]">
               คัดคนที่ใช่
               <br />
-              ไม่ใช่แค่เรซูเม่สวย
+              เกินกว่าแค่เรซูเม่
             </h1>
             <p className="mb-8 max-w-[520px] text-[clamp(15px,1.6vw,18px)] leading-[1.7] text-[#4A4A4A]">
               แพลตฟอร์มคัดเลือก Candidate คุณภาพด้วยผลประเมิน Soft Skills จริงจากมินิเกม พร้อมระบบ Blind Review
@@ -106,29 +170,6 @@ export default function CompanyPage() {
             </div>
           </div>
 
-          <div className="relative flex min-w-[280px] flex-[1_1_320px] justify-center">
-            <div className="w-full max-w-[440px] rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[clamp(24px,3vw,36px)]" style={{ position: "relative" }}>
-              <div className="absolute top-[-14px] left-[-14px] -z-10 h-14 w-14 bg-[#3BF55C]" />
-              <div className="mb-[6px] text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
-                ตัวอย่างโปรไฟล์แบบ Blind Review
-              </div>
-              <div className="mb-[18px] text-[17px] font-extrabold">Candidate #A12F — Frontend Dev</div>
-              <div className="flex justify-center">
-                <RadarChart data={RADAR_DATA} size={230} theme="mono" showLabels animate />
-              </div>
-              <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2">
-                {AXIS_CHIPS.map((chip) => (
-                  <div
-                    key={chip.en}
-                    className="rounded-xl border border-[rgba(15,15,15,0.1)] bg-white px-[11px] py-[9px] text-[11px] text-[#0F0F0F]"
-                  >
-                    <div className="font-extrabold">{chip.value}%</div>
-                    <div className="opacity-60">{chip.th}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

@@ -116,7 +116,7 @@ export default function OnboardingPage() {
                 เริ่มเล่นมินิเกม
               </Link>
               <div className="text-center text-[11px] text-[#8A8A8A]">
-                ⏱ ไม่ต้องเตรียมเรซูเม่ล่วงหน้า · เล่นจบปลดล็อก Dynamic Profile และตำแหน่งงานแมตช์ทันที
+                ⏱ ไม่ต้องมีเรซูเม่ก่อนก็เริ่มได้ · เล่นจบระบบช่วยสร้างหรืออัปโหลดเรซูเม่เพื่อยื่นสมัครได้เลย
               </div>
             </div>
           </div>
