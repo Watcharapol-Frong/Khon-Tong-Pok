@@ -15,23 +15,25 @@ export function Footer() {
   return (
     <div className="mt-3 bg-[#0F0F0F] px-[clamp(20px,4vw,48px)] pt-[clamp(40px,6vw,64px)] pb-7 text-white">
       <div className="mx-auto flex max-w-[1240px] flex-wrap justify-between gap-10 pb-9">
-        <div className="flex min-w-[260px] flex-[1_1_340px] items-start gap-10">
-          <div className="hidden w-[100px] flex-shrink-0 sm:block">
-            <Image
-              src="/mascot/mascot-footer.png"
-              alt=""
-              width={132}
-              height={253}
-              className="h-[190px] w-full object-contain"
-            />
-          </div>
-          <div className="min-w-0">
-            <div className="mb-3.5 text-3xl font-extrabold tracking-[-0.02em]">
-              คนตรงปก <span className="text-xs font-normal opacity-70">(KhonTongPok)</span>
-            </div>
-            <div className="max-w-[280px] text-[13px] leading-[1.7] text-[#9A9A9A]">
-              พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ ประเมินศักยภาพก่อน ระบบช่วยสร้างเรซูเม่ได้เลย
-            </div>
+        {/* This image is the full logo lockup — mascot + "คนตรงปก"
+            wordmark baked into one graphic — so it replaces the separate
+            text heading entirely instead of sitting beside a duplicate
+            of the same brand name. */}
+        <div className="flex min-w-[260px] flex-[1_1_340px] flex-col items-start">
+          <Image
+            src="/mascot/mascot-footer.png"
+            alt="คนตรงปก (KhonTongPok)"
+            width={1224}
+            height={1285}
+            className="h-auto w-[190px] object-contain sm:w-[230px]"
+          />
+          {/* Visually hidden — the brand name is already legible inside
+              the image above for sighted users, but screen readers and
+              search engines can't read text baked into a graphic, so
+              this keeps it discoverable without showing it twice. */}
+          <h3 className="sr-only">คนตรงปก (KhonTongPok)</h3>
+          <div className="mt-3 max-w-[280px] text-[13px] leading-[1.7] text-[#9A9A9A]">
+            พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ ประเมินศักยภาพก่อน ระบบช่วยสร้างเรซูเม่ได้เลย
           </div>
         </div>
         <div
@@ -59,11 +61,6 @@ export function Footer() {
       </div>
       <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-center gap-3 pt-5">
         <div className="text-[13px] text-[#8A8A8A]">© 2026 คนตรงปก (KhonTongPok) · พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ</div>
-      </div>
-      <div className="mx-auto mt-4 flex max-w-[1240px] items-center justify-center">
-        <div className="rounded-full bg-[rgba(255,255,255,0.06)] px-4 py-1.5 text-center text-[11px] text-[#666666]">
-          🚧 Prototype Only — ข้อมูล ตัวเลข และเนื้อหาทั้งหมดในเว็บไซต์นี้เป็น Mockup เพื่อการนำเสนอเท่านั้น ไม่ใช่บริการจริง
-        </div>
       </div>
     </div>
   );
