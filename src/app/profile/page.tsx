@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Briefcase,
   Camera,
+  Check,
   FileText,
   GraduationCap,
   Lightbulb,
   Paperclip,
+  Pencil,
   Sparkle,
   Target,
   TrendingUp,
+  User,
 } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
@@ -28,13 +31,18 @@ export default function ProfilePage() {
   // column below the radar chart instead (see main render) so both
   // soft and hard skills are visible together up front, not hidden
   // behind a click.
-  const [activeTab, setActiveTab] = useState<"feedback" | "matching">("feedback");
+  const [activeTab, setActiveTab] = useState<"feedback" | "matching" | "courses">("feedback");
   // Defaults are neutral placeholders, not a fabricated example person —
   // the real name comes from the candidate's resume (see /decoder) and
   // real skills come from what was actually extracted there. An empty
   // skills list is a legitimate, honest state ("go run the assessment
   // first"), not something to paper over with fake sample data.
   const [candidateName, setCandidateName] = useState<string>("ผู้สมัคร");
+  // The name is guessed from the resume (see guessNameFromResumeText in
+  // /decoder) — a heuristic, not a guarantee, so it needs to be
+  // correctable here rather than permanently locked to a wrong guess.
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
   const [userSkills, setUserSkills] = useState<string[]>([]);
   // Which of userSkills came from an uploaded resume (document-verified)
   // vs. only ever typed in chat (self-reported) — mirrors the
@@ -104,6 +112,59 @@ export default function ProfilePage() {
       localStorage.setItem("ktp_profile_photo", dataUrl);
     };
     reader.readAsDataURL(file);
+  };
+
+  const startEditingName = () => {
+    setNameDraft(candidateName);
+    setIsEditingName(true);
+  };
+
+  const saveNameEdit = () => {
+    const trimmed = nameDraft.trim();
+    if (trimmed) {
+      setCandidateName(trimmed);
+      localStorage.setItem("ktp_username", trimmed);
+    }
+    setIsEditingName(false);
+  };
+
+  // Explicitly opt-in sample data for reviewing the job-match/course-gap
+  // sections with something populated, since they're computed from real
+  // localStorage the way this page always works — there's no way for
+  // this app to write into a visitor's own browser storage from outside
+  // it. Clearly labeled as a sample, not silently pretending to be a
+  // real candidate's data.
+  const handleLoadSampleData = () => {
+    const sampleResumeSkills = ["React", "TypeScript"];
+    const sampleAllSkills = ["React", "TypeScript", "Node.js", "PostgreSQL", "Docker"];
+    setResumeSkills(sampleResumeSkills);
+    setUserSkills(sampleAllSkills);
+    localStorage.setItem("ktp_resume_skills", JSON.stringify(sampleResumeSkills));
+    localStorage.setItem("ktp_hard_skills", JSON.stringify(sampleAllSkills));
+  };
+
+  // RadarChart takes a pixel `size`, not a CSS width, and computes label
+  // font size / wrap width / dot radius directly from it — a hardcoded
+  // size can't track how wide the panel actually renders (it just got
+  // wider than Hard Skills, so 320px was leaving real space unused and
+  // still crowding labels). Measuring the wrapper's real width keeps
+  // this in sync. Same pattern as the HR candidate report's own radar.
+  const chartResizeObserverRef = useRef<ResizeObserver | null>(null);
+  const [chartSize, setChartSize] = useState(230);
+  const chartWrapRefCallback = (el: HTMLDivElement | null) => {
+    chartResizeObserverRef.current?.disconnect();
+    chartResizeObserverRef.current = null;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (!width) return;
+      // RadarChart's axis labels render outside its size×size box on
+      // purpose (readability) — reserve headroom for that overflow
+      // instead of using the full measured width as `size`.
+      setChartSize(Math.max(200, Math.min(380, Math.floor(width * 0.6))));
+    });
+    observer.observe(el);
+    chartResizeObserverRef.current = observer;
   };
 
   const handleConfirmProfileAndGoToJobs = () => {
@@ -192,16 +253,18 @@ export default function ProfilePage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-4">
               <label
-                className="group relative flex h-12 w-12 sm:h-16 sm:w-16 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-2xl bg-white"
+                className="group relative flex h-12 w-12 sm:h-16 sm:w-16 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-2xl bg-[#E5E5E5]"
                 title="อัปโหลดรูปโปรไฟล์"
               >
-                <Image
-                  src={profilePhoto || "/mascot/mascot-blind-candidate.png"}
-                  alt=""
-                  width={64}
-                  height={64}
-                  className="h-full w-full object-cover"
-                />
+                {profilePhoto ? (
+                  <Image src={profilePhoto} alt="" width={64} height={64} className="h-full w-full object-cover" />
+                ) : (
+                  // Plain gray placeholder — the previous mascot fallback
+                  // read as "this is the candidate's actual avatar," not
+                  // "no photo uploaded yet." A generic silhouette is the
+                  // standard, unambiguous way to signal "add your own."
+                  <User className="h-6 w-6 sm:h-8 sm:w-8 text-[#9A9A9A]" strokeWidth={1.75} />
+                )}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/0 text-[9px] font-bold text-white opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
                   แก้ไข
                 </div>
@@ -215,12 +278,43 @@ export default function ProfilePage() {
                 <input type="file" accept="image/*" onChange={handlePhotoUpload} className="sr-only" />
               </label>
               <div className="min-w-0 flex-1">
-                <h1 className="text-base sm:text-xl md:text-2xl font-extrabold tracking-[-0.02em] text-[#0F0F0F]">
-                  คุณ{candidateName}
-                </h1>
-                {(userSkills.length > 0 || recommendedJobs.length > 0) && (
-                  <div className="mt-0.5 text-[11px] sm:text-xs text-[#5C5C5C] leading-snug">
-                    ทักษะที่สกัดได้ {userSkills.length} รายการ · แมตช์ {recommendedJobs.length} ตำแหน่งงาน
+                {isEditingName ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveNameEdit();
+                        if (e.key === "Escape") setIsEditingName(false);
+                      }}
+                      className="min-w-0 rounded-lg border border-[rgba(15,15,15,0.15)] bg-white px-2 py-1 text-base sm:text-xl font-extrabold tracking-[-0.02em] text-[#0F0F0F] outline-none focus:border-[#0F0F0F]"
+                    />
+                    <button
+                      type="button"
+                      onClick={saveNameEdit}
+                      aria-label="บันทึกชื่อ"
+                      className="flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#0F0F0F] text-white"
+                    >
+                      <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <h1 className="text-base sm:text-xl md:text-2xl font-extrabold tracking-[-0.02em] text-[#0F0F0F]">
+                      คุณ{candidateName}
+                    </h1>
+                    {/* น้องตรงปกเดาชื่อจากเรซูเม่ให้ — ไม่ใช่ข้อมูลที่ยืนยัน
+                        แล้ว 100% เสมอไป จึงต้องแก้ไขได้ตรงนี้เลย */}
+                    <button
+                      type="button"
+                      onClick={startEditingName}
+                      aria-label="แก้ไขชื่อ"
+                      className="cursor-pointer text-[#8A8A8A] opacity-60 transition-opacity hover:text-[#0F0F0F] hover:opacity-100"
+                    >
+                      <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
+                    </button>
                   </div>
                 )}
               </div>
@@ -229,10 +323,45 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Big Dashboard — Hard Skills and Soft Skills side by side as two
-            equal panels, both visible immediately with nothing hidden
-            behind a tab or a narrow sidebar. */}
-        <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Big Dashboard — Soft Skills gets more room since the radar
+            chart and its six axis labels need real space to render
+            without crowding; Hard Skills is a plain skill list and
+            needs comparatively little. Both fully visible, nothing
+            hidden behind a tab or a narrow sidebar. */}
+        <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
+          {/* Soft Skills */}
+          <div className="rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-7">
+            <div className="mb-1 text-[11px] sm:text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
+              Dynamic Smart Profile
+            </div>
+            <h2 className="text-base sm:text-xl font-extrabold text-[#0F0F0F]">
+              กราฟ Soft Skills 6 ด้าน
+            </h2>
+            <p className="mt-0.5 text-[11px] sm:text-xs text-[#5C5C5C]">
+              ประมวลผลจากมินิเกม Neuroscience
+            </p>
+
+            {/* Radar sized from the wrapper's real measured width instead
+                of a fixed 230/320px — lets it actually use the extra
+                room this panel now has instead of leaving it empty
+                while axis labels still crowd each other. */}
+            <div ref={chartWrapRefCallback} className="my-4 sm:my-6 flex justify-center w-full overflow-hidden">
+              <RadarChart data={RADAR_DATA} size={chartSize} theme="mono" showLabels animate />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-3">
+              {AXIS_CHIPS.map((chip) => (
+                <div
+                  key={chip.en}
+                  className="rounded-xl bg-white p-2 sm:p-3 text-center text-xs"
+                >
+                  <div className="font-extrabold text-[#0F0F0F]">{chip.value}%</div>
+                  <div className="text-[10px] leading-snug sm:text-[11px] opacity-70">{chip.th}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Hard Skills */}
           <div className="rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-7">
             <div className="mb-1 text-[11px] sm:text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
@@ -246,13 +375,22 @@ export default function ProfilePage() {
             </div>
 
             {userSkills.length === 0 && (
-              <p className="text-xs leading-[1.7] text-[#8A8A8A]">
-                ยังไม่มีทักษะที่สกัดได้ — ไปที่{" "}
-                <Link href="/decoder" className="font-bold text-[#0F0F0F] underline">
-                  ห้องสนทนากับน้องตรงปก
-                </Link>{" "}
-                เพื่อวิเคราะห์ทักษะจากเรซูเม่หรือประสบการณ์ของคุณ
-              </p>
+              <div>
+                <p className="text-xs leading-[1.7] text-[#8A8A8A]">
+                  ยังไม่มีทักษะที่สกัดได้ — ไปที่{" "}
+                  <Link href="/decoder" className="font-bold text-[#0F0F0F] underline">
+                    ห้องสนทนากับน้องตรงปก
+                  </Link>{" "}
+                  เพื่อวิเคราะห์ทักษะจากเรซูเม่หรือประสบการณ์ของคุณ
+                </p>
+                <button
+                  type="button"
+                  onClick={handleLoadSampleData}
+                  className="mt-2 cursor-pointer text-xs font-bold text-[#4D7CFF] underline underline-offset-2"
+                >
+                  หรือลองโหลดข้อมูลตัวอย่างเพื่อดูตัวอย่างหน้านี้
+                </button>
+              </div>
             )}
             <div className="flex flex-wrap gap-2">
               {userSkills.map((skill) => {
@@ -288,51 +426,16 @@ export default function ProfilePage() {
               </p>
             )}
           </div>
-
-          {/* Soft Skills */}
-          <div className="rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-7">
-            <div className="mb-1 text-[11px] sm:text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
-              Dynamic Smart Profile
-            </div>
-            <h2 className="text-base sm:text-xl font-extrabold text-[#0F0F0F]">
-              กราฟ Soft Skills 6 ด้าน
-            </h2>
-            <p className="mt-0.5 text-[11px] sm:text-xs text-[#5C5C5C]">
-              ประมวลผลจากมินิเกม Neuroscience
-            </p>
-
-            {/* Responsive Radar Size (Mobile 230px / Desktop 320px) */}
-            <div className="my-4 sm:my-6 flex justify-center w-full overflow-hidden">
-              <div className="block sm:hidden">
-                <RadarChart data={RADAR_DATA} size={230} theme="mono" showLabels animate />
-              </div>
-              <div className="hidden sm:block">
-                <RadarChart data={RADAR_DATA} size={320} theme="mono" showLabels animate />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-3">
-              {AXIS_CHIPS.map((chip) => (
-                <div
-                  key={chip.en}
-                  className="rounded-xl bg-white p-2 sm:p-3 text-center text-xs"
-                >
-                  <div className="font-extrabold text-[#0F0F0F]">{chip.value}%</div>
-                  <div className="text-[10px] sm:text-[11px] opacity-70 truncate">{chip.th}</div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* AI Insights & Recommended Jobs — full width below the dashboard */}
         <div className="mb-10 flex flex-col gap-6">
           {/* Dashboard Tabs (Fixed Layout Shift) */}
-            <div className="flex overflow-x-auto">
+            <div className="flex gap-6 overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setActiveTab("feedback")}
-                className={`cursor-pointer inline-flex items-center gap-1.5 pb-3 text-xs font-extrabold transition-all border-b-2 mr-6 whitespace-nowrap ${
+                className={`cursor-pointer inline-flex items-center gap-1.5 pb-3 text-xs font-extrabold transition-all border-b-2 whitespace-nowrap ${
                   activeTab === "feedback"
                     ? "border-[#0F0F0F] text-[#0F0F0F]"
                     : "border-transparent text-[#8A8A8A] hover:text-[#0F0F0F]"
@@ -352,6 +455,18 @@ export default function ProfilePage() {
               >
                 <Briefcase className="h-3.5 w-3.5" strokeWidth={2} />
                 ตำแหน่งงานที่น้องตรงปก แนะนำ ({recommendedJobs.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("courses")}
+                className={`cursor-pointer inline-flex items-center gap-1.5 pb-3 text-xs font-extrabold transition-all border-b-2 whitespace-nowrap ${
+                  activeTab === "courses"
+                    ? "border-[#0F0F0F] text-[#0F0F0F]"
+                    : "border-transparent text-[#8A8A8A] hover:text-[#0F0F0F]"
+                }`}
+              >
+                <GraduationCap className="h-3.5 w-3.5" strokeWidth={2} />
+                คอร์สเรียนที่แนะนำ ({skillGapCourses.length})
               </button>
             </div>
 
@@ -389,51 +504,52 @@ export default function ProfilePage() {
                     </p>
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* Upskilling recommendations — a real skill-gap analysis
-                    against the candidate's own top job matches (see
-                    skillGapCourses above), not a static list tied to mock
-                    soft-skill scores. Each card names the actual missing
-                    skill and exactly which/how many real matched jobs
-                    need it. */}
-                <div className="mt-2 rounded-xl bg-white p-4">
-                  <div className="mb-3">
-                    <h4 className="flex items-center gap-1.5 text-xs font-extrabold text-[#0F0F0F]">
-                      <GraduationCap className="h-3.5 w-3.5 text-[#4D7CFF]" strokeWidth={2} />
-                      ทักษะที่ควรพัฒนาเพิ่มเพื่อเพิ่มโอกาสแมตช์
-                    </h4>
-                    <p className="text-[11px] text-[#8A8A8A]">
-                      คำนวณจากทักษะที่ตำแหน่งงานที่แมตช์กับคุณต้องการ แต่คุณยังไม่มีในโปรไฟล์
-                    </p>
-                  </div>
-
-                  {skillGapCourses.length === 0 ? (
-                    <p className="text-xs leading-[1.7] text-[#8A8A8A]">
-                      {recommendedJobs.length === 0
-                        ? "ยังไม่มีตำแหน่งงานที่แมตช์ให้วิเคราะห์ช่องว่างทักษะ เพิ่มทักษะของคุณในกล่อง Hard Skills ด้านซ้ายก่อน"
-                        : "ทักษะของคุณครอบคลุมทุกตำแหน่งที่แมตช์แล้ว ไม่มีช่องว่างที่ต้องพัฒนาเพิ่มตอนนี้"}
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {skillGapCourses.map(({ skill, count, jobTitles }) => (
-                        <div key={skill} className="flex flex-col justify-between rounded-lg bg-[#FAFAFA] p-3">
-                          <div>
-                            <span className="rounded-full bg-[#4D7CFF]/10 px-2 py-0.5 text-[10px] font-bold text-[#4D7CFF]">
-                              ต้องการใน {count} ตำแหน่งที่แมตช์
-                            </span>
-                            <h5 className="mt-1 text-xs font-extrabold text-[#0F0F0F]">
-                              พัฒนาทักษะ {skill}
-                            </h5>
-                            <p className="mt-1 text-[11px] text-[#5C5C5C]">
-                              ใช้ในตำแหน่ง {jobTitles.slice(0, 2).join(", ")}
-                              {jobTitles.length > 2 ? ` และอีก ${jobTitles.length - 2} ตำแหน่ง` : ""}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+            {/* TAB 3: คอร์สเรียนที่แนะนำ — a real skill-gap analysis against
+                the candidate's own top job matches (see skillGapCourses
+                above), not a static list tied to mock soft-skill scores.
+                Each card names the actual missing skill and exactly
+                which/how many real matched jobs need it. */}
+            {activeTab === "courses" && (
+              <div className="rounded-2xl bg-[#FAFAFA] p-6">
+                <div className="mb-4">
+                  <h3 className="flex items-center gap-1.5 text-base font-extrabold text-[#0F0F0F]">
+                    <GraduationCap className="h-4 w-4 text-[#4D7CFF]" strokeWidth={2} />
+                    ทักษะที่ควรพัฒนาเพิ่มเพื่อเพิ่มโอกาสแมตช์
+                  </h3>
+                  <p className="mt-1 text-xs text-[#5C5C5C]">
+                    คำนวณจากทักษะที่ตำแหน่งงานที่แมตช์กับคุณต้องการ แต่คุณยังไม่มีในโปรไฟล์
+                  </p>
                 </div>
+
+                {skillGapCourses.length === 0 ? (
+                  <p className="text-xs leading-[1.7] text-[#8A8A8A]">
+                    {recommendedJobs.length === 0
+                      ? "ยังไม่มีตำแหน่งงานที่แมตช์ให้วิเคราะห์ช่องว่างทักษะ เพิ่มทักษะของคุณในกล่อง Hard Skills ก่อน"
+                      : "ทักษะของคุณครอบคลุมทุกตำแหน่งที่แมตช์แล้ว ไม่มีช่องว่างที่ต้องพัฒนาเพิ่มตอนนี้"}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {skillGapCourses.map(({ skill, count, jobTitles }) => (
+                      <div key={skill} className="flex flex-col justify-between rounded-lg bg-white p-3">
+                        <div>
+                          <span className="rounded-full bg-[#4D7CFF]/10 px-2 py-0.5 text-[10px] font-bold text-[#4D7CFF]">
+                            ต้องการใน {count} ตำแหน่งที่แมตช์
+                          </span>
+                          <h5 className="mt-1 text-xs font-extrabold text-[#0F0F0F]">
+                            พัฒนาทักษะ {skill}
+                          </h5>
+                          <p className="mt-1 text-[11px] text-[#5C5C5C]">
+                            ใช้ในตำแหน่ง {jobTitles.slice(0, 2).join(", ")}
+                            {jobTitles.length > 2 ? ` และอีก ${jobTitles.length - 2} ตำแหน่ง` : ""}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -444,7 +560,7 @@ export default function ProfilePage() {
                   <div className="rounded-2xl bg-[#FAFAFA] p-6 text-center">
                     <p className="text-sm font-bold text-[#0F0F0F]">ยังไม่มีตำแหน่งที่แนะนำได้</p>
                     <p className="mx-auto mt-1.5 max-w-[380px] text-xs leading-[1.7] text-[#8A8A8A]">
-                      ยังไม่มีทักษะให้เทียบกับตำแหน่งงาน เพิ่มทักษะของคุณในกล่อง Hard Skills ด้านซ้ายมือ แล้วตำแหน่งที่แมตช์จะขึ้นที่นี่ทันที
+                      ยังไม่มีทักษะให้เทียบกับตำแหน่งงาน เพิ่มทักษะของคุณในกล่อง Hard Skills ด้านบน แล้วตำแหน่งที่แมตช์จะขึ้นที่นี่ทันที
                     </p>
                   </div>
                 )}
