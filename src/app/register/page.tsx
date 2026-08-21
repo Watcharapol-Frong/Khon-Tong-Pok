@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AlertCircle, Globe, Mail, RefreshCw } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 
@@ -192,7 +193,7 @@ export default function RegisterCandidatePage() {
                     }}
                     className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white py-3 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]"
                   >
-                    <span>🌐</span> สมัครสมาชิกด่วนด้วย Google
+                    <Globe className="h-3.5 w-3.5" strokeWidth={2} /> สมัครสมาชิกด่วนด้วย Google
                   </button>
                 </div>
 
@@ -204,8 +205,9 @@ export default function RegisterCandidatePage() {
                 </div>
 
                 {errorMsg && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-600">
-                    ⚠️ {errorMsg}
+                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-600">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" strokeWidth={2} />
+                    <span>{errorMsg}</span>
                   </div>
                 )}
 
@@ -305,7 +307,7 @@ export default function RegisterCandidatePage() {
               /* STEP 2 FORM: 6-Digit Email OTP Verification */
               <form onSubmit={handleOtpSubmit} className="flex flex-col gap-5">
                 <div className="rounded-2xl border border-[rgba(15,15,15,0.08)] bg-white p-4 text-center">
-                  <div className="text-2xl">📩</div>
+                  <Mail className="mx-auto h-6 w-6 text-[#4D7CFF]" strokeWidth={2} />
                   <div className="mt-1 text-xs font-bold text-[#0F0F0F]">
                     รหัสอ้างอิง OTP: <span className="font-mono text-[#4D7CFF]">#KP-8902</span>
                   </div>
@@ -316,8 +318,9 @@ export default function RegisterCandidatePage() {
                 </div>
 
                 {errorMsg && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-600">
-                    ⚠️ {errorMsg}
+                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-600">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" strokeWidth={2} />
+                    <span>{errorMsg}</span>
                   </div>
                 )}
 
@@ -350,9 +353,9 @@ export default function RegisterCandidatePage() {
                     <button
                       type="button"
                       onClick={handleResendOtp}
-                      className="cursor-pointer font-bold text-[#0F0F0F] underline hover:opacity-80"
+                      className="inline-flex cursor-pointer items-center gap-1 font-bold text-[#0F0F0F] underline hover:opacity-80"
                     >
-                      🔄 ส่งรหัส OTP ใหม่อีกครั้ง
+                      <RefreshCw className="h-3 w-3" strokeWidth={2} /> ส่งรหัส OTP ใหม่อีกครั้ง
                     </button>
                   )}
                 </div>

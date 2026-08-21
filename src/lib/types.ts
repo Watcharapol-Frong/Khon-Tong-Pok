@@ -41,7 +41,7 @@ export type GameStage = {
   title: string;
   subtitle: string;
   desc: string;
-  icon: string;
+  iconKey: "risk" | "flexibility" | "focus" | "collaboration";
   color: string;
 };
 

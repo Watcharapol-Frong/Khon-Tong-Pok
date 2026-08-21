@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Send } from "lucide-react";
+import { FileText, Loader2, MessageCircle, Send, Sparkle } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
@@ -23,7 +23,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "1",
     sender: "ai",
-    text: "สวัสดีครับ! ผมคือน้องตรงปก 🤖 ผู้ช่วย AI สำหรับวิเคราะห์ทักษะจากประสบการณ์ของคุณ บทสนทนานี้จะมีทั้งหมด 4 คำถามสั้นๆ ครอบคลุมทั้งทักษะที่ถนัดและสถานการณ์การทำงานจริง เริ่มได้เลยด้วยการแนบไฟล์เรซูเม่ PDF ด้านบน หรือพิมพ์เล่าประสบการณ์/ชื่อเครื่องมือที่คุณถนัดในแชทนี้ได้เลยครับ",
+    text: "สวัสดีครับ! ผมคือน้องตรงปก ผู้ช่วย AI สำหรับวิเคราะห์ทักษะจากประสบการณ์ของคุณ บทสนทนานี้จะมีทั้งหมด 4 คำถามสั้นๆ ครอบคลุมทั้งทักษะที่ถนัดและสถานการณ์การทำงานจริง เริ่มได้เลยด้วยการแนบไฟล์เรซูเม่ PDF ด้านบน หรือพิมพ์เล่าประสบการณ์/ชื่อเครื่องมือที่คุณถนัดในแชทนี้ได้เลยครับ",
     time: "10:30 น.",
   },
 ];
@@ -43,7 +43,7 @@ const SCRIPTED_PROMPTS = [
 ] as const;
 
 const COMPLETION_MESSAGE =
-  "ขอบคุณมากครับ! 🎉 น้องตรงปกเก็บข้อมูลครบตามที่ต้องการแล้ว พร้อมไปดู Smart Profile ของคุณได้เลยครับ";
+  "ขอบคุณมากครับ! น้องตรงปกเก็บข้อมูลครบตามที่ต้องการแล้ว พร้อมไปดู Smart Profile ของคุณได้เลยครับ";
 
 function nowLabel() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -318,24 +318,24 @@ export default function DecoderPage() {
               <button
                 type="button"
                 onClick={() => setActiveMobileTab("chat")}
-                className={`flex-1 rounded-lg py-2 text-center text-xs font-extrabold transition-all ${
+                className={`flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-center text-xs font-extrabold transition-all ${
                   activeMobileTab === "chat"
                     ? "bg-white text-[#0F0F0F]"
                     : "text-[#8A8A8A] hover:text-[#0F0F0F]"
                 }`}
               >
-                💬 ห้องแชทน้องตรงปก
+                <MessageCircle className="h-3.5 w-3.5" strokeWidth={2} /> ห้องแชทน้องตรงปก
               </button>
               <button
                 type="button"
                 onClick={() => setActiveMobileTab("skills")}
-                className={`flex-1 rounded-lg py-2 text-center text-xs font-extrabold transition-all ${
+                className={`flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-center text-xs font-extrabold transition-all ${
                   activeMobileTab === "skills"
                     ? "bg-white text-[#0F0F0F]"
                     : "text-[#8A8A8A] hover:text-[#0F0F0F]"
                 }`}
               >
-                ✨ ทักษะที่สกัดได้ ({confirmedSkills.length})
+                <Sparkle className="h-3.5 w-3.5" strokeWidth={2} /> ทักษะที่สกัดได้ ({confirmedSkills.length})
               </button>
             </div>
 
@@ -377,14 +377,19 @@ export default function DecoderPage() {
                 {/* Mobile-Optimized Compact PDF Resume Upload Box */}
                 <div className="relative mb-3 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-dashed border-[rgba(15,15,15,0.2)] bg-[#FAFAFA] p-2.5 sm:p-3 transition-all hover:border-[#0F0F0F] hover:bg-white">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-lg sm:text-xl">📄</span>
+                    <FileText className="h-5 w-5 flex-shrink-0 text-[#8A8A8A]" strokeWidth={1.75} />
                     <div className="min-w-0">
-                      <div className="truncate text-xs font-bold text-[#0F0F0F]">
-                        {isParsingResume
-                          ? `⏳ กำลังอ่านไฟล์ "${uploadedFile}"...`
-                          : uploadedFile
-                            ? `✓ แนบสำเร็จ: ${uploadedFile}`
-                            : "แนบไฟล์เรซูเม่ PDF (Optional)"}
+                      <div className="flex items-center gap-1.5 truncate text-xs font-bold text-[#0F0F0F]">
+                        {isParsingResume ? (
+                          <>
+                            <Loader2 className="h-3 w-3 flex-shrink-0 animate-spin" strokeWidth={2.5} />
+                            <span className="truncate">กำลังอ่านไฟล์ &quot;{uploadedFile}&quot;...</span>
+                          </>
+                        ) : uploadedFile ? (
+                          <span className="truncate">✓ แนบสำเร็จ: {uploadedFile}</span>
+                        ) : (
+                          <span className="truncate">แนบไฟล์เรซูเม่ PDF (Optional)</span>
+                        )}
                       </div>
                       <span className="hidden sm:inline text-[10px] text-[#8A8A8A]">
                         ลากวาง หรือ คลิกอัปโหลด (รองรับ PDF ไม่เกิน 10MB)
@@ -521,8 +526,8 @@ export default function DecoderPage() {
               >
                 <div>
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-xs font-extrabold text-[#0F0F0F]">
-                      ✨ ทักษะเชิงรุกที่สกัดได้
+                    <span className="flex items-center gap-1.5 text-xs font-extrabold text-[#0F0F0F]">
+                      <Sparkle className="h-3.5 w-3.5" strokeWidth={2} /> ทักษะเชิงรุกที่สกัดได้
                     </span>
                     <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#8A8A8A]">
                       {confirmedSkills.length} ทักษะ

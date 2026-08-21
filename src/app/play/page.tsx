@@ -2,10 +2,25 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  Coffee,
+  Coins,
+  Gauge,
+  Handshake,
+  Lock,
+  PartyPopper,
+  Shield,
+  Shuffle,
+  Target,
+  TrendingUp,
+  Zap,
+} from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { GAME_STAGES as GAMES_DATA } from "@/lib/data";
+
+const GAME_ICONS = { risk: Gauge, flexibility: Shuffle, focus: Target, collaboration: Handshake };
 
 export default function PlayPage() {
   const [currentStage, setCurrentStage] = useState(0); // 0 to 3
@@ -61,6 +76,7 @@ export default function PlayPage() {
   };
 
   const currentGame = GAMES_DATA[currentStage];
+  const CurrentGameIcon = GAME_ICONS[currentGame.iconKey];
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
@@ -107,7 +123,7 @@ export default function PlayPage() {
             {allGamesFinished ? (
               /* All Games Completed Screen */
               <div className="rounded-2xl border border-[rgba(59,245,92,0.4)] bg-[rgba(59,245,92,0.12)] p-6 text-center">
-                <div className="mb-2 text-4xl">🎉</div>
+                <PartyPopper className="mx-auto mb-2 h-9 w-9 text-[#3BF55C]" strokeWidth={1.75} />
                 <h2 className="text-xl font-extrabold text-[#0F0F0F]">
                   ประมวลผลเกมสำเร็จ!
                 </h2>
@@ -117,8 +133,9 @@ export default function PlayPage() {
 
                 {/* Processing Status Notice (Scores hidden until Smart Profile per spec) */}
                 <div className="my-6 rounded-xl border border-[rgba(15,15,15,0.08)] bg-white p-4 text-center">
-                  <div className="text-xs font-bold text-[#0F0F0F]">
-                    🔒 คะแนน 6 Core Metrics ถูกประมวลผลหลังบ้านเรียบร้อยแล้ว
+                  <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#0F0F0F]">
+                    <Lock className="h-3.5 w-3.5" strokeWidth={2} />
+                    คะแนน 6 Core Metrics ถูกประมวลผลหลังบ้านเรียบร้อยแล้ว
                   </div>
                   <div className="mt-1 text-[11px] text-[#8A8A8A]">
                     (ผลประเมินจะผสานรวมกับประวัติประสบการณ์ และปลดล็อกเต็มรูปแบบใน Smart Profile)
@@ -153,7 +170,11 @@ export default function PlayPage() {
 
                 {/* Game Canvas Container */}
                 <div className="relative flex flex-col items-center justify-center rounded-2xl border border-[rgba(15,15,15,0.1)] bg-white p-8 text-center min-h-[300px]">
-                  <div className="mb-2 text-5xl">{currentGame.icon}</div>
+                  <CurrentGameIcon
+                    className="mb-2 h-11 w-11"
+                    style={{ color: currentGame.color }}
+                    strokeWidth={1.75}
+                  />
                   <div className="text-sm font-extrabold text-[#0F0F0F]">{currentGame.subtitle}</div>
                   <p className="mt-1 max-w-[480px] text-xs text-[#5C5C5C]">{currentGame.desc}</p>
 
@@ -169,8 +190,14 @@ export default function PlayPage() {
                             opacity: busted ? 0.2 : 0.85,
                           }}
                         />
-                        <span className="absolute font-mono text-sm font-extrabold text-[#0F0F0F]">
-                          {busted ? "💥 แตก!" : `${pumpValue * 10} pts`}
+                        <span className="absolute flex items-center gap-1 font-mono text-sm font-extrabold text-[#0F0F0F]">
+                          {busted ? (
+                            <>
+                              <Zap className="h-3.5 w-3.5" strokeWidth={2.5} /> แตก!
+                            </>
+                          ) : (
+                            `${pumpValue * 10} pts`
+                          )}
                         </span>
                       </div>
 
@@ -178,16 +205,16 @@ export default function PlayPage() {
                         <button
                           type="button"
                           onClick={handleAction}
-                          className="rounded-full bg-[#0F0F0F] px-6 py-3 text-xs font-bold text-white transition-transform active:scale-95"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[#0F0F0F] px-6 py-3 text-xs font-bold text-white transition-transform active:scale-95"
                         >
-                          🎈 ปั๊มมูลค่า (+20 pts)
+                          <TrendingUp className="h-3.5 w-3.5" strokeWidth={2} /> ปั๊มมูลค่า (+20 pts)
                         </button>
                         <button
                           type="button"
                           onClick={handleCashOut}
-                          className="rounded-full border border-[rgba(15,15,15,0.2)] bg-white px-6 py-3 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[rgba(15,15,15,0.2)] bg-white px-6 py-3 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]"
                         >
-                          💰 Cash Out บันทึกคะแนน
+                          <Coins className="h-3.5 w-3.5" strokeWidth={2} /> Cash Out บันทึกคะแนน
                         </button>
                       </div>
                     </div>
@@ -204,16 +231,16 @@ export default function PlayPage() {
                         <button
                           type="button"
                           onClick={handleAction}
-                          className="rounded-xl border border-[rgba(15,15,15,0.15)] bg-white px-5 py-3 text-xs font-bold text-[#0F0F0F] hover:bg-[#3BF55C]/20"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[rgba(15,15,15,0.15)] bg-white px-5 py-3 text-xs font-bold text-[#0F0F0F] hover:bg-[#3BF55C]/20"
                         >
-                          🍵 Matcha Latte
+                          <Coffee className="h-3.5 w-3.5" strokeWidth={2} /> Matcha Latte
                         </button>
                         <button
                           type="button"
                           onClick={handleAction}
-                          className="rounded-xl border border-[rgba(15,15,15,0.15)] bg-white px-5 py-3 text-xs font-bold text-[#0F0F0F] hover:bg-[#3BF55C]/20"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-[rgba(15,15,15,0.15)] bg-white px-5 py-3 text-xs font-bold text-[#0F0F0F] hover:bg-[#3BF55C]/20"
                         >
-                          🍃 Hojicha Cold
+                          <Coffee className="h-3.5 w-3.5" strokeWidth={2} /> Hojicha Cold
                         </button>
                       </div>
                     </div>
@@ -255,16 +282,16 @@ export default function PlayPage() {
                         <button
                           type="button"
                           onClick={handleAction}
-                          className="rounded-full bg-[#0F0F0F] px-6 py-3 text-xs font-bold text-white"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[#0F0F0F] px-6 py-3 text-xs font-bold text-white"
                         >
-                          🤝 บริจาคเข้าทีม 100%
+                          <Handshake className="h-3.5 w-3.5" strokeWidth={2} /> บริจาคเข้าทีม 100%
                         </button>
                         <button
                           type="button"
                           onClick={handleAction}
-                          className="rounded-full border border-[rgba(15,15,15,0.2)] bg-white px-6 py-3 text-xs font-bold text-[#0F0F0F]"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-[rgba(15,15,15,0.2)] bg-white px-6 py-3 text-xs font-bold text-[#0F0F0F]"
                         >
-                          🛡️ เก็บส่วนตัว 50%
+                          <Shield className="h-3.5 w-3.5" strokeWidth={2} /> เก็บส่วนตัว 50%
                         </button>
                       </div>
                     </div>

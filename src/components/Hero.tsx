@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Clock } from "lucide-react";
 import { RadarChart } from "@/components/RadarChart";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { AXIS_CHIPS, RADAR_DATA } from "@/lib/data";
@@ -55,8 +56,9 @@ export function Hero() {
               หา Candidate (HR)
             </Link>
           </div>
-          <div className="text-[13px] text-[#8A8A8A]">
-            ⏱ ใช้เวลาไม่ถึง 10 นาที · ไม่ต้องมีประสบการณ์ก็เล่นได้
+          <div className="flex items-center gap-1.5 text-[13px] text-[#8A8A8A]">
+            <Clock className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={2} />
+            ใช้เวลาไม่ถึง 10 นาที · ไม่ต้องมีประสบการณ์ก็เล่นได้
           </div>
         </div>
 

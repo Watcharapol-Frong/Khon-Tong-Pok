@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { RotateCcw, SlidersHorizontal } from "lucide-react";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 import type { JobFilters } from "@/hooks/useJobFilters";
 import { BIZ_LABELS, CATEGORY_TABS, LEVEL_LABELS, LOCATION_LABELS, WORK_TYPE_LABELS } from "@/lib/data";
@@ -50,7 +51,7 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="✨ ค้นหางานด้วย AI หรือทักษะ..."
+            placeholder="ค้นหางานด้วย AI หรือทักษะ..."
             className="w-full rounded-xl border border-[rgba(15,15,15,0.1)] bg-white py-[11px] pr-[76px] pl-4 font-sans text-[13px] text-[#0F0F0F] outline-none"
           />
           <span className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer rounded-lg bg-[#0F0F0F] px-[14px] py-[7px] text-xs font-extrabold text-white">
@@ -63,7 +64,7 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
             onClick={() => setFilterPanelOpen((v) => !v)}
             className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-[10px] bg-[#0F0F0F] px-[14px] py-[9px] text-xs font-extrabold whitespace-nowrap text-white"
           >
-            🎛️ กรองผลลัพธ์
+            <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={2} /> กรองผลลัพธ์
             {hasActiveFilters && <span className="h-[7px] w-[7px] rounded-full bg-[#3BF55C]" />}
           </span>
           <div className="h-4 w-px flex-shrink-0 bg-[rgba(15,15,15,0.1)]" />
@@ -199,8 +200,11 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
             </div>
 
             <div className="mt-3.5 flex items-center justify-between border-t border-[rgba(15,15,15,0.1)] pt-3.5">
-              <span onClick={resetFilters} className="cursor-pointer text-xs font-bold text-[#5C5C5C]">
-                ↺ ล้างตัวกรองทั้งหมด
+              <span
+                onClick={resetFilters}
+                className="flex cursor-pointer items-center gap-1.5 text-xs font-bold text-[#5C5C5C]"
+              >
+                <RotateCcw className="h-3 w-3" strokeWidth={2} /> ล้างตัวกรองทั้งหมด
               </span>
               <span
                 onClick={() => setFilterPanelOpen(false)}

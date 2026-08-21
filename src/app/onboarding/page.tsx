@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Clock, GraduationCap, Rocket, Shuffle, TrendingUp } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
@@ -11,28 +12,28 @@ const ROLE_GROUPS = [
     id: "student",
     title: "นักศึกษา / เด็กจบใหม่",
     desc: "เพิ่งจบการศึกษา หรือกำลังศึกษาอยู่ ไม่มีประสบการณ์ทำงานประจำ เน้นวัดศักยภาพและ Soft Skills แฝง",
-    icon: "🎓",
+    icon: GraduationCap,
     badgeColor: "#3BF55C",
   },
   {
     id: "early_career",
     title: "Early Career (ประสบการณ์ 1 - 3 ปี)",
     desc: "เริ่มทำงานแล้ว กำลังค้นหาตำแหน่งงานที่ตอบโจทย์ตัวตนจริงและความก้าวหน้าในสายอาชีพ",
-    icon: "🚀",
+    icon: Rocket,
     badgeColor: "#4D7CFF",
   },
   {
     id: "career_switcher",
     title: "Career Switcher (ย้ายสายงาน)",
     desc: "ต้องการเปลี่ยนสายงานใหม่ โดยใช้ทักษะที่ถ่ายทอดได้ (Transferable Skills) และการเรียนรู้ไวเป็นหลัก",
-    icon: "🔄",
+    icon: Shuffle,
     badgeColor: "#FF6E5C",
   },
   {
     id: "upskiller",
     title: "Upskiller (พัฒนาทักษะเพิ่มเติม)",
     desc: "มีประสบการณ์สูง ต้องการประเมินศักยภาพรอบด้านและอัปเดตโปรไฟล์ทักษะยุคใหม่",
-    icon: "📈",
+    icon: TrendingUp,
     badgeColor: "#F5D949",
   },
 ];
@@ -93,7 +94,7 @@ export default function OnboardingPage() {
                       }`}
                     >
                       <div className="mb-2.5 flex items-center justify-between">
-                        <span className="text-2xl">{group.icon}</span>
+                        <group.icon className="h-6 w-6" style={{ color: group.badgeColor }} strokeWidth={1.75} />
                         <div
                           className="h-3 w-3 rounded-full"
                           style={{ background: group.badgeColor }}
@@ -115,8 +116,9 @@ export default function OnboardingPage() {
               >
                 เริ่มเล่นมินิเกม
               </Link>
-              <div className="text-center text-[11px] text-[#8A8A8A]">
-                ⏱ ไม่ต้องมีเรซูเม่ก่อนก็เริ่มได้ · เล่นจบระบบช่วยสร้างหรืออัปโหลดเรซูเม่เพื่อยื่นสมัครได้เลย
+              <div className="flex items-center justify-center gap-1.5 text-center text-[11px] text-[#8A8A8A]">
+                <Clock className="h-3 w-3 flex-shrink-0" strokeWidth={2} />
+                ไม่ต้องมีเรซูเม่ก่อนก็เริ่มได้ · เล่นจบระบบช่วยสร้างหรืออัปโหลดเรซูเม่เพื่อยื่นสมัครได้เลย
               </div>
             </div>
           </div>

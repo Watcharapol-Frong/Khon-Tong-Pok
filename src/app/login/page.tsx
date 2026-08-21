@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Globe } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
@@ -138,7 +139,7 @@ export default function LoginPage() {
               }}
               className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#F0F0F0]"
             >
-              <span>🌐</span> เข้าสู่ระบบด้วย Google
+              <Globe className="h-3.5 w-3.5" strokeWidth={2} /> เข้าสู่ระบบด้วย Google
             </button>
 
             <div className="mt-4 text-center text-xs text-[#5C5C5C]">

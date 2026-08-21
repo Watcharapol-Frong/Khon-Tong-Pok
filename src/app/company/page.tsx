@@ -5,6 +5,7 @@ import {
   BarChart3,
   Building2,
   Check,
+  Clock,
   Compass,
   EyeOff,
   Gamepad2,
@@ -316,8 +317,9 @@ export default function CompanyPage() {
                 ดูตัวอย่าง Job Board
               </Link>
             </div>
-            <div className="text-[13px] text-[#8A8A8A]">
-              ⏱ เริ่มประกาศตำแหน่งงานแรกได้ใน 5 นาที · ไม่ต้องใช้บัตรเครดิต
+            <div className="flex items-center gap-1.5 text-[13px] text-[#8A8A8A]">
+              <Clock className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={2} />
+              เริ่มประกาศตำแหน่งงานแรกได้ใน 5 นาที · ไม่ต้องใช้บัตรเครดิต
             </div>
           </div>
 

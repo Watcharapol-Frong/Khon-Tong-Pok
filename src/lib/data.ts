@@ -83,7 +83,7 @@ export const GAME_STAGES: GameStage[] = [
     id: 1,
     title: "BART — Balloon Analogue Risk Task",
     subtitle: "วัด: Risk Tolerance & Decision Making under Uncertainty",
-    icon: "🎈",
+    iconKey: "risk",
     desc: "ประเมินว่าคุณรับความเสี่ยงได้มากแค่ไหน และตัดสินใจอย่างไรเมื่อมีสิ่งล่อใจที่ยิ่งเสี่ยงยิ่งได้รับรางวัลมาก แต่ผิดพลาดครั้งเดียวก็หมด วัด Risk Tolerance, Impulse Control และ Expected Value Reasoning",
     color: "#FF6E5C",
   },
@@ -92,7 +92,7 @@ export const GAME_STAGES: GameStage[] = [
     title: "WCST — Wisconsin Card Sorting Test",
     subtitle: "วัด: Learning Agility & Cognitive Flexibility",
     desc: "ประเมินว่าคุณเรียนรู้กฎใหม่และปรับกลยุทธ์ได้เร็วแค่ไหนเมื่อกติกาเปลี่ยนกะทันหันโดยไม่มีคำเตือน วัด Rule Shifting, Feedback-based Learning และ Perseveration (ความดื้อรั้นต่อกฎเดิม)",
-    icon: "🃏",
+    iconKey: "flexibility",
     color: "#3BF55C",
   },
   {
@@ -100,7 +100,7 @@ export const GAME_STAGES: GameStage[] = [
     title: "Flanker Task — Eriksen Flanker Test",
     subtitle: "วัด: Attentional Focus & Distractor Filtering",
     desc: "ประเมินความสามารถในการโฟกัสและกรองสิ่งรบกวนออกจากงานหลัก วัด Selective Attention, Inhibitory Control และ Reaction Time under Conflict",
-    icon: "🎯",
+    iconKey: "focus",
     color: "#4D7CFF",
   },
   {
@@ -108,7 +108,7 @@ export const GAME_STAGES: GameStage[] = [
     title: "PGG — Public Goods Game",
     subtitle: "วัด: Collaboration Mindset & Prosocial Behavior",
     desc: "ประเมินว่าคุณตัดสินใจจัดสรรทรัพยากรร่วมกับผู้อื่นอย่างไรเมื่อผลลัพธ์ขึ้นอยู่กับความร่วมมือของทั้งทีม วัด Cooperation Level, Trust และ Social Preference",
-    icon: "🤝",
+    iconKey: "collaboration",
     color: "#F5D949",
   },
 ];

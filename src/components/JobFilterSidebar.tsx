@@ -1,5 +1,6 @@
 "use client";
 
+import { RotateCcw } from "lucide-react";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 import type { JobFilters } from "@/hooks/useJobFilters";
 import { BIZ_LABELS, CATEGORY_TABS, LEVEL_LABELS, LOCATION_LABELS, WORK_TYPE_LABELS } from "@/lib/data";
@@ -77,7 +78,7 @@ export function JobFilterSidebar({ filters }: { filters: JobFilters }) {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="✨ ค้นหางานด้วย AI หรือทักษะ..."
+          placeholder="ค้นหางานด้วย AI หรือทักษะ..."
           className="w-full rounded-lg border border-[rgba(15,15,15,0.1)] bg-white py-2 pr-3 pl-3 font-sans text-[13px] text-[#0F0F0F] outline-none"
         />
       </div>
@@ -179,9 +180,9 @@ export function JobFilterSidebar({ filters }: { filters: JobFilters }) {
       {hasActiveFilters && (
         <button
           onClick={resetFilters}
-          className="mt-4 w-full cursor-pointer border-t border-[rgba(15,15,15,0.08)] pt-3 text-center text-xs font-bold text-[#5C5C5C]"
+          className="mt-4 flex w-full cursor-pointer items-center justify-center gap-1.5 border-t border-[rgba(15,15,15,0.08)] pt-3 text-center text-xs font-bold text-[#5C5C5C]"
         >
-          ↺ ล้างตัวกรองทั้งหมด
+          <RotateCcw className="h-3 w-3" strokeWidth={2} /> ล้างตัวกรองทั้งหมด
         </button>
       )}
     </div>
