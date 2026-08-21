@@ -96,6 +96,24 @@ export default function DecoderPage() {
     setMessages((prev) => [...prev, userMsg]);
     setInputText("");
 
+    // A stray typo or an accidental Enter shouldn't burn one of the 4
+    // bounded turns — the candidate would lose a real answer slot and
+    // we'd still have gained no usable data from it. Ask them to
+    // elaborate instead, without advancing questionStage or touching
+    // the skill matcher/API.
+    if (userQuery.length < 3) {
+      setTimeout(() => {
+        const aiReply: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          sender: "ai",
+          text: "ข้อความสั้นไปหน่อยครับ ขอรายละเอียดเพิ่มอีกนิดได้ไหมครับ จะได้สกัดข้อมูลได้แม่นยำขึ้น",
+          time: nowLabel(),
+        };
+        setMessages((prev) => [...prev, aiReply]);
+      }, 500);
+      return;
+    }
+
     // The candidate's name comes from their resume (see the upload handler
     // below) rather than being asked in chat, so every message here goes
     // straight to skill extraction — no first-message name-collection step.
