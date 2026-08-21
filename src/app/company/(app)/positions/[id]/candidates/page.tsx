@@ -4,10 +4,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock, Star } from "lucide-react";
-import { Footer } from "@/components/Footer";
 import { InterviewInviteModal } from "@/components/InterviewInviteModal";
-import { LoadingMascot } from "@/components/LoadingMascot";
-import { CompanyNavbar } from "@/components/CompanyNavbar";
 import {
   createInterviewInvite,
   ensureMatchesForPosition,
@@ -88,22 +85,13 @@ export default function PositionCandidatesPage() {
     return list;
   }, [candidates, sortOrder, skillFilter]);
 
-  if (!session) {
-    return (
-      <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-        <CompanyNavbar />
-        <LoadingMascot />
-        <Footer />
-      </div>
-    );
-  }
+  if (!session) return null;
 
   // Guard: only this position's own company may view its candidates.
   if (!position || position.companyId !== session.company.id) {
     return (
-      <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-        <CompanyNavbar />
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-[#8A8A8A]">
+      <div className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-6 md:px-10">
+        <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-[#8A8A8A]">
           <p>ไม่พบตำแหน่งงานนี้ หรือคุณไม่มีสิทธิ์เข้าถึง</p>
           <Link
             href="/company/positions"
@@ -113,7 +101,6 @@ export default function PositionCandidatesPage() {
             กลับไปหน้าจัดการตำแหน่งงาน
           </Link>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -123,10 +110,8 @@ export default function PositionCandidatesPage() {
   ).filter((entry): entry is [keyof SoftSkillScores, number] => entry[1] !== undefined);
 
   return (
-    <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-      <CompanyNavbar />
-
-      <div className="mx-auto w-full max-w-[900px] flex-1 px-4 py-10 sm:px-6 md:px-8">
+    <>
+      <div className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-6 md:px-10">
         <Link
           href="/company/positions"
           className="inline-flex items-center gap-1 text-xs font-bold text-[#8A8A8A] hover:text-[#0F0F0F]"
@@ -315,8 +300,6 @@ export default function PositionCandidatesPage() {
           onSubmit={handleSendInvite}
         />
       )}
-
-      <Footer />
-    </div>
+    </>
   );
 }

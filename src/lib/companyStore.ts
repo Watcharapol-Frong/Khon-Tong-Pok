@@ -472,6 +472,30 @@ export function createInterviewInvite(
   return slot;
 }
 
+/**
+ * Cancels an interview invite: removes the InterviewSlot and reverts the
+ * underlying Match back to "pending" — the mirror image of
+ * createInterviewInvite, for when HR changes their mind. Works regardless of
+ * the slot's current status (pending/confirmed/declined) since HR may want
+ * to clear any of those and start over.
+ */
+export function cancelInterviewInvite(positionId: string, jobSeekerId: string): void {
+  const store = readStore();
+  const matchId = getMatchId(positionId, jobSeekerId);
+
+  store.interviewSlots = store.interviewSlots.filter((s) => s.matchId !== matchId);
+
+  const matchIdx = store.matches.findIndex(
+    (m) => m.positionId === positionId && m.jobSeekerId === jobSeekerId
+  );
+  if (matchIdx !== -1) {
+    store.matches[matchIdx] = { ...store.matches[matchIdx], status: "pending" };
+  }
+
+  writeStore(store);
+  notify();
+}
+
 export type CompanyInterviewSlot = InterviewSlot & {
   positionTitle: string;
   jobSeeker: JobSeeker;

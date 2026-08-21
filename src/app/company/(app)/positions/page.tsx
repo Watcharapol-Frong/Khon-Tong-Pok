@@ -1,12 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
+import { Suspense, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, Plus } from "lucide-react";
-import { Footer } from "@/components/Footer";
-import { LoadingMascot } from "@/components/LoadingMascot";
-import { CompanyNavbar } from "@/components/CompanyNavbar";
 import onetSkills from "@/data/onet_skills_dictionary_full.json";
 import { SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
 import {
@@ -76,19 +73,15 @@ function parseSoftSkillInput(value: string): number | undefined {
 }
 
 function CompanyPositionsContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
+  // (app)/layout.tsx already guards against no-session and redirects to
+  // /company/login before this page ever mounts — this read is just to
+  // type-narrow and access session.company.id for this page's own data.
   const session = useSyncExternalStore(
     subscribeToStore,
     getSessionSnapshot,
     getServerSessionSnapshot
   );
-
-  useEffect(() => {
-    if (getSessionSnapshot() === null) {
-      router.replace("/company/login");
-    }
-  }, [router]);
 
   // searchParams is known at initial render on both server and client (it's
   // part of the request, unlike localStorage), so a lazy useState initializer
@@ -99,7 +92,9 @@ function CompanyPositionsContent() {
   const [formError, setFormError] = useState("");
   const [invalidSkillsNotice, setInvalidSkillsNotice] = useState<string[]>([]);
 
-  const positions = session ? getPositionsSnapshot(session.company.id) : [];
+  if (!session) return null;
+
+  const positions = getPositionsSnapshot(session.company.id);
   const isFormOpen = isCreating || editingPositionId !== null;
 
   const startCreate = () => {
@@ -128,7 +123,6 @@ function CompanyPositionsContent() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!session) return;
 
     if (!form.title.trim()) {
       setFormError("กรุณากรอกชื่อตำแหน่งงาน");
@@ -164,21 +158,9 @@ function CompanyPositionsContent() {
     setFormError("");
   };
 
-  if (!session) {
-    return (
-      <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-        <CompanyNavbar />
-        <LoadingMascot />
-        <Footer />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-      <CompanyNavbar />
-
-      <div className="mx-auto w-full max-w-[900px] flex-1 px-4 py-10 sm:px-6 md:px-8">
+    <>
+      <div className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-6 md:px-10">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(15,15,15,0.08)] pb-6">
           <div>
             <Link
@@ -399,9 +381,7 @@ function CompanyPositionsContent() {
           </div>
         )}
       </div>
-
-      <Footer />
-    </div>
+    </>
   );
 }
 
