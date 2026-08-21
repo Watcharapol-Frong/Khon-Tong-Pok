@@ -8,7 +8,7 @@ import { ArrowLeft, Briefcase, Check, Clock, EyeOff, Mail, MapPin, Phone, Star }
 import { Footer } from "@/components/Footer";
 import { InterviewInviteModal } from "@/components/InterviewInviteModal";
 import { LoadingMascot } from "@/components/LoadingMascot";
-import { Navbar } from "@/components/Navbar";
+import { CompanyNavbar } from "@/components/CompanyNavbar";
 import { RadarChart } from "@/components/RadarChart";
 import {
   createInterviewInvite,
@@ -66,7 +66,7 @@ export default function CandidateReportPage() {
   if (!session) {
     return (
       <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-        <Navbar />
+        <CompanyNavbar />
         <LoadingMascot />
         <Footer />
       </div>
@@ -79,7 +79,7 @@ export default function CandidateReportPage() {
   if (!report) {
     return (
       <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-        <Navbar />
+        <CompanyNavbar />
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-[#8A8A8A]">
           <p>ไม่พบผู้สมัครนี้ หรือคุณไม่มีสิทธิ์เข้าถึง</p>
           <Link
@@ -113,7 +113,7 @@ export default function CandidateReportPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-      <Navbar />
+      <CompanyNavbar />
 
       <div className="mx-auto w-full max-w-[720px] flex-1 px-4 py-10 sm:px-6 md:px-8">
         <Link

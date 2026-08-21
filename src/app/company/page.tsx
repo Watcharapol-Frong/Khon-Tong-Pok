@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BarChart3, Building2, Compass, EyeOff, Gamepad2 } from "lucide-react";
 import { Faq } from "@/components/Faq";
 import { Footer } from "@/components/Footer";
-import { Navbar } from "@/components/Navbar";
+import { CompanyNavbar } from "@/components/CompanyNavbar";
 import { COMPANY_FAQ_DATA } from "@/lib/data";
 
 export const metadata: Metadata = {
@@ -57,7 +57,7 @@ const COMPANY_STEPS = [
 export default function CompanyPage() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-      <Navbar />
+      <CompanyNavbar />
 
       {/* Hero */}
       <div className="relative overflow-hidden">

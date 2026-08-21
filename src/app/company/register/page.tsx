@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Eye, EyeOff, Mail } from "lucide-react";
 import { Footer } from "@/components/Footer";
-import { Navbar } from "@/components/Navbar";
+import { CompanyNavbar } from "@/components/CompanyNavbar";
 import { checkEmailDomain, registerOrJoinCompany, setHRSession } from "@/lib/companyStore";
 import type { Company } from "@/lib/types";
 
@@ -81,7 +81,7 @@ export default function CompanyRegisterPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-      <Navbar />
+      <CompanyNavbar />
 
       <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-12 sm:px-6 md:px-8">
         <div

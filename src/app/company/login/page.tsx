@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { Footer } from "@/components/Footer";
-import { Navbar } from "@/components/Navbar";
+import { CompanyNavbar } from "@/components/CompanyNavbar";
 import { loginHR, setHRSession } from "@/lib/companyStore";
 
 export default function CompanyLoginPage() {
@@ -35,7 +35,7 @@ export default function CompanyLoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-      <Navbar />
+      <CompanyNavbar />
 
       <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 py-12 sm:px-6 md:px-8">
         <div

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, Plus } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { LoadingMascot } from "@/components/LoadingMascot";
-import { Navbar } from "@/components/Navbar";
+import { CompanyNavbar } from "@/components/CompanyNavbar";
 import onetSkills from "@/data/onet_skills_dictionary_full.json";
 import { SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
 import {
@@ -167,7 +167,7 @@ function CompanyPositionsContent() {
   if (!session) {
     return (
       <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-        <Navbar />
+        <CompanyNavbar />
         <LoadingMascot />
         <Footer />
       </div>
@@ -176,7 +176,7 @@ function CompanyPositionsContent() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
-      <Navbar />
+      <CompanyNavbar />
 
       <div className="mx-auto w-full max-w-[900px] flex-1 px-4 py-10 sm:px-6 md:px-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(15,15,15,0.08)] pb-6">
