@@ -6,10 +6,6 @@ interface StepItem {
   step: Step;
   title: string;
   href: string;
-  // Each step's own pastel, drawn from the same 6-color set already used
-  // for SOFT_SKILL_AXIS_META/hero sparkles elsewhere — not a one-off
-  // palette invented for this component.
-  color: string;
   icon: (className: string) => React.ReactNode;
 }
 
@@ -18,7 +14,6 @@ const STEPS: StepItem[] = [
     step: 1,
     title: "Role Selection",
     href: "/onboarding",
-    color: "#FF6E5C",
     icon: (className) => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path
@@ -33,7 +28,6 @@ const STEPS: StepItem[] = [
     step: 2,
     title: "Mini-Games",
     href: "/play",
-    color: "#F5D949",
     icon: (className) => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <rect x="2" y="6" width="20" height="12" rx="4" />
@@ -45,7 +39,6 @@ const STEPS: StepItem[] = [
     step: 3,
     title: "น้องตรงปก",
     href: "/decoder",
-    color: "#4D7CFF",
     icon: (className) => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path
@@ -60,7 +53,6 @@ const STEPS: StepItem[] = [
     step: 4,
     title: "Smart Profile",
     href: "/profile",
-    color: "#3BF55C",
     icon: (className) => (
       <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <circle cx="12" cy="12" r="9" />
@@ -74,40 +66,40 @@ const STEPS: StepItem[] = [
 export function AssessmentStepBar({ currentStep }: { currentStep: Step }) {
   return (
     <div className="mx-auto w-full max-w-[760px] px-4 pt-5 pb-3">
-      {/* Same soft-fill, no-border pill treatment as the navbar itself —
-          this used to float directly on the page as bordered outline
-          circles, which matched neither. */}
+      {/* Same soft-fill, no-border pill treatment as the navbar itself.
+          Monochrome + one accent (green = done, matching "Verified"
+          elsewhere in the app) instead of a different pastel per step —
+          four unrelated colors read as noisy against the rest of the
+          site's restrained palette. */}
       <div className="relative flex items-start justify-between rounded-[28px] bg-[#FAFAFA] px-4 py-5 sm:px-6">
         {STEPS.map((item, idx) => {
           const isDone = currentStep > item.step;
           const isActive = currentStep === item.step;
-          const isReached = isDone || isActive;
 
           return (
             <div key={item.step} className="relative z-10 flex flex-1 flex-col items-center">
               <div className="relative flex items-center justify-center">
                 <div
-                  className="relative flex h-12 w-12 items-center justify-center rounded-full transition-all duration-300 sm:h-14 sm:w-14"
-                  style={{
-                    backgroundColor: isReached ? `${item.color}1F` : "#FFFFFF",
-                  }}
+                  className={`relative flex h-12 w-12 items-center justify-center rounded-full transition-all duration-300 sm:h-14 sm:w-14 ${
+                    isActive
+                      ? "bg-[#0F0F0F]"
+                      : isDone
+                        ? "bg-[rgba(59,245,92,0.15)]"
+                        : "bg-white"
+                  }`}
                 >
                   {isDone && (
-                    <span
-                      className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-extrabold text-white"
-                      style={{ backgroundColor: item.color }}
-                    >
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#3BF55C] text-[9px] font-extrabold text-[#0F0F0F]">
                       ✓
                     </span>
                   )}
                   {isActive && (
-                    <span
-                      className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full ring-2 ring-white"
-                      style={{ backgroundColor: item.color }}
-                    />
+                    <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-white ring-2 ring-[#FAFAFA]" />
                   )}
 
-                  <div style={{ color: isReached ? item.color : "#B5B5B5" }}>
+                  <div
+                    className={isActive ? "text-white" : isDone ? "text-[#0f5c22]" : "text-[#B5B5B5]"}
+                  >
                     {item.icon("h-5 w-5 sm:h-6 sm:w-6 transition-colors")}
                   </div>
                 </div>
@@ -131,10 +123,9 @@ export function AssessmentStepBar({ currentStep }: { currentStep: Step }) {
                     {[0, 1, 2].map((dot) => (
                       <span
                         key={dot}
-                        className="h-1.5 w-1.5 rounded-full transition-colors"
-                        style={{
-                          backgroundColor: currentStep > item.step ? item.color : "#E5E5E5",
-                        }}
+                        className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                          currentStep > item.step ? "bg-[#3BF55C]" : "bg-[#E5E5E5]"
+                        }`}
                       />
                     ))}
                   </div>
