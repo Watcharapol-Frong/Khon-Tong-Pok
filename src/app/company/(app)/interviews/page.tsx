@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock, X } from "lucide-react";
 import {
-  cancelInterviewInvite,
   getInterviewSlotsForCompanySnapshot,
   getSessionSnapshot,
   subscribeToStore,
@@ -61,7 +60,7 @@ export default function CompanyInterviewsPage() {
           <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
           กลับ Dashboard
         </Link>
-        <h1 className="mt-1 mb-1 text-[clamp(20px,3.5vw,26px)] font-extrabold tracking-[-0.02em]">
+        <h1 className="mt-2 mb-1 text-[clamp(20px,3.5vw,26px)] font-extrabold tracking-[-0.02em]">
           นัดสัมภาษณ์ทั้งหมด
         </h1>
         <p className="mb-6 text-xs text-[#8A8A8A]">
@@ -78,18 +77,12 @@ export default function CompanyInterviewsPage() {
               const StatusIcon = STATUS_META[slot.status].icon;
               const [positionId] = slot.matchId.split("::");
               return (
-                // A plain div (not <Link>) because the cancel button below
-                // needs to be independently clickable — nesting a <button>
-                // inside an <a> is invalid HTML and would also trigger the
-                // link's navigation on every button click.
-                <div
+                <Link
                   key={slot.matchId}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-white p-4"
+                  href={`/company/interviews/${positionId}/${slot.jobSeeker.id}`}
+                  className="flex w-full flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#FAFAFA] p-4 text-left transition-colors hover:bg-[#F0F0F0]"
                 >
-                  <Link
-                    href={`/company/candidates/${slot.jobSeeker.id}`}
-                    className="min-w-0 flex-1 rounded-xl transition-opacity hover:opacity-70"
-                  >
+                  <div className="min-w-0 flex-1">
                     <div className="text-xs font-extrabold text-[#0F0F0F]">
                       {slot.jobSeeker.realName}
                     </div>
@@ -102,23 +95,21 @@ export default function CompanyInterviewsPage() {
                         ยืนยันเวลา: {slot.confirmedTime}
                       </div>
                     )}
-                  </Link>
-                  <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
+                  </div>
+                  {/* Skipped when confirmed — the "ยืนยันเวลา: ..." line
+                      above already says this is confirmed, so a second
+                      "ยืนยันนัดแล้ว" badge here would just repeat it. Pending/
+                      declined still need the badge since nothing else on the
+                      card states their status. */}
+                  {!(slot.status === "confirmed" && slot.confirmedTime) && (
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-bold ${STATUS_META[slot.status].className}`}
+                      className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-bold ${STATUS_META[slot.status].className}`}
                     >
                       <StatusIcon className="h-3 w-3" strokeWidth={2.5} />
                       {STATUS_META[slot.status].label}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => cancelInterviewInvite(positionId, slot.jobSeeker.id)}
-                      className="cursor-pointer text-[10px] font-bold text-[#C0392B] hover:underline"
-                    >
-                      ยกเลิกคำเชิญ
-                    </button>
-                  </div>
-                </div>
+                  )}
+                </Link>
               );
             })}
           </div>

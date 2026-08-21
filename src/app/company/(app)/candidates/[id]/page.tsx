@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -19,28 +19,58 @@ import type { HardSkillStatus, SoftSkillScores } from "@/lib/types";
 const getServerSessionSnapshot = () => null;
 const getServerNull = () => null;
 
+// partial uses blue, not amber — amber is reserved for the "ช้างเผือก"
+// standout badge above, which can appear on the same page.
 const STATUS_META: Record<HardSkillStatus, { label: string; className: string }> = {
   verified: { label: "Verified", className: "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]" },
-  partial: { label: "Partial", className: "bg-[rgba(245,217,73,0.2)] text-[#856700]" },
+  partial: { label: "Partial", className: "bg-[rgba(77,124,255,0.12)] text-[#4D7CFF]" },
   unclear: { label: "Unclear", className: "bg-[#F0F0F0] text-[#8A8A8A]" },
 };
-
-// Once Blind Review lifts there's still no real photo upload in this mock
-// app — an initial-letter avatar in a deterministic brand color (same
-// palette as SOFT_SKILL_AXIS_META) is an honest stand-in rather than a fake
-// photo, and gives each revealed candidate a stable, recognizable color.
-const AVATAR_PALETTE = ["#FF6E5C", "#3BF55C", "#4D7CFF", "#F5D949", "#B14DFF", "#FF5CA8"];
-function avatarColorFor(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % 997;
-  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
-}
 
 export default function CandidateReportPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const jobSeekerId = params.id;
   const [inviteTargetPositionId, setInviteTargetPositionId] = useState<string | null>(null);
+
+  // RadarChart takes a pixel `size` prop, not a CSS width — it computes
+  // label font size, label wrap width, and dot radius directly from that
+  // number, so a hardcoded size can't track the column it actually renders
+  // in (full-width on mobile, half-width beside the stat cards on desktop).
+  // Measuring the wrapper's real rendered width keeps all of that in sync
+  // with whatever space is actually available instead of guessing per
+  // breakpoint. A callback ref (not useRef + useEffect(..., [])) because the
+  // wrapper only mounts once session/report finish loading, past the early
+  // returns below — an effect with an empty dep array would fire once
+  // against a still-null ref and never run again.
+  //
+  // RadarChart's axis labels are positioned *outside* its size×size box on
+  // purpose (readability) — at size=s they can extend roughly another 0.5s
+  // past each edge. Passing the wrapper's full measured width as `size`
+  // left no room for that overflow once the chart sat directly beside the
+  // stat-cards column (previously it had a whole page's margin to bleed
+  // into), so labels spilled over and overlapped the cards. Scaling down to
+  // 60% of the measured width reserves that headroom instead.
+  const chartResizeObserverRef = useRef<ResizeObserver | null>(null);
+  const [chartSize, setChartSize] = useState(230);
+  const chartWrapRefCallback = (el: HTMLDivElement | null) => {
+    chartResizeObserverRef.current?.disconnect();
+    chartResizeObserverRef.current = null;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (!width) return;
+      // Side-by-side (lg+) has a stat-cards column right next to it, so it
+      // keeps the bigger overflow reserve; stacked layout has nothing beside
+      // it to collide with, so it can use more of its measured width.
+      const sideBySide = window.matchMedia("(min-width: 1024px)").matches;
+      const ratio = sideBySide ? 0.55 : 0.68;
+      const ceiling = sideBySide ? 320 : 250;
+      setChartSize(Math.max(170, Math.min(ceiling, Math.floor(width * ratio))));
+    });
+    observer.observe(el);
+    chartResizeObserverRef.current = observer;
+  };
 
   const session = useSyncExternalStore(
     subscribeToStore,
@@ -114,18 +144,24 @@ export default function CandidateReportPage() {
           <div className="mt-2 mb-6 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               {report.nameRevealed ? (
-                <div
-                  className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-base font-extrabold"
-                  style={{
-                    backgroundColor: `${avatarColorFor(jobSeekerId)}26`,
-                    color: avatarColorFor(jobSeekerId),
-                  }}
-                >
-                  {displayName.charAt(0)}
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F0F0F0]">
+                  <Image
+                    src={report.jobSeeker.photoUrl}
+                    alt={displayName}
+                    width={48}
+                    height={48}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
               ) : (
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-[#F0F0F0] text-xs font-extrabold text-[#5A5A5A]">
-                  #{jobSeekerId.replace(/^js_/, "").toUpperCase()}
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F0F0F0]">
+                  <Image
+                    src="/mascot/mascot-blind-candidate.png"
+                    alt="ผู้สมัครที่ยังไม่เปิดเผยตัวตน (Blind Review)"
+                    width={48}
+                    height={48}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
               )}
               <div>
@@ -149,14 +185,14 @@ export default function CandidateReportPage() {
           </div>
 
           {report.isStandout && (
-            <div className="flex items-start gap-2 mb-6 rounded-2xl border border-[rgba(245,217,73,0.4)] bg-[rgba(245,217,73,0.1)] p-3.5 text-xs font-semibold text-[#856700]">
+            <div className="flex items-start gap-2 mb-6 rounded-2xl bg-[rgba(245,217,73,0.1)] p-3.5 text-xs font-semibold text-[#856700]">
               <Star className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 fill-current" strokeWidth={1.75} />
               <span>ผู้สมัครช้างเผือก — มี Match Score ตั้งแต่ 90% ขึ้นไปในอย่างน้อยหนึ่งตำแหน่ง</span>
             </div>
           )}
 
           {/* Contact & personal info — same Blind Review gate as the name */}
-          <div className="mb-6 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-4">
+          <div className="mb-6 rounded-2xl bg-[#FAFAFA] p-4">
             <h2 className="mb-3 text-xs font-extrabold text-[#0F0F0F]">ข้อมูลส่วนตัว</h2>
             {report.nameRevealed ? (
               <div className="flex flex-col gap-2 text-xs text-[#0F0F0F]">
@@ -195,7 +231,7 @@ export default function CandidateReportPage() {
           </div>
 
           {/* Matches / interview actions */}
-          <div className="mb-6 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-4">
+          <div className="mb-6 rounded-2xl bg-[#FAFAFA] p-4">
             <h2 className="mb-3 text-xs font-extrabold text-[#0F0F0F]">
               ตำแหน่งที่ Match ({report.matches.length})
             </h2>
@@ -244,11 +280,11 @@ export default function CandidateReportPage() {
             {report.jobSeeker.hardSkills.length === 0 ? (
               <p className="text-xs text-[#8A8A8A]">ไม่มีข้อมูล</p>
             ) : (
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 rounded-2xl bg-[#FAFAFA] p-3">
                 {report.jobSeeker.hardSkills.map((h) => (
                   <div
                     key={h.skill}
-                    className="flex items-center justify-between rounded-xl border border-[rgba(15,15,15,0.08)] bg-white px-3.5 py-2"
+                    className="flex items-center justify-between rounded-xl bg-white px-3.5 py-2"
                   >
                     <span className="text-xs font-semibold text-[#0F0F0F]">{h.skill}</span>
                     <span
@@ -262,45 +298,68 @@ export default function CandidateReportPage() {
             )}
           </div>
 
-          {/* Soft skills radar */}
-          <div className="mb-6">
-            <h2 className="mb-3 text-sm font-extrabold text-[#0F0F0F]">Soft Skills</h2>
-            {radarData.length === 0 ? (
-              <p className="text-xs text-[#8A8A8A]">ไม่มีข้อมูล</p>
-            ) : (
-              <div className="rounded-2xl border border-[rgba(15,15,15,0.08)] bg-[#FAFAFA] p-4">
-                <div className="flex justify-center">
-                  <RadarChart data={radarData} size={280} theme="mono" showLabels animate />
+        </div>
+
+        {/* Soft skills radar — breaks out of the 720px reading column on
+            purpose: it's a data widget, not prose, and the extra width is
+            what makes the chart genuinely bigger/more prominent than the
+            stat cards while still leaving the label-overflow margin that
+            chartWrapRefCallback above relies on. Narrower and this would be
+            right back to labels colliding with the cards column. */}
+        <div className="mx-auto w-full max-w-[960px] mb-6">
+          <h2 className="mb-3 text-sm font-extrabold text-[#0F0F0F]">Soft Skills</h2>
+          {radarData.length === 0 ? (
+            <p className="text-xs text-[#8A8A8A]">ไม่มีข้อมูล</p>
+          ) : (
+            <div className="rounded-2xl bg-[#FAFAFA] p-4">
+              <div className="flex flex-col items-center gap-5 lg:flex-row lg:items-center lg:gap-6">
+                <div
+                  ref={chartWrapRefCallback}
+                  className="flex w-full max-w-[300px] flex-shrink-0 items-center justify-center lg:w-3/5 lg:max-w-none"
+                >
+                  <RadarChart data={radarData} size={chartSize} theme="mono" showLabels animate />
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="grid w-full grid-cols-2 gap-2 lg:w-2/5">
                   {radarData.map((d) => (
-                    <div
-                      key={d.axis}
-                      className="rounded-xl border border-[rgba(15,15,15,0.08)] bg-white p-2.5 text-center"
-                    >
-                      <div className="text-sm font-extrabold text-[#0F0F0F]">{d.value}%</div>
-                      <div className="text-[10px] leading-snug text-[#8A8A8A]">{d.axis}</div>
+                    <div key={d.axis} className="rounded-xl bg-white p-2.5 text-center">
+                      <div className="text-sm font-extrabold text-[#0F0F0F] sm:text-base">
+                        {d.value}%
+                      </div>
+                      <div className="text-[9px] leading-snug text-[#8A8A8A] sm:text-[10px]">
+                        {d.axis}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
 
+        <div className="mx-auto w-full max-w-[720px]">
           {/* AI Summary */}
           <div className="mb-6">
-            <div className="mb-3 flex items-center gap-2">
-              <Image
-                src="/mascot/mascot-ai-thinking.png"
-                alt=""
-                width={28}
-                height={28}
-                className="flex-shrink-0"
-              />
-              <h2 className="text-sm font-extrabold text-[#0F0F0F]">AI Summary</h2>
-            </div>
-            <div className="rounded-2xl border border-[rgba(77,124,255,0.2)] bg-[rgba(77,124,255,0.06)] p-4 text-xs leading-relaxed text-[#0F0F0F]">
-              {report.jobSeeker.aiSummary}
+            <div className="rounded-2xl bg-[rgba(77,124,255,0.06)] p-4 sm:p-5">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:gap-5 sm:text-left">
+                <Image
+                  src="/mascot/mascot-ai-summary.png"
+                  alt=""
+                  width={100}
+                  height={100}
+                  className="h-[clamp(64px,20vw,100px)] w-[clamp(64px,20vw,100px)] flex-shrink-0 object-contain"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                    <h2 className="text-sm font-extrabold text-[#0F0F0F]">AI Summary</h2>
+                    <span className="inline-flex max-w-full items-center rounded-full bg-white px-2.5 py-1 text-[10px] font-bold whitespace-normal text-[#4D7CFF]">
+                      วิเคราะห์โดยน้องตรงปก
+                    </span>
+                  </div>
+                  <p className="text-xs leading-relaxed break-words text-[#0F0F0F]">
+                    {report.jobSeeker.aiSummary}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

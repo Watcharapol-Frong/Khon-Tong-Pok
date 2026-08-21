@@ -120,6 +120,8 @@ export type JobSeeker = {
   currentRole: string;
   yearsOfExperience: number;
   contact: JobSeekerContactInfo;
+  /** Same Blind Review gate as realName — only rendered once nameRevealed is true; see the blind-state mascot image used before that. */
+  photoUrl: string;
   hardSkills: JobSeekerHardSkill[];
   softSkills: SoftSkillScores;
   aiSummary: string;

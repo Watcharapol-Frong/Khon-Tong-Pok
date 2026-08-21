@@ -11,6 +11,7 @@ import type {
 import {
   MOCK_COMPANIES,
   MOCK_HR_USERS,
+  MOCK_INTERVIEW_SLOTS,
   MOCK_JOB_SEEKERS,
   MOCK_MATCHES,
   MOCK_POSITIONS,
@@ -42,7 +43,7 @@ const SEED_PASSWORD = "demo1234";
 // readStore() reseeds from scratch on a mismatch rather than attempting a
 // partial migration — this is disposable mock/demo data (no backend), so a
 // stale shape isn't worth reconciling field-by-field.
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 8;
 
 type Credential = { hrUserId: string; password: string };
 
@@ -77,7 +78,7 @@ function seedStore(): CompanyStoreData {
     matches: [...MOCK_MATCHES],
     jobSeekers: [...MOCK_JOB_SEEKERS],
     credentials: MOCK_HR_USERS.map((u) => ({ hrUserId: u.id, password: SEED_PASSWORD })),
-    interviewSlots: [],
+    interviewSlots: [...MOCK_INTERVIEW_SLOTS],
   };
 }
 
@@ -491,6 +492,33 @@ export function cancelInterviewInvite(positionId: string, jobSeekerId: string): 
   if (matchIdx !== -1) {
     store.matches[matchIdx] = { ...store.matches[matchIdx], status: "pending" };
   }
+
+  writeStore(store);
+  notify();
+}
+
+/**
+ * Records which of the proposed times the interview actually happens at.
+ * Stands in for the candidate-facing accept flow that doesn't exist yet
+ * (see InterviewSlot's docstring) — HR marks the slot "confirmed" on the
+ * candidate's behalf once a time has been agreed outside the app.
+ */
+export function confirmInterviewTime(
+  positionId: string,
+  jobSeekerId: string,
+  confirmedTime: string
+): void {
+  const store = readStore();
+  const matchId = getMatchId(positionId, jobSeekerId);
+
+  const slotIdx = store.interviewSlots.findIndex((s) => s.matchId === matchId);
+  if (slotIdx === -1) return;
+
+  store.interviewSlots[slotIdx] = {
+    ...store.interviewSlots[slotIdx],
+    status: "confirmed",
+    confirmedTime,
+  };
 
   writeStore(store);
   notify();

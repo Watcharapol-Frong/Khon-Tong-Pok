@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import { Send } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
-import { extractTextFromPdf } from "@/lib/pdf";
+import { extractTextFromPdf, guessNameFromResumeText } from "@/lib/pdf";
 import { matchSkills } from "@/lib/ahoCorasick";
 import onetSkills from "@/data/onet_skills_dictionary_full.json";
 
@@ -21,10 +23,31 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "1",
     sender: "ai",
-    text: "สวัสดีครับ! ผมคือ น้องตรงปก 🤖 ก่อนที่เราจะเริ่มวิเคราะห์ประสบการณ์กัน ขออนุญาตสอบถามชื่อ หรือชื่อเล่น สำหรับให้ผมเรียกคุณตลอดการประเมินหน่อยครับ?",
+    text: "สวัสดีครับ! ผมคือน้องตรงปก 🤖 ผู้ช่วย AI สำหรับวิเคราะห์ทักษะจากประสบการณ์ของคุณ บทสนทนานี้จะมีทั้งหมด 4 คำถามสั้นๆ ครอบคลุมทั้งทักษะที่ถนัดและสถานการณ์การทำงานจริง เริ่มได้เลยด้วยการแนบไฟล์เรซูเม่ PDF ด้านบน หรือพิมพ์เล่าประสบการณ์/ชื่อเครื่องมือที่คุณถนัดในแชทนี้ได้เลยครับ",
     time: "10:30 น.",
   },
 ];
+
+// A bounded, scripted flow rather than open-ended chat: 2 free-text turns
+// for hard-skill extraction (stage 0, stage 3) bookend 2 STAR-format
+// behavioral questions (stage 1, stage 2) that surface soft-skill
+// evidence — after stage 3's reply the conversation is marked complete
+// and the input is replaced with a CTA into the profile, so there's a
+// defined endpoint instead of unlimited free chat.
+const TOTAL_QUESTION_STAGES = 4;
+
+const SCRIPTED_PROMPTS = [
+  'ก่อนไปต่อ ขอน้องตรงปกถามแบบ STAR สักหน่อยนะครับ — เล่าสถานการณ์ที่คุณเคยเจอปัญหางานยากๆ ให้ฟังหน่อยได้ไหมครับ? (Situation คุณเจอสถานการณ์อะไร และ Task คุณต้องทำอะไร)',
+  "แล้วคุณลงมือทำอย่างไรครับ (Action) และผลลัพธ์ที่ได้เป็นอย่างไรบ้าง (Result)?",
+  "เกือบเสร็จแล้วครับ! มีเครื่องมือ ซอฟต์แวร์ หรือทักษะอื่นที่คุณถนัดอีกไหมครับ อยากเก็บให้ครบก่อนสรุปโปรไฟล์",
+] as const;
+
+const COMPLETION_MESSAGE =
+  "ขอบคุณมากครับ! 🎉 น้องตรงปกเก็บข้อมูลครบตามที่ต้องการแล้ว พร้อมไปดู Smart Profile ของคุณได้เลยครับ";
+
+function nowLabel() {
+  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
 export default function DecoderPage() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
@@ -32,7 +55,6 @@ export default function DecoderPage() {
   const [userName, setUserName] = useState<string>("");
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
   const [isParsingResume, setIsParsingResume] = useState(false);
-  const [chatAttachment, setChatAttachment] = useState<string | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<"chat" | "skills">("chat");
   // Resume skills are replaced wholesale on each new upload (a new resume
   // supersedes the old one); chat skills accumulate across the conversation.
@@ -41,75 +63,54 @@ export default function DecoderPage() {
   const [chatSkills, setChatSkills] = useState<string[]>([]);
   const confirmedSkills = Array.from(new Set([...resumeSkills, ...chatSkills]));
   const [isChatLoading, setIsChatLoading] = useState(false);
+  // Which scripted question turn we're on (0-indexed); reaching
+  // TOTAL_QUESTION_STAGES marks the guided conversation as complete.
+  const [questionStage, setQuestionStage] = useState(0);
+  const isConversationComplete = questionStage >= TOTAL_QUESTION_STAGES;
+
+  // /profile reads both of these — the union for the skills list itself,
+  // and resumeSkills separately so it can show "Verified" (came from an
+  // actual document) vs "Partial" (self-reported in chat only) the same
+  // way HR's own candidate report distinguishes hard-skill confidence.
+  // Without this the whole point of this chat (building a Smart Profile)
+  // dead-ends once the candidate navigates away.
+  useEffect(() => {
+    const union = Array.from(new Set([...resumeSkills, ...chatSkills]));
+    localStorage.setItem("ktp_hard_skills", JSON.stringify(union));
+    localStorage.setItem("ktp_resume_skills", JSON.stringify(resumeSkills));
+  }, [resumeSkills, chatSkills]);
 
   const handleSendMessage = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (isChatLoading) return;
-    if (!inputText.trim() && !chatAttachment) return;
+    if (isChatLoading || isConversationComplete) return;
+    if (!inputText.trim()) return;
 
-    const messageContent = chatAttachment
-      ? `${inputText} (📎 แนบไฟล์: ${chatAttachment})`.trim()
-      : inputText;
-
+    const userQuery = inputText.trim();
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       sender: "user",
-      text: messageContent,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      text: userQuery,
+      time: nowLabel(),
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    const userQuery = inputText || chatAttachment || "";
     setInputText("");
-    setChatAttachment(null);
 
-    // If user has not provided their name yet (first message)
-    if (!userName) {
-      const extractedName = userQuery.replace(/^(ผมชื่อ|ดิฉันชื่อ|ชื่อ|เรียกผมว่า|เรียกฉันว่า)/i, "").trim();
-      const candidateName = extractedName || userQuery;
+    // The candidate's name comes from their resume (see the upload handler
+    // below) rather than being asked in chat, so every message here goes
+    // straight to skill extraction — no first-message name-collection step.
+    const greetName = userName ? `คุณ${userName}` : "คุณ";
 
-      // Reject obvious non-names (greetings/thanks/etc.) so the bot doesn't
-      // address the user as "คุณ ขอบคุณค่ะ" when they answer with those
-      // instead of an actual name — ask again rather than accept anything.
-      const isPlausibleName =
-        candidateName.length > 0 &&
-        candidateName.length <= 20 &&
-        !/^(ขอบคุณ|สวัสดี|โอเค|ok|hi|hello|ไม่รู้|ไม่มี|เฉยๆ)/i.test(candidateName);
-
-      if (!isPlausibleName) {
-        setTimeout(() => {
-          const aiReply: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            sender: "ai",
-            text: `ขอโทษครับ ผมยังไม่แน่ใจว่านี่คือชื่อที่จะเรียกคุณไหม รบกวนพิมพ์แค่ชื่อหรือชื่อเล่นสั้นๆ อีกครั้งได้ไหมครับ?`,
-            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          };
-          setMessages((prev) => [...prev, aiReply]);
-        }, 700);
-        return;
-      }
-
-      setUserName(candidateName);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("ktp_username", candidateName);
-      }
-
-      setTimeout(() => {
-        const aiReply: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          sender: "ai",
-          text: `ยินดีที่ได้รู้จักครับคุณ ${candidateName}! 🤝 สามารถแนบไฟล์เรซูเม่ PDF ด้านบน หรือพิมพ์บอกชื่อเครื่องมือ/ซอฟต์แวร์/ทักษะที่คุณถนัดตรงๆ ให้ผมช่วยสกัดทักษะวิชาชีพได้เลยครับ (ระบบผมจับคำเฉพาะทาง เช่น "Python", "Excel", "Critical Thinking" ได้แม่นกว่าประโยคเล่าเรื่องยาวๆ ครับ)`,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        };
-        setMessages((prev) => [...prev, aiReply]);
-      }, 700);
-      return;
-    }
-
-    // Subsequent experience extraction messages — try Gemini first, fall back
-    // to the local Aho-Corasick matcher (same one the resume scanner uses)
-    // on any API failure so the chat never hangs or shows a dead end.
-    const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    // This message's turn in the bounded flow — captured once so both the
+    // Gemini path and its local-matcher fallback append the same next
+    // scripted prompt (or the completion message on the final turn)
+    // regardless of which one ends up serving the reply.
+    const currentStage = questionStage;
+    const isFinalStage = currentStage === TOTAL_QUESTION_STAGES - 1;
+    const stageSuffix = isFinalStage
+      ? `\n\n${COMPLETION_MESSAGE}`
+      : `\n\n${SCRIPTED_PROMPTS[currentStage]}`;
+    setQuestionStage(currentStage + 1);
 
     const replyWithLocalMatcher = () => {
       const matchedSkills = matchSkills(userQuery, [
@@ -121,13 +122,15 @@ export default function DecoderPage() {
         setChatSkills((prev) => Array.from(new Set([...prev, ...matchedSkills])));
       }
 
+      const baseText = matchedSkills.length
+        ? `เยี่ยมมากครับ${greetName}! จากประสบการณ์ที่คุณเล่าเรื่อง "${userQuery.slice(0, 25)}..." ระบบสกัดและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้ว`
+        : `ขอบคุณครับ${greetName}! ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะจากข้อความนี้ครับ`;
+
       const aiReply: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
-        text: matchedSkills.length
-          ? `เยี่ยมมากครับคุณ ${userName}! จากประสบการณ์ที่คุณเล่าเรื่อง "${userQuery.slice(0, 25)}..." ระบบสกัดและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้ว มีประสบการณ์อื่นอยากเล่าเพิ่มไหมครับ?`
-          : `ขอบคุณครับคุณ ${userName}! ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะจากข้อความนี้ครับ ลองพิมพ์ชื่อเครื่องมือ/ซอฟต์แวร์/ทักษะตรงๆ แทนการเล่าเป็นเรื่องราว เช่น "Python, Excel, Critical Thinking" จะช่วยให้ผมจับได้แม่นขึ้นครับ`,
-        time: now(),
+        text: `${baseText}${stageSuffix}`,
+        time: nowLabel(),
         ...(matchedSkills.length ? { extractedSkills: matchedSkills } : {}),
       };
       setMessages((prev) => [...prev, aiReply]);
@@ -173,8 +176,8 @@ export default function DecoderPage() {
       const aiReply: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
-        text: reply,
-        time: now(),
+        text: `${reply}${stageSuffix}`,
+        time: nowLabel(),
         ...(skills.length ? { extractedSkills: skills } : {}),
       };
       setMessages((prev) => [...prev, aiReply]);
@@ -187,6 +190,71 @@ export default function DecoderPage() {
       replyWithLocalMatcher();
     } finally {
       setIsChatLoading(false);
+    }
+  };
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const inputEl = e.target;
+    if (!file) return;
+
+    setUploadedFile(file.name);
+    setIsParsingResume(true);
+
+    try {
+      const text = await extractTextFromPdf(file);
+      if (text.trim().length < 20) {
+        throw new Error("PDF has no extractable text layer");
+      }
+
+      const matchedSkills = matchSkills(text, onetSkills.hardSkills);
+      // A new resume replaces the previous resume's skills (not a union) —
+      // an old file's stale skills shouldn't linger once it's been swapped
+      // out. Chat-derived skills are untouched.
+      setResumeSkills(matchedSkills);
+
+      // The candidate's name is read straight from their resume — never
+      // asked for in chat. Only guess once; a later resume swap shouldn't
+      // override a name the candidate may have since typed themselves.
+      let greetedName = userName;
+      if (!greetedName) {
+        const guessedName = guessNameFromResumeText(text);
+        if (guessedName) {
+          greetedName = guessedName;
+          setUserName(guessedName);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("ktp_username", guessedName);
+          }
+        }
+      }
+      const nameLine = greetedName && greetedName !== userName ? `ยินดีที่ได้รู้จักคุณ${greetedName}นะครับ! ` : "";
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          sender: "ai",
+          text: matchedSkills.length
+            ? `${nameLine}น้องตรงปกวิเคราะห์ไฟล์ PDF "${file.name}" เรียบร้อยแล้ว! พบและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้วครับ`
+            : `${nameLine}น้องตรงปกอ่านไฟล์ PDF "${file.name}" ได้แล้วครับ แต่ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะ ลองพิมพ์เล่าประสบการณ์เพิ่มเติมในแชทได้เลยครับ`,
+          time: nowLabel(),
+          ...(matchedSkills.length ? { extractedSkills: matchedSkills } : {}),
+        },
+      ]);
+    } catch (err) {
+      console.error("Resume PDF parsing failed:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          sender: "ai",
+          text: `น้องตรงปกไม่สามารถอ่านข้อความจากไฟล์ "${file.name}" ได้ครับ (ไฟล์อาจเป็นภาพสแกนที่ไม่มีข้อความ หรือไฟล์เสียหาย) ลองแนบไฟล์ PDF อื่น หรือพิมพ์เล่าประสบการณ์ในแชทแทนได้เลยครับ`,
+          time: nowLabel(),
+        },
+      ]);
+    } finally {
+      setIsParsingResume(false);
+      inputEl.value = "";
     }
   };
 
@@ -208,14 +276,14 @@ export default function DecoderPage() {
           }}
         />
 
-        <div className="relative w-full max-w-[960px]">
+        <div className="relative w-full max-w-[1040px]">
           {/* Main Card Container with Mobile-Optimized Padding */}
-          <div className="relative rounded-[24px] sm:rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-3 sm:p-[clamp(20px,4vw,36px)] shadow-[0_20px_50px_rgba(15,15,15,0.05)]">
+          <div className="relative rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-3 sm:p-[clamp(20px,4vw,36px)]">
             <div className="absolute -top-3 -left-3 -z-10 h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-[#4D7CFF]" />
 
             {/* Header */}
-            <div className="mb-4 sm:mb-6 border-b border-[rgba(15,15,15,0.08)] pb-3 sm:pb-4">
-              <div className="mb-1 inline-flex items-center gap-2 rounded-full border border-[rgba(15,15,15,0.08)] bg-white px-2.5 py-0.5 text-[11px] sm:text-xs font-bold text-[#5C5C5C]">
+            <div className="mb-4 sm:mb-6 pb-3 sm:pb-4">
+              <div className="mb-1 inline-flex items-center gap-2 rounded-full bg-white px-2.5 py-0.5 text-[11px] sm:text-xs font-bold text-[#5C5C5C]">
                 <span className="h-2 w-2 rounded-full bg-[#4D7CFF]" />
                 วิเคราะห์และดึงประสิทธิภาพโดยน้องตรงปก
               </div>
@@ -234,7 +302,7 @@ export default function DecoderPage() {
                 onClick={() => setActiveMobileTab("chat")}
                 className={`flex-1 rounded-lg py-2 text-center text-xs font-extrabold transition-all ${
                   activeMobileTab === "chat"
-                    ? "bg-white text-[#0F0F0F] shadow-xs"
+                    ? "bg-white text-[#0F0F0F]"
                     : "text-[#8A8A8A] hover:text-[#0F0F0F]"
                 }`}
               >
@@ -245,7 +313,7 @@ export default function DecoderPage() {
                 onClick={() => setActiveMobileTab("skills")}
                 className={`flex-1 rounded-lg py-2 text-center text-xs font-extrabold transition-all ${
                   activeMobileTab === "skills"
-                    ? "bg-white text-[#0F0F0F] shadow-xs"
+                    ? "bg-white text-[#0F0F0F]"
                     : "text-[#8A8A8A] hover:text-[#0F0F0F]"
                 }`}
               >
@@ -257,10 +325,37 @@ export default function DecoderPage() {
             <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-10">
               {/* Left: Chat & Upload Area */}
               <div
-                className={`flex flex-col rounded-2xl border border-[rgba(15,15,15,0.1)] bg-white p-2.5 sm:p-4 lg:col-span-7 ${
+                className={`flex flex-col rounded-2xl bg-white p-2.5 sm:p-4 lg:col-span-7 ${
                   activeMobileTab === "chat" ? "block" : "hidden lg:flex"
                 }`}
               >
+                {/* Conversation header — identifies exactly who/what the
+                    candidate is talking to (an AI chatbot), the same way a
+                    real messaging app labels the other party in a thread. */}
+                <div className="mb-3 flex items-center gap-2.5 sm:mb-4">
+                  <div className="relative flex-shrink-0">
+                    <div className="h-10 w-10 overflow-hidden rounded-full bg-[#F5F5F5] sm:h-11 sm:w-11">
+                      <Image
+                        src="/mascot/chatbot-avatar.png"
+                        alt=""
+                        width={88}
+                        height={88}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <span className="absolute right-0 bottom-0 h-2.5 w-2.5 rounded-full bg-[#3BF55C] ring-2 ring-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-extrabold text-[#0F0F0F]">น้องตรงปก</span>
+                      <span className="rounded-full bg-[rgba(77,124,255,0.12)] px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-[#4D7CFF] uppercase">
+                        AI Chatbot
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-[#8A8A8A]">ผู้ช่วยวิเคราะห์ทักษะ • ออนไลน์</div>
+                  </div>
+                </div>
+
                 {/* Mobile-Optimized Compact PDF Resume Upload Box */}
                 <div className="relative mb-3 flex cursor-pointer items-center justify-between gap-2 rounded-xl border border-dashed border-[rgba(15,15,15,0.2)] bg-[#FAFAFA] p-2.5 sm:p-3 transition-all hover:border-[#0F0F0F] hover:bg-white">
                   <div className="flex items-center gap-2 min-w-0">
@@ -281,107 +376,77 @@ export default function DecoderPage() {
                       </span>
                     </div>
                   </div>
-                  <span className="flex-shrink-0 rounded-lg bg-white px-2.5 py-1 text-[10px] sm:text-xs font-bold text-[#0F0F0F] border border-[rgba(15,15,15,0.1)]">
+                  <span className="flex-shrink-0 rounded-lg bg-white px-2.5 py-1 text-[10px] sm:text-xs font-bold text-[#0F0F0F]">
                     {isParsingResume ? "กำลังประมวลผล..." : uploadedFile ? "เปลี่ยนไฟล์" : "อัปโหลด"}
                   </span>
                   <input
                     type="file"
                     accept=".pdf"
                     disabled={isParsingResume}
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      const inputEl = e.target;
-                      if (!file) return;
-
-                      setUploadedFile(file.name);
-                      setIsParsingResume(true);
-
-                      const now = () =>
-                        new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-                      try {
-                        const text = await extractTextFromPdf(file);
-                        if (text.trim().length < 20) {
-                          throw new Error("PDF has no extractable text layer");
-                        }
-
-                        const matchedSkills = matchSkills(text, onetSkills.hardSkills);
-
-                        // A new resume replaces the previous resume's skills
-                        // (not a union) — an old file's stale skills shouldn't
-                        // linger once it's been swapped out. Chat-derived
-                        // skills are untouched.
-                        setResumeSkills(matchedSkills);
-
-                        setMessages((prev) => [
-                          ...prev,
-                          {
-                            id: Date.now().toString(),
-                            sender: "ai",
-                            text: matchedSkills.length
-                              ? `น้องตรงปกวิเคราะห์ไฟล์ PDF "${file.name}" เรียบร้อยแล้ว! พบและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้วครับ`
-                              : `น้องตรงปกอ่านไฟล์ PDF "${file.name}" ได้แล้วครับ แต่ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะ ลองพิมพ์เล่าประสบการณ์เพิ่มเติมในแชทได้เลยครับ`,
-                            time: now(),
-                            ...(matchedSkills.length ? { extractedSkills: matchedSkills } : {}),
-                          },
-                        ]);
-                      } catch (err) {
-                        console.error("Resume PDF parsing failed:", err);
-                        setMessages((prev) => [
-                          ...prev,
-                          {
-                            id: Date.now().toString(),
-                            sender: "ai",
-                            text: `น้องตรงปกไม่สามารถอ่านข้อความจากไฟล์ "${file.name}" ได้ครับ (ไฟล์อาจเป็นภาพสแกนที่ไม่มีข้อความ หรือไฟล์เสียหาย) ลองแนบไฟล์ PDF อื่น หรือพิมพ์เล่าประสบการณ์ในแชทแทนได้เลยครับ`,
-                            time: now(),
-                          },
-                        ]);
-                      } finally {
-                        setIsParsingResume(false);
-                        inputEl.value = "";
-                      }
-                    }}
+                    onChange={handleResumeUpload}
                     className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
                   />
                 </div>
 
                 {/* Message History Feed */}
-                <div className="flex min-h-[300px] max-h-[380px] sm:min-h-[340px] sm:max-h-[420px] flex-col gap-2.5 overflow-y-auto pr-1">
+                <div className="flex min-h-[300px] max-h-[380px] sm:min-h-[340px] sm:max-h-[420px] flex-col gap-3 overflow-y-auto pr-1">
                   {messages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
+                      className={`flex items-end gap-2 ${msg.sender === "user" ? "flex-row-reverse" : ""}`}
                     >
-                      <div
-                        className={`max-w-[92%] sm:max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
-                          msg.sender === "user"
-                            ? "bg-[#0F0F0F] text-white rounded-br-none"
-                            : "bg-[#F5F5F5] text-[#0F0F0F] rounded-bl-none border border-[rgba(15,15,15,0.08)]"
-                        }`}
-                      >
-                        {msg.text}
-                        {msg.extractedSkills && (
-                          <div className="mt-2 flex flex-wrap gap-1.5 border-t border-[rgba(15,15,15,0.1)] pt-2">
-                            <span className="w-full text-[10px] font-bold text-[#4D7CFF]">
-                              เพิ่มเข้าโปรไฟล์ให้อัตโนมัติแล้ว:
-                            </span>
-                            {msg.extractedSkills.map((sk) => (
-                              <span
-                                key={sk}
-                                className="rounded-lg bg-[#4D7CFF] px-2 py-1 text-[10px] font-bold text-white"
-                              >
-                                {sk}
+                      {msg.sender === "ai" && (
+                        <div className="mb-4 h-6 w-6 flex-shrink-0 overflow-hidden rounded-full bg-[#F5F5F5]">
+                          <Image
+                            src="/mascot/chatbot-avatar.png"
+                            alt=""
+                            width={48}
+                            height={48}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}>
+                        <div
+                          className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
+                            msg.sender === "user"
+                              ? "bg-[#0F0F0F] text-white rounded-br-none"
+                              : "bg-[#F5F5F5] text-[#0F0F0F] rounded-bl-none"
+                          }`}
+                        >
+                          {msg.text}
+                          {msg.extractedSkills && (
+                            <div className="mt-2 flex flex-wrap gap-1.5 pt-2">
+                              <span className="w-full text-[10px] font-bold text-[#4D7CFF]">
+                                เพิ่มเข้าโปรไฟล์ให้อัตโนมัติแล้ว:
                               </span>
-                            ))}
-                          </div>
-                        )}
+                              {msg.extractedSkills.map((sk) => (
+                                <span
+                                  key={sk}
+                                  className="rounded-lg bg-[#4D7CFF] px-2 py-1 text-[10px] font-bold text-white"
+                                >
+                                  {sk}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <span className="mt-1 text-[9px] text-[#8A8A8A]">{msg.time}</span>
                       </div>
-                      <span className="mt-1 text-[9px] text-[#8A8A8A]">{msg.time}</span>
                     </div>
                   ))}
                   {isChatLoading && (
-                    <div className="flex flex-col items-start">
-                      <div className="flex items-center gap-1 rounded-2xl rounded-bl-none border border-[rgba(15,15,15,0.08)] bg-[#F5F5F5] px-3.5 py-2.5">
+                    <div className="flex items-end gap-2">
+                      <div className="h-6 w-6 flex-shrink-0 overflow-hidden rounded-full bg-[#F5F5F5]">
+                        <Image
+                          src="/mascot/chatbot-avatar.png"
+                          alt=""
+                          width={48}
+                          height={48}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1 rounded-2xl rounded-bl-none bg-[#F5F5F5] px-3.5 py-2.5">
                         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A] [animation-delay:-0.3s]" />
                         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A] [animation-delay:-0.15s]" />
                         <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A]" />
@@ -390,59 +455,49 @@ export default function DecoderPage() {
                   )}
                 </div>
 
-                {/* Chat Input Form */}
-                <form onSubmit={handleSendMessage} className="mt-2.5 flex flex-col gap-1.5">
-                  {chatAttachment && (
-                    <div className="inline-flex items-center justify-between gap-2 self-start rounded-lg border border-[rgba(15,15,15,0.12)] bg-[#FAFAFA] px-2.5 py-1 text-[11px] font-semibold text-[#0F0F0F]">
-                      <span className="truncate">📎 ไฟล์แนบ: {chatAttachment}</span>
-                      <button
-                        type="button"
-                        onClick={() => setChatAttachment(null)}
-                        className="text-[10px] text-[#8A8A8A] hover:text-red-500 font-bold"
-                      >
-                        ✕
-                      </button>
+                {/* Chat Input Form — resume attachment lives solely in the
+                    dedicated upload box above; this input is text-only so
+                    it can't be confused with a second, redundant file
+                    upload path. Bounded to TOTAL_QUESTION_STAGES turns —
+                    once complete, the input is replaced by a CTA into the
+                    profile instead of allowing unlimited free chat. */}
+                {isConversationComplete ? (
+                  <Link
+                    href="/profile"
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-[#0F0F0F] py-2.5 text-xs font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.99] sm:py-3"
+                  >
+                    ไปที่ Smart Profile ของคุณ →
+                  </Link>
+                ) : (
+                  <div className="mt-3">
+                    <div className="mb-1.5 text-[10px] font-semibold text-[#8A8A8A]">
+                      คำถามที่ {questionStage + 1} / {TOTAL_QUESTION_STAGES}
                     </div>
-                  )}
-
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    {/* Attachment Icon Button */}
-                    <div className="relative flex h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-xl border border-[rgba(15,15,15,0.12)] bg-[#FAFAFA] text-base transition-all hover:bg-white hover:border-[#0F0F0F]">
-                      <span>📎</span>
+                    <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2">
                       <input
-                        type="file"
-                        accept=".pdf,.png,.jpg,.jpeg,.docx"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) setChatAttachment(file.name);
-                        }}
-                        className="absolute inset-0 cursor-pointer opacity-0"
-                        title="แนบไฟล์หรือรูปภาพ"
+                        type="text"
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        placeholder="พิมพ์ชื่อเครื่องมือ/ทักษะ เช่น Python, Excel..."
+                        disabled={isChatLoading}
+                        className="min-w-0 flex-1 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs outline-none focus:border-[#0F0F0F] disabled:opacity-60"
                       />
-                    </div>
-
-                    <input
-                      type="text"
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      placeholder="พิมพ์ชื่อเครื่องมือ/ทักษะ เช่น Python, Excel..."
-                      disabled={isChatLoading}
-                      className="min-w-0 flex-1 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs outline-none focus:border-[#0F0F0F] disabled:opacity-60"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isChatLoading}
-                      className="rounded-xl bg-[#0F0F0F] px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
-                    >
-                      {isChatLoading ? "..." : "ส่ง"}
-                    </button>
+                      <button
+                        type="submit"
+                        disabled={isChatLoading || !inputText.trim()}
+                        aria-label="ส่งข้อความ"
+                        className="flex h-9 w-9 flex-shrink-0 cursor-pointer items-center justify-center rounded-xl bg-[#0F0F0F] text-white transition-transform active:scale-[0.95] disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:w-10"
+                      >
+                        <Send className="h-4 w-4" strokeWidth={2.25} />
+                      </button>
+                    </form>
                   </div>
-                </form>
+                )}
               </div>
 
               {/* Right: Confirmed Skill Statements Sidebar */}
               <div
-                className={`flex flex-col justify-between rounded-2xl border border-[rgba(15,15,15,0.06)] bg-[#F8F9FA] p-3 sm:p-4 lg:col-span-3 ${
+                className={`flex flex-col justify-between rounded-2xl bg-[#FAFAFA] p-3 sm:p-4 lg:col-span-3 ${
                   activeMobileTab === "skills" ? "block" : "hidden lg:flex"
                 }`}
               >
@@ -451,7 +506,7 @@ export default function DecoderPage() {
                     <span className="text-xs font-extrabold text-[#0F0F0F]">
                       ✨ ทักษะเชิงรุกที่สกัดได้
                     </span>
-                    <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#8A8A8A] border border-[rgba(15,15,15,0.08)]">
+                    <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#8A8A8A]">
                       {confirmedSkills.length} ทักษะ
                     </span>
                   </div>
@@ -469,7 +524,7 @@ export default function DecoderPage() {
                     {confirmedSkills.map((sk) => (
                       <div
                         key={sk}
-                        className="flex items-center gap-1.5 rounded-full border border-[rgba(15,15,15,0.08)] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#0F0F0F]"
+                        className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#0F0F0F]"
                       >
                         <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#3BF55C]" />
                         <span className="truncate">{sk}</span>

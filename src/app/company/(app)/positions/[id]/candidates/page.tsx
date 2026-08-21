@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Check, Clock, Star } from "lucide-react";
+import { ArrowLeft, Check, Clock, Star, X } from "lucide-react";
 import { InterviewInviteModal } from "@/components/InterviewInviteModal";
 import {
   createInterviewInvite,
@@ -15,7 +16,7 @@ import {
   subscribeToStore,
 } from "@/lib/companyStore";
 import { SOFT_SKILL_AXIS_META } from "@/lib/data";
-import type { SoftSkillScores } from "@/lib/types";
+import type { InterviewSlotStatus, SoftSkillScores } from "@/lib/types";
 
 const getServerSessionSnapshot = () => null;
 const getServerNull = () => null;
@@ -26,6 +27,20 @@ const EMPTY_CANDIDATES: never[] = [];
 const getServerEmptyCandidates = () => EMPTY_CANDIDATES;
 
 type SortOrder = "score-desc" | "score-asc";
+
+const PAGE_SIZE = 20;
+
+// Same status → color/icon mapping as /company/interviews — "declined" must
+// never render green here just because the candidate was contacted; the
+// color has to track the interview outcome, not contact status.
+const INTERVIEW_STATUS_META: Record<
+  InterviewSlotStatus,
+  { label: string; icon: typeof Clock; className: string }
+> = {
+  pending: { label: "รอผู้สมัครยืนยัน", icon: Clock, className: "bg-[rgba(77,124,255,0.12)] text-[#4D7CFF]" },
+  confirmed: { label: "ยืนยันนัดแล้ว", icon: Check, className: "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]" },
+  declined: { label: "ปฏิเสธคำเชิญ", icon: X, className: "bg-[#F0F0F0] text-[#8A8A8A]" },
+};
 
 export default function PositionCandidatesPage() {
   const router = useRouter();
@@ -63,7 +78,15 @@ export default function PositionCandidatesPage() {
 
   const [sortOrder, setSortOrder] = useState<SortOrder>("score-desc");
   const [skillFilter, setSkillFilter] = useState("");
+  // HR sets this themselves — nobody is excluded by default (0 = show
+  // everyone). A system-picked cutoff would silently deny candidates a
+  // chance without HR ever deciding to; this only filters when HR drags it.
+  const [minScore, setMinScore] = useState(0);
   const [inviteTargetId, setInviteTargetId] = useState<string | null>(null);
+  // How many of the filtered/sorted results are currently shown — resets to
+  // one page whenever a filter changes below, so page 3 of an old filter
+  // doesn't linger as the new, much shorter list's "page 3".
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const handleSendInvite = (proposedTimes: string[]) => {
     if (!inviteTargetId) return;
@@ -71,7 +94,7 @@ export default function PositionCandidatesPage() {
     setInviteTargetId(null);
   };
 
-  const visibleCandidates = useMemo(() => {
+  const filteredCandidates = useMemo(() => {
     let list = candidates;
     if (skillFilter.trim()) {
       const needle = skillFilter.trim().toLowerCase();
@@ -79,11 +102,16 @@ export default function PositionCandidatesPage() {
         c.jobSeeker.hardSkills.some((h) => h.skill.toLowerCase().includes(needle))
       );
     }
+    if (minScore > 0) {
+      list = list.filter((c) => c.matchScore >= minScore);
+    }
     list = [...list].sort((a, b) =>
       sortOrder === "score-desc" ? b.matchScore - a.matchScore : a.matchScore - b.matchScore
     );
     return list;
-  }, [candidates, sortOrder, skillFilter]);
+  }, [candidates, sortOrder, skillFilter, minScore]);
+
+  const visibleCandidates = filteredCandidates.slice(0, visibleCount);
 
   if (!session) return null;
 
@@ -120,7 +148,7 @@ export default function PositionCandidatesPage() {
           กลับไปหน้าจัดการตำแหน่งงาน
         </Link>
 
-        <div className="mt-2 mb-6 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-4">
+        <div className="mt-2 mb-6 rounded-2xl bg-[#FAFAFA] p-4">
           <h1 className="text-[clamp(20px,3.5vw,26px)] font-extrabold tracking-[-0.02em]">
             {position.title}
           </h1>
@@ -150,11 +178,14 @@ export default function PositionCandidatesPage() {
           )}
         </div>
 
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <input
             type="text"
             value={skillFilter}
-            onChange={(e) => setSkillFilter(e.target.value)}
+            onChange={(e) => {
+              setSkillFilter(e.target.value);
+              setVisibleCount(PAGE_SIZE);
+            }}
             placeholder="กรองตามชื่อ hard skill..."
             className="flex-1 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3.5 py-2 text-xs font-semibold text-[#0F0F0F] outline-none focus:border-[#0F0F0F]"
           />
@@ -168,8 +199,32 @@ export default function PositionCandidatesPage() {
           </select>
         </div>
 
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-[#FAFAFA] px-3.5 py-2.5">
+          <label htmlFor="min-score" className="flex-shrink-0 text-xs font-bold text-[#0F0F0F]">
+            Match ขั้นต่ำ
+          </label>
+          <input
+            id="min-score"
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={minScore}
+            onChange={(e) => {
+              setMinScore(Number(e.target.value));
+              setVisibleCount(PAGE_SIZE);
+            }}
+            className="min-w-[120px] flex-1 accent-[#0F0F0F]"
+          />
+          <span className="flex-shrink-0 text-xs font-bold text-[#0F0F0F]">
+            {minScore === 0 ? "แสดงทั้งหมด" : `≥ ${minScore}%`}
+          </span>
+        </div>
+
         <p className="mb-3 text-xs text-[#8A8A8A]">
-          ผู้สมัคร Match {visibleCandidates.length} คน
+          ผู้สมัคร Match {filteredCandidates.length} คน
+          {visibleCandidates.length < filteredCandidates.length &&
+            ` (กำลังแสดง ${visibleCandidates.length} คน)`}
         </p>
 
         {visibleCandidates.length === 0 ? (
@@ -186,6 +241,9 @@ export default function PositionCandidatesPage() {
                 .filter((entry): entry is [keyof SoftSkillScores, number] => entry[1] !== undefined)
                 .sort((a, b) => b[1] - a[1])[0];
               const interviewSlot = getInterviewSlotSnapshot(positionId, c.jobSeekerId);
+              const InterviewStatusIcon = interviewSlot
+                ? INTERVIEW_STATUS_META[interviewSlot.status].icon
+                : null;
 
               return (
                 // A plain div (not <Link>) because the "นัดสัมภาษณ์" button
@@ -195,10 +253,16 @@ export default function PositionCandidatesPage() {
                 <div
                   key={c.jobSeekerId}
                   onClick={() => router.push(`/company/candidates/${c.jobSeekerId}`)}
-                  className="flex flex-wrap items-center gap-3 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-white p-4 transition-colors hover:border-[rgba(15,15,15,0.25)] cursor-pointer"
+                  className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#FAFAFA] p-4 transition-colors hover:bg-[#F0F0F0] cursor-pointer"
                 >
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#F0F0F0] text-[11px] font-extrabold text-[#5A5A5A]">
-                    #{c.jobSeekerId.replace(/^js_/, "").toUpperCase()}
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F0F0F0]">
+                    <Image
+                      src="/mascot/mascot-blind-candidate.png"
+                      alt="ผู้สมัครที่ยังไม่เปิดเผยตัวตน (Blind Review)"
+                      width={40}
+                      height={40}
+                      className="h-full w-full object-cover"
+                    />
                   </div>
 
                   <div className="min-w-0 flex-1">
@@ -207,37 +271,33 @@ export default function PositionCandidatesPage() {
                         Candidate #{c.jobSeekerId.replace(/^js_/, "").toUpperCase()}
                       </span>
                       {c.isStandout && (
-                        <span className="inline-flex items-center gap-0.5 rounded-full bg-[rgba(245,217,73,0.25)] px-2 py-0.5 text-[10px] font-bold text-[#856700]">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(245,217,73,0.25)] px-2.5 py-0.5 text-[10px] font-bold text-[#856700]">
                           <Star className="h-2.5 w-2.5 fill-current" strokeWidth={1.75} />
                           ช้างเผือก
                         </span>
                       )}
-                      {/* Status display only — the actual action is the
-                          labeled "นัดสัมภาษณ์" button below, not this pill. */}
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          c.status === "contacted"
-                            ? "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]"
-                            : "bg-[#F0F0F0] text-[#5A5A5A]"
-                        }`}
-                      >
-                        {interviewSlot?.status === "pending"
-                          ? "รอผู้สมัครยืนยัน"
-                          : interviewSlot?.status === "confirmed"
-                            ? "ยืนยันนัดแล้ว"
-                            : interviewSlot?.status === "declined"
-                              ? "ปฏิเสธคำเชิญ"
-                              : c.status === "contacted"
-                                ? "ติดต่อแล้ว"
-                                : "รอติดต่อ"}
-                      </span>
+                      {/* Only shown when there's no interview slot yet — once
+                          one exists, the labeled status pill on the right
+                          already covers this, so showing both here would be
+                          two overlapping badges for the same candidate. */}
+                      {!interviewSlot && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            c.status === "contacted"
+                              ? "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]"
+                              : "bg-[#F0F0F0] text-[#5A5A5A]"
+                          }`}
+                        >
+                          {c.status === "contacted" ? "ติดต่อแล้ว" : "รอติดต่อ"}
+                        </span>
+                      )}
                     </div>
                     {verifiedSkills.length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {verifiedSkills.map((h) => (
                           <span
                             key={h.skill}
-                            className="inline-flex items-center gap-0.5 rounded bg-[#F0F0F0] px-1.5 py-0.5 text-[10px] text-[#5A5A5A]"
+                            className="inline-flex items-center gap-0.5 rounded bg-[#F0F0F0] px-1.5 py-0.5 text-[10px] font-semibold text-[#5A5A5A]"
                           >
                             <Check className="h-2.5 w-2.5" strokeWidth={2.5} />
                             {h.skill}
@@ -257,22 +317,22 @@ export default function PositionCandidatesPage() {
                       <div className="text-lg font-extrabold text-[#0F0F0F]">{c.matchScore}%</div>
                       <div className="text-[9px] text-[#8A8A8A]">Match</div>
                     </div>
-                    {interviewSlot ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(59,245,92,0.15)] px-3 py-1.5 text-[10px] font-bold text-[#0f5c22]">
-                        {interviewSlot.status === "pending" ? (
-                          <>
-                            <Clock className="h-3 w-3" strokeWidth={2} />
-                            รอผู้สมัครยืนยัน
-                          </>
-                        ) : interviewSlot.status === "confirmed" ? (
-                          <>
-                            <Check className="h-3 w-3" strokeWidth={2.5} />
-                            {interviewSlot.confirmedTime ?? "ยืนยันนัดแล้ว"}
-                          </>
-                        ) : (
-                          "ปฏิเสธคำเชิญ"
-                        )}
-                      </span>
+                    {interviewSlot && InterviewStatusIcon ? (
+                      interviewSlot.status === "confirmed" && interviewSlot.confirmedTime ? (
+                        // "ยืนยันเวลา: ..." alone already says this is
+                        // confirmed — a colored badge repeating "ยืนยันนัดแล้ว"
+                        // next to it would just say the same thing twice.
+                        <span className="text-[10px] font-bold text-[#0f5c22]">
+                          ยืนยันเวลา: {interviewSlot.confirmedTime}
+                        </span>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-bold ${INTERVIEW_STATUS_META[interviewSlot.status].className}`}
+                        >
+                          <InterviewStatusIcon className="h-3 w-3" strokeWidth={2.5} />
+                          {INTERVIEW_STATUS_META[interviewSlot.status].label}
+                        </span>
+                      )
                     ) : (
                       <button
                         type="button"
@@ -290,6 +350,16 @@ export default function PositionCandidatesPage() {
               );
             })}
           </div>
+        )}
+
+        {visibleCandidates.length < filteredCandidates.length && (
+          <button
+            type="button"
+            onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+            className="mt-4 w-full rounded-full bg-[#FAFAFA] py-2.5 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#F0F0F0]"
+          >
+            โหลดเพิ่ม ({filteredCandidates.length - visibleCandidates.length} คนที่เหลือ)
+          </button>
         )}
       </div>
 

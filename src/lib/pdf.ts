@@ -85,3 +85,34 @@ export async function extractTextFromPdf(file: File): Promise<string> {
 
   return pageTexts.join("\n");
 }
+
+const NON_NAME_LINE_PATTERN =
+  /@|https?:\/\/|www\.|\d{3}|resume|curriculum vitae|^cv$|profile|objective|summary|address|ที่อยู่|เบอร์โทร|อีเมล|ประวัติ|resumé/i;
+
+/**
+ * Best-effort guess at the candidate's name from raw resume text — a
+ * person's name is almost always one of the first few non-empty lines
+ * (the header/title block), so this just looks for the first line in
+ * that region that doesn't look like contact info, a section heading, or
+ * a document title. Returns null rather than guessing wrong when nothing
+ * plausible turns up, since a wrong guess is worse than asking the user.
+ */
+export function guessNameFromResumeText(text: string): string | null {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+
+  for (const line of lines) {
+    if (line.length < 2 || line.length > 40) continue;
+    if (NON_NAME_LINE_PATTERN.test(line)) continue;
+
+    const words = line.split(/\s+/);
+    if (words.length < 1 || words.length > 4) continue;
+
+    return line;
+  }
+
+  return null;
+}

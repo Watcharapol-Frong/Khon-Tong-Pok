@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Briefcase, CalendarClock, LayoutDashboard, LogOut } from "lucide-react";
@@ -49,7 +50,13 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
       <div className="relative mx-auto max-w-[1200px]">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-full bg-[#F5F5F5] py-[10px] pr-5 pl-[22px]">
           <Link href="/company/dashboard" className="flex flex-shrink-0 items-center gap-[10px]">
-            <div className="h-[30px] w-[30px] flex-shrink-0 rounded-lg bg-[#0F0F0F]" />
+            <Image
+              src="/mascot/mascot-navbar-icon.png"
+              alt=""
+              width={44}
+              height={44}
+              className="h-[clamp(34px,9vw,44px)] w-[clamp(34px,9vw,44px)] flex-shrink-0 object-contain"
+            />
             <div className="whitespace-nowrap text-[clamp(15px,4vw,20px)] font-extrabold tracking-[-0.02em]">
               คนตรงปก
             </div>

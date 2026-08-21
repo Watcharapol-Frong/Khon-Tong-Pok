@@ -4,6 +4,7 @@ import type {
   FaqItem,
   GameStage,
   HRUser,
+  InterviewSlot,
   Job,
   JobSeeker,
   Match,
@@ -466,13 +467,22 @@ export const MOCK_POSITIONS: Position[] = [
   },
 ];
 
+// Every match below that has a corresponding entry in MOCK_INTERVIEW_SLOTS
+// is marked "contacted" — sending an interview invite is what lifts Blind
+// Review (see getCandidateReport's nameRevealed), so a match can't have an
+// interview slot while still "pending" without that invariant going stale.
 export const MOCK_MATCHES: Match[] = [
   { positionId: "pos_001", jobSeekerId: "js_a12f", matchScore: 92, status: "contacted" },
-  { positionId: "pos_001", jobSeekerId: "js_b7k9", matchScore: 84, status: "pending" },
-  { positionId: "pos_001", jobSeekerId: "js_c3mx", matchScore: 71, status: "pending" },
-  { positionId: "pos_003", jobSeekerId: "js_d8qz", matchScore: 88, status: "pending" },
+  { positionId: "pos_001", jobSeekerId: "js_b7k9", matchScore: 84, status: "contacted" },
+  { positionId: "pos_001", jobSeekerId: "js_c3mx", matchScore: 71, status: "contacted" },
+  { positionId: "pos_001", jobSeekerId: "js_g4wp", matchScore: 86, status: "contacted" },
+  { positionId: "pos_001", jobSeekerId: "js_h9lk", matchScore: 93, status: "contacted" },
+  { positionId: "pos_002", jobSeekerId: "js_i2bn", matchScore: 77, status: "contacted" },
+  { positionId: "pos_002", jobSeekerId: "js_j6ty", matchScore: 68, status: "contacted" },
+  { positionId: "pos_002", jobSeekerId: "js_k7mp", matchScore: 82, status: "contacted" },
+  { positionId: "pos_003", jobSeekerId: "js_d8qz", matchScore: 88, status: "contacted" },
   { positionId: "pos_004", jobSeekerId: "js_e2rv", matchScore: 79, status: "contacted" },
-  { positionId: "pos_005", jobSeekerId: "js_f5nt", matchScore: 90, status: "pending" },
+  { positionId: "pos_005", jobSeekerId: "js_f5nt", matchScore: 90, status: "contacted" },
 ];
 
 // realName, currentRole, yearsOfExperience, and contact are all withheld in
@@ -485,6 +495,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
     currentRole: "Frontend Developer ที่ StartUp Hub",
     yearsOfExperience: 4,
     contact: { email: "nicha.watt@example.com", phone: "081-234-5678", location: "กรุงเทพฯ" },
+    photoUrl: "/avatars/js_a12f.jpg",
     hardSkills: [
       { skill: "React", status: "verified" },
       { skill: "TypeScript", status: "verified" },
@@ -499,6 +510,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
     currentRole: "Frontend Developer ที่ Freelance",
     yearsOfExperience: 2,
     contact: { email: "phuwadol.j@example.com", phone: "082-345-6789", location: "นนทบุรี" },
+    photoUrl: "/avatars/js_b7k9.jpg",
     hardSkills: [
       { skill: "React", status: "verified" },
       { skill: "TypeScript", status: "partial" },
@@ -513,6 +525,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
     currentRole: "จบใหม่ / เคยฝึกงานสาย Frontend",
     yearsOfExperience: 0,
     contact: { email: "kanyanat.s@example.com", phone: "083-456-7890", location: "กรุงเทพฯ" },
+    photoUrl: "/avatars/js_c3mx.jpg",
     hardSkills: [
       { skill: "React", status: "partial" },
       { skill: "TypeScript", status: "unclear" },
@@ -527,6 +540,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
     currentRole: "Data Analyst ที่ FinServe Co.",
     yearsOfExperience: 3,
     contact: { email: "theerapat.m@example.com", phone: "084-567-8901", location: "กรุงเทพฯ" },
+    photoUrl: "/avatars/js_d8qz.jpg",
     hardSkills: [
       { skill: "Python", status: "verified" },
       { skill: "PostgreSQL", status: "verified" },
@@ -541,6 +555,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
     currentRole: "Performance Marketing Executive ที่ AdReach Agency",
     yearsOfExperience: 3,
     contact: { email: "pawarisa.s@example.com", phone: "085-678-9012", location: "กรุงเทพฯ" },
+    photoUrl: "/avatars/js_e2rv.jpg",
     hardSkills: [
       { skill: "Google Ads", status: "verified" },
       { skill: "Google Analytics", status: "partial" },
@@ -555,11 +570,161 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
     currentRole: "Product Designer ที่ Studio Nine",
     yearsOfExperience: 5,
     contact: { email: "apisit.r@example.com", phone: "086-789-0123", location: "เชียงใหม่" },
+    photoUrl: "/avatars/js_f5nt.jpg",
     hardSkills: [
       { skill: "Figma", status: "verified" },
       { skill: "Adobe Illustrator", status: "verified" },
     ],
     softSkills: { learningAgility: 78, resilienceAdaptability: 80, criticalThinking: 70, decisionMakingUnderPressure: 62, riskTolerance: 58, collaborationMindset: 90 },
     aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพ ผู้สมัครมีทักษะ Figma และ Adobe Illustrator ที่ยืนยันแล้วครบทั้งสองรายการจากทั้งเรซูเม่และบทสนทนา ด้านผลประเมิน 6 มิติโดดเด่นเป็นพิเศษที่ Collaboration Mindset สูงถึง 90% รวมถึง Resilience & Adaptability (80%) และ Learning Agility (78%) ที่สูงกว่าเกณฑ์ของตำแหน่งนี้อย่างชัดเจน สะท้อนว่าเป็นนักออกแบบที่ทั้งมีฝีมือและทำงานร่วมกับทีม/ผู้มีส่วนได้ส่วนเสียได้อย่างราบรื่นเป็นพิเศษ พร้อมปรับตัวไวเมื่อโจทย์งานหรือ feedback เปลี่ยนแปลงกะทันหัน ภาพรวมจึงเหมาะสมอย่างยิ่งกับตำแหน่ง UI/UX Product Designer ที่ต้องทำงานร่วมกับหลายฝ่ายอย่างต่อเนื่อง",
+  },
+  // --- Below: bulk-added for interview-list volume testing (see
+  // MOCK_INTERVIEW_SLOTS) — same shape/rigor as the personas above, just
+  // shorter aiSummary text since these exist for UI/list-density testing
+  // rather than to be individually showcased.
+  {
+    id: "js_g4wp",
+    realName: "ศุภกร ธนวัฒน์",
+    currentRole: "Frontend Developer ที่ PixelWorks",
+    yearsOfExperience: 3,
+    contact: { email: "supakorn.t@example.com", phone: "087-111-2233", location: "กรุงเทพฯ" },
+    photoUrl: "/avatars/js_g4wp.jpg",
+    hardSkills: [
+      { skill: "React", status: "verified" },
+      { skill: "TypeScript", status: "verified" },
+      { skill: "Git", status: "verified" },
+    ],
+    softSkills: { learningAgility: 76, resilienceAdaptability: 71, criticalThinking: 80, decisionMakingUnderPressure: 68, riskTolerance: 60, collaborationMindset: 82 },
+    aiSummary: "ทักษะ React, TypeScript และ Git ยืนยันแล้วครบจากเรซูเม่และบทสนทนา ผลประเมิน 6 มิติโดดเด่นด้าน Critical Thinking (80%) และ Collaboration Mindset (82%) เหมาะกับตำแหน่ง Senior Frontend Developer ที่ต้องทำงานร่วมกับทีมอย่างต่อเนื่อง",
+  },
+  {
+    id: "js_h9lk",
+    realName: "พิมพ์ชนก อินทรวิเชียร",
+    currentRole: "Senior Frontend Engineer ที่ CloudNest",
+    yearsOfExperience: 6,
+    contact: { email: "pimchanok.i@example.com", phone: "088-222-3344", location: "กรุงเทพฯ" },
+    photoUrl: "/avatars/js_h9lk.jpg",
+    hardSkills: [
+      { skill: "React", status: "verified" },
+      { skill: "TypeScript", status: "verified" },
+      { skill: "Git", status: "verified" },
+    ],
+    softSkills: { learningAgility: 88, resilienceAdaptability: 84, criticalThinking: 90, decisionMakingUnderPressure: 82, riskTolerance: 65, collaborationMindset: 87 },
+    aiSummary: "ทักษะเทคนิคยืนยันแล้วครบทุกด้าน ผลประเมิน 6 มิติสูงเกินเกณฑ์เกือบทุกแกน โดยเฉพาะ Critical Thinking (90%) และ Learning Agility (88%) — ผู้สมัครระดับ Senior ที่ตัดสินใจเชิงเทคนิคได้ด้วยตนเองและปรับตัวไวภายใต้ deadline",
+  },
+  {
+    id: "js_i2bn",
+    realName: "ธีรเดช ศรีวิไล",
+    currentRole: "QA Engineer ที่ ShipFast Logistics",
+    yearsOfExperience: 2,
+    contact: { email: "theeradech.s@example.com", phone: "089-333-4455", location: "นนทบุรี" },
+    photoUrl: "/avatars/js_i2bn.jpg",
+    hardSkills: [
+      { skill: "Docker", status: "verified" },
+      { skill: "Linux", status: "partial" },
+      { skill: "Git", status: "verified" },
+    ],
+    softSkills: { learningAgility: 70, resilienceAdaptability: 66, criticalThinking: 75, decisionMakingUnderPressure: 63, riskTolerance: 55, collaborationMindset: 68 },
+    aiSummary: "ทักษะ Docker และ Git ยืนยันแล้ว ส่วน Linux พบหลักฐานบางส่วน ผลประเมินอยู่ในระดับดีด้าน Critical Thinking (75%) เหมาะกับตำแหน่ง QA Automation Engineer ระดับกลาง",
+  },
+  {
+    id: "js_j6ty",
+    realName: "กรวิชญ์ บุญมาก",
+    currentRole: "จบใหม่ / เคยฝึกงานสาย QA",
+    yearsOfExperience: 0,
+    contact: { email: "korawit.b@example.com", phone: "090-444-5566", location: "ปทุมธานี" },
+    photoUrl: "/avatars/js_j6ty.jpg",
+    hardSkills: [
+      { skill: "Git", status: "verified" },
+      { skill: "Linux", status: "unclear" },
+      { skill: "Docker", status: "partial" },
+    ],
+    softSkills: { learningAgility: 62, resilienceAdaptability: 58, criticalThinking: 55, decisionMakingUnderPressure: 52, riskTolerance: 50, collaborationMindset: 64 },
+    aiSummary: "มีเพียง Git ที่ยืนยันได้ชัดเจน Linux และ Docker ยังพบหลักฐานไม่ครบ ผลประเมิน 6 มิติอยู่ระดับกลางค่อนต่ำ เหมาะกับตำแหน่งระดับ Junior ที่มีพี่เลี้ยงคอยซัพพอร์ต",
+  },
+  {
+    id: "js_k7mp",
+    realName: "วรรณิศา ประเสริฐกุล",
+    currentRole: "QA Automation Engineer ที่ Nimbus Cloud",
+    yearsOfExperience: 4,
+    contact: { email: "wannisa.p@example.com", phone: "091-555-6677", location: "กรุงเทพฯ" },
+    photoUrl: "/avatars/js_k7mp.jpg",
+    hardSkills: [
+      { skill: "Docker", status: "verified" },
+      { skill: "Linux", status: "verified" },
+      { skill: "Git", status: "verified" },
+    ],
+    softSkills: { learningAgility: 74, resilienceAdaptability: 72, criticalThinking: 78, decisionMakingUnderPressure: 70, riskTolerance: 58, collaborationMindset: 75 },
+    aiSummary: "ทักษะ Docker, Linux และ Git ยืนยันแล้วครบทั้งสามด้าน ผลประเมิน 6 มิติสม่ำเสมออยู่ในเกณฑ์ดีทุกแกน โดยเฉพาะ Critical Thinking (78%) เหมาะกับตำแหน่ง QA Automation Engineer ระดับกลางถึงอาวุโส",
+  },
+];
+
+// Seeded interview invites for testing the "นัดสัมภาษณ์ทั้งหมด" list — spans
+// all 4 mock companies, though co_techcorp gets the most (8) since it's the
+// primary demo login (hr_001/hr_002). Every status (pending/confirmed/
+// declined) appears at least once for EACH of co_techcorp's two positions
+// (pos_001 and pos_002) individually, not just once overall, so switching
+// positions while testing still shows full status coverage. Every matchId
+// here must have a corresponding "contacted" entry in MOCK_MATCHES (see the
+// note above that array).
+export const MOCK_INTERVIEW_SLOTS: InterviewSlot[] = [
+  {
+    matchId: "pos_001::js_a12f",
+    proposedTimes: ["2026-08-25 14:00", "2026-08-26 10:00"],
+    status: "confirmed",
+    confirmedTime: "2026-08-25 14:00",
+  },
+  {
+    matchId: "pos_001::js_b7k9",
+    proposedTimes: ["2026-08-27 11:00", "2026-08-28 15:00"],
+    status: "pending",
+  },
+  {
+    matchId: "pos_001::js_c3mx",
+    proposedTimes: ["2026-08-24 09:00"],
+    status: "declined",
+  },
+  {
+    matchId: "pos_001::js_g4wp",
+    proposedTimes: ["2026-08-29 13:00", "2026-08-30 10:00", "2026-08-31 16:00"],
+    status: "pending",
+  },
+  {
+    matchId: "pos_001::js_h9lk",
+    proposedTimes: ["2026-09-01 11:00"],
+    status: "confirmed",
+    confirmedTime: "2026-09-01 11:00",
+  },
+  {
+    matchId: "pos_002::js_i2bn",
+    proposedTimes: ["2026-08-26 09:30", "2026-08-27 14:30"],
+    status: "pending",
+  },
+  {
+    matchId: "pos_002::js_j6ty",
+    proposedTimes: ["2026-08-25 10:00"],
+    status: "declined",
+  },
+  {
+    matchId: "pos_002::js_k7mp",
+    proposedTimes: ["2026-08-24 14:00", "2026-08-25 09:00"],
+    status: "confirmed",
+    confirmedTime: "2026-08-24 14:00",
+  },
+  {
+    matchId: "pos_003::js_d8qz",
+    proposedTimes: ["2026-08-28 13:00"],
+    status: "confirmed",
+    confirmedTime: "2026-08-28 13:00",
+  },
+  {
+    matchId: "pos_004::js_e2rv",
+    proposedTimes: ["2026-08-26 15:00", "2026-08-27 09:00"],
+    status: "pending",
+  },
+  {
+    matchId: "pos_005::js_f5nt",
+    proposedTimes: ["2026-09-02 10:00", "2026-09-03 14:00"],
+    status: "pending",
   },
 ];
