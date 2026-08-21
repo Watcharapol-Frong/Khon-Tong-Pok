@@ -5,6 +5,9 @@ import Link from "next/link";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { extractTextFromPdf } from "@/lib/pdf";
+import { matchSkills } from "@/lib/ahoCorasick";
+import onetSkills from "@/data/onet_skills_dictionary_full.json";
 
 interface ChatMessage {
   id: string;
@@ -28,17 +31,20 @@ export default function DecoderPage() {
   const [inputText, setInputText] = useState("");
   const [userName, setUserName] = useState<string>("");
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+  const [isParsingResume, setIsParsingResume] = useState(false);
   const [chatAttachment, setChatAttachment] = useState<string | null>(null);
   const [activeMobileTab, setActiveMobileTab] = useState<"chat" | "skills">("chat");
-  const [confirmedSkills, setConfirmedSkills] = useState<string[]>([
-    "Critical Problem Solving",
-    "Cross-functional Teamwork",
-    "Agile Sprint Execution",
-    "User-Centric Prototyping",
-  ]);
+  // Resume skills are replaced wholesale on each new upload (a new resume
+  // supersedes the old one); chat skills accumulate across the conversation.
+  // The panel shows the union of both, deduped.
+  const [resumeSkills, setResumeSkills] = useState<string[]>([]);
+  const [chatSkills, setChatSkills] = useState<string[]>([]);
+  const confirmedSkills = Array.from(new Set([...resumeSkills, ...chatSkills]));
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isChatLoading) return;
     if (!inputText.trim() && !chatAttachment) return;
 
     const messageContent = chatAttachment
@@ -60,17 +66,39 @@ export default function DecoderPage() {
     // If user has not provided their name yet (first message)
     if (!userName) {
       const extractedName = userQuery.replace(/^(ผมชื่อ|ดิฉันชื่อ|ชื่อ|เรียกผมว่า|เรียกฉันว่า)/i, "").trim();
-      const finalName = extractedName || userQuery;
-      setUserName(finalName);
+      const candidateName = extractedName || userQuery;
+
+      // Reject obvious non-names (greetings/thanks/etc.) so the bot doesn't
+      // address the user as "คุณ ขอบคุณค่ะ" when they answer with those
+      // instead of an actual name — ask again rather than accept anything.
+      const isPlausibleName =
+        candidateName.length > 0 &&
+        candidateName.length <= 20 &&
+        !/^(ขอบคุณ|สวัสดี|โอเค|ok|hi|hello|ไม่รู้|ไม่มี|เฉยๆ)/i.test(candidateName);
+
+      if (!isPlausibleName) {
+        setTimeout(() => {
+          const aiReply: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            sender: "ai",
+            text: `ขอโทษครับ ผมยังไม่แน่ใจว่านี่คือชื่อที่จะเรียกคุณไหม รบกวนพิมพ์แค่ชื่อหรือชื่อเล่นสั้นๆ อีกครั้งได้ไหมครับ?`,
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          };
+          setMessages((prev) => [...prev, aiReply]);
+        }, 700);
+        return;
+      }
+
+      setUserName(candidateName);
       if (typeof window !== "undefined") {
-        localStorage.setItem("ktp_username", finalName);
+        localStorage.setItem("ktp_username", candidateName);
       }
 
       setTimeout(() => {
         const aiReply: ChatMessage = {
           id: (Date.now() + 1).toString(),
           sender: "ai",
-          text: `ยินดีที่ได้รู้จักครับคุณ ${finalName}! 🤝 สามารถแนบไฟล์เรซูเม่ PDF ด้านบน หรือพิมพ์เล่าประสบการณ์ทำงาน/โปรเจกต์ที่ภาคภูมิใจ ให้ผมช่วยสกัดทักษะวิชาชีพได้เลยครับ`,
+          text: `ยินดีที่ได้รู้จักครับคุณ ${candidateName}! 🤝 สามารถแนบไฟล์เรซูเม่ PDF ด้านบน หรือพิมพ์บอกชื่อเครื่องมือ/ซอฟต์แวร์/ทักษะที่คุณถนัดตรงๆ ให้ผมช่วยสกัดทักษะวิชาชีพได้เลยครับ (ระบบผมจับคำเฉพาะทาง เช่น "Python", "Excel", "Critical Thinking" ได้แม่นกว่าประโยคเล่าเรื่องยาวๆ ครับ)`,
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
         setMessages((prev) => [...prev, aiReply]);
@@ -78,22 +106,87 @@ export default function DecoderPage() {
       return;
     }
 
-    // Subsequent experience extraction messages
-    setTimeout(() => {
+    // Subsequent experience extraction messages — try Gemini first, fall back
+    // to the local Aho-Corasick matcher (same one the resume scanner uses)
+    // on any API failure so the chat never hangs or shows a dead end.
+    const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+    const replyWithLocalMatcher = () => {
+      const matchedSkills = matchSkills(userQuery, [
+        ...onetSkills.hardSkills,
+        ...onetSkills.softSkills,
+      ]);
+
+      if (matchedSkills.length) {
+        setChatSkills((prev) => Array.from(new Set([...prev, ...matchedSkills])));
+      }
+
       const aiReply: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: "ai",
-        text: `เยี่ยมมากครับคุณ ${userName}! จากประสบการณ์ที่คุณเล่าเรื่อง "${userQuery.slice(0, 25)}..." ระบบสกัดเป็นทักษะเชิงรุกได้ว่า: คุณมีทักษะในการแก้ปัญหาและตัดสินใจภายใต้สภาวะกดดันสูง มีทักษะเพิ่มเติมอะไรที่อยากเพิ่มอีกไหมครับ?`,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        extractedSkills: ["Strategic Resource Allocation", "Analytical Thinking"],
+        text: matchedSkills.length
+          ? `เยี่ยมมากครับคุณ ${userName}! จากประสบการณ์ที่คุณเล่าเรื่อง "${userQuery.slice(0, 25)}..." ระบบสกัดและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้ว มีประสบการณ์อื่นอยากเล่าเพิ่มไหมครับ?`
+          : `ขอบคุณครับคุณ ${userName}! ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะจากข้อความนี้ครับ ลองพิมพ์ชื่อเครื่องมือ/ซอฟต์แวร์/ทักษะตรงๆ แทนการเล่าเป็นเรื่องราว เช่น "Python, Excel, Critical Thinking" จะช่วยให้ผมจับได้แม่นขึ้นครับ`,
+        time: now(),
+        ...(matchedSkills.length ? { extractedSkills: matchedSkills } : {}),
       };
       setMessages((prev) => [...prev, aiReply]);
-    }, 800);
-  };
+    };
 
-  const addExtractedSkill = (skill: string) => {
-    if (!confirmedSkills.includes(skill)) {
-      setConfirmedSkills((prev) => [...prev, skill]);
+    setIsChatLoading(true);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userQuery,
+          // Same combined vocabulary as the local-matcher fallback below —
+          // otherwise Gemini can never recognize soft skills (e.g. "Critical
+          // Thinking") since it's instructed to only return verbatim matches
+          // from whatever list it's given.
+          hardSkills: [...onetSkills.hardSkills, ...onetSkills.softSkills],
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`/api/chat returned ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (!data.ok) {
+        throw new Error(`/api/chat unavailable: ${data.error ?? "unknown reason"}`);
+      }
+
+      const reply = typeof data.reply === "string" ? data.reply.trim() : "";
+      const skills: string[] = Array.isArray(data.skills)
+        ? data.skills.filter((s: unknown): s is string => typeof s === "string")
+        : [];
+
+      if (!reply) {
+        throw new Error("/api/chat returned an empty reply");
+      }
+
+      if (skills.length) {
+        setChatSkills((prev) => Array.from(new Set([...prev, ...skills])));
+      }
+
+      const aiReply: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: "ai",
+        text: reply,
+        time: now(),
+        ...(skills.length ? { extractedSkills: skills } : {}),
+      };
+      setMessages((prev) => [...prev, aiReply]);
+    } catch (err) {
+      // Expected, handled condition (network hiccup, quota, timeout) — the
+      // local matcher fallback below covers it, so this isn't a real error.
+      // console.warn (not .error) so Next.js's dev overlay doesn't treat a
+      // routine fallback as a crash.
+      console.warn("Gemini chat unavailable, falling back to local matcher:", err);
+      replyWithLocalMatcher();
+    } finally {
+      setIsChatLoading(false);
     }
   };
 
@@ -130,7 +223,7 @@ export default function DecoderPage() {
                 ห้องสนทนากับน้องตรงปก
               </h1>
               <p className="mt-0.5 text-[11px] sm:text-xs text-[#8A8A8A]">
-                แนบไฟล์เรซูเม่ PDF หรือพิมพ์พูดคุยกับน้องตรงปก เพื่อดึงประสบการณ์และสกัดเป็นประโยคทักษะวิชาชีพ
+                แนบไฟล์เรซูเม่ PDF หรือพิมพ์ชื่อเครื่องมือ/ทักษะที่ถนัด (เช่น Python, Excel, Adobe Photoshop, Critical Thinking) ให้น้องตรงปกช่วยสกัดทักษะวิชาชีพ
               </p>
             </div>
 
@@ -174,9 +267,11 @@ export default function DecoderPage() {
                     <span className="text-lg sm:text-xl">📄</span>
                     <div className="min-w-0">
                       <div className="truncate text-xs font-bold text-[#0F0F0F]">
-                        {uploadedFile
-                          ? `✓ แนบสำเร็จ: ${uploadedFile}`
-                          : "แนบไฟล์เรซูเม่ PDF (Optional)"}
+                        {isParsingResume
+                          ? `⏳ กำลังอ่านไฟล์ "${uploadedFile}"...`
+                          : uploadedFile
+                            ? `✓ แนบสำเร็จ: ${uploadedFile}`
+                            : "แนบไฟล์เรซูเม่ PDF (Optional)"}
                       </div>
                       <span className="hidden sm:inline text-[10px] text-[#8A8A8A]">
                         ลากวาง หรือ คลิกอัปโหลด (รองรับ PDF ไม่เกิน 10MB)
@@ -187,28 +282,66 @@ export default function DecoderPage() {
                     </div>
                   </div>
                   <span className="flex-shrink-0 rounded-lg bg-white px-2.5 py-1 text-[10px] sm:text-xs font-bold text-[#0F0F0F] border border-[rgba(15,15,15,0.1)]">
-                    {uploadedFile ? "เปลี่ยนไฟล์" : "อัปโหลด"}
+                    {isParsingResume ? "กำลังประมวลผล..." : uploadedFile ? "เปลี่ยนไฟล์" : "อัปโหลด"}
                   </span>
                   <input
                     type="file"
                     accept=".pdf"
-                    onChange={(e) => {
+                    disabled={isParsingResume}
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
-                      if (file) {
-                        setUploadedFile(file.name);
+                      const inputEl = e.target;
+                      if (!file) return;
+
+                      setUploadedFile(file.name);
+                      setIsParsingResume(true);
+
+                      const now = () =>
+                        new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+                      try {
+                        const text = await extractTextFromPdf(file);
+                        if (text.trim().length < 20) {
+                          throw new Error("PDF has no extractable text layer");
+                        }
+
+                        const matchedSkills = matchSkills(text, onetSkills.hardSkills);
+
+                        // A new resume replaces the previous resume's skills
+                        // (not a union) — an old file's stale skills shouldn't
+                        // linger once it's been swapped out. Chat-derived
+                        // skills are untouched.
+                        setResumeSkills(matchedSkills);
+
                         setMessages((prev) => [
                           ...prev,
                           {
                             id: Date.now().toString(),
                             sender: "ai",
-                            text: `น้องตรงปกวิเคราะห์ไฟล์ PDF "${file.name}" เรียบร้อยแล้ว! พบทักษะสำคัญในการบริหารจัดการโปรเจกต์และทักษะเทคนิค คุณอยากเพิ่มหรือแก้ไขทักษะส่วนไหนเพิ่มเติมไหมครับ?`,
-                            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                            extractedSkills: ["Resume Validated Skills", "Technical Competency"],
+                            text: matchedSkills.length
+                              ? `น้องตรงปกวิเคราะห์ไฟล์ PDF "${file.name}" เรียบร้อยแล้ว! พบและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้วครับ`
+                              : `น้องตรงปกอ่านไฟล์ PDF "${file.name}" ได้แล้วครับ แต่ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะ ลองพิมพ์เล่าประสบการณ์เพิ่มเติมในแชทได้เลยครับ`,
+                            time: now(),
+                            ...(matchedSkills.length ? { extractedSkills: matchedSkills } : {}),
                           },
                         ]);
+                      } catch (err) {
+                        console.error("Resume PDF parsing failed:", err);
+                        setMessages((prev) => [
+                          ...prev,
+                          {
+                            id: Date.now().toString(),
+                            sender: "ai",
+                            text: `น้องตรงปกไม่สามารถอ่านข้อความจากไฟล์ "${file.name}" ได้ครับ (ไฟล์อาจเป็นภาพสแกนที่ไม่มีข้อความ หรือไฟล์เสียหาย) ลองแนบไฟล์ PDF อื่น หรือพิมพ์เล่าประสบการณ์ในแชทแทนได้เลยครับ`,
+                            time: now(),
+                          },
+                        ]);
+                      } finally {
+                        setIsParsingResume(false);
+                        inputEl.value = "";
                       }
                     }}
-                    className="absolute inset-0 cursor-pointer opacity-0"
+                    className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -230,17 +363,15 @@ export default function DecoderPage() {
                         {msg.extractedSkills && (
                           <div className="mt-2 flex flex-wrap gap-1.5 border-t border-[rgba(15,15,15,0.1)] pt-2">
                             <span className="w-full text-[10px] font-bold text-[#4D7CFF]">
-                              น้องตรงปก สกัดทักษะให้เพิ่ม:
+                              เพิ่มเข้าโปรไฟล์ให้อัตโนมัติแล้ว:
                             </span>
                             {msg.extractedSkills.map((sk) => (
-                              <button
+                              <span
                                 key={sk}
-                                type="button"
-                                onClick={() => addExtractedSkill(sk)}
-                                className="rounded-lg bg-[#4D7CFF] px-2 py-1 text-[10px] font-bold text-white active:scale-95 transition-transform"
+                                className="rounded-lg bg-[#4D7CFF] px-2 py-1 text-[10px] font-bold text-white"
                               >
-                                + {sk}
-                              </button>
+                                {sk}
+                              </span>
                             ))}
                           </div>
                         )}
@@ -248,6 +379,15 @@ export default function DecoderPage() {
                       <span className="mt-1 text-[9px] text-[#8A8A8A]">{msg.time}</span>
                     </div>
                   ))}
+                  {isChatLoading && (
+                    <div className="flex flex-col items-start">
+                      <div className="flex items-center gap-1 rounded-2xl rounded-bl-none border border-[rgba(15,15,15,0.08)] bg-[#F5F5F5] px-3.5 py-2.5">
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A] [animation-delay:-0.3s]" />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A] [animation-delay:-0.15s]" />
+                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A]" />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Chat Input Form */}
@@ -285,14 +425,16 @@ export default function DecoderPage() {
                       type="text"
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
-                      placeholder="พิมพ์เล่าประสบการณ์..."
-                      className="min-w-0 flex-1 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs outline-none focus:border-[#0F0F0F]"
+                      placeholder="พิมพ์ชื่อเครื่องมือ/ทักษะ เช่น Python, Excel..."
+                      disabled={isChatLoading}
+                      className="min-w-0 flex-1 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs outline-none focus:border-[#0F0F0F] disabled:opacity-60"
                     />
                     <button
                       type="submit"
-                      className="rounded-xl bg-[#0F0F0F] px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs font-bold text-white transition-transform active:scale-[0.98]"
+                      disabled={isChatLoading}
+                      className="rounded-xl bg-[#0F0F0F] px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
                     >
-                      ส่ง
+                      {isChatLoading ? "..." : "ส่ง"}
                     </button>
                   </div>
                 </form>
@@ -314,29 +456,23 @@ export default function DecoderPage() {
                     </span>
                   </div>
                   <p className="mb-2.5 text-[10px] text-[#8A8A8A]">
-                    คลิก ✕ เพื่อแก้ไขหรือลบทักษะก่อนบันทึก
+                    น้องตรงปกสกัดและเพิ่มทักษะเหล่านี้ให้อัตโนมัติ
                   </p>
 
                   {/* Minimal Skill Pills List */}
                   <div className="flex min-h-[220px] max-h-[320px] sm:min-h-[280px] sm:max-h-[360px] flex-col gap-1.5 overflow-y-auto pr-0.5">
+                    {confirmedSkills.length === 0 && (
+                      <p className="text-[11px] text-[#8A8A8A]">
+                        ยังไม่มีทักษะที่สกัดได้ — แนบเรซูเม่ PDF หรือพิมพ์เล่าประสบการณ์ในแชท แล้วน้องตรงปกจะสกัดและเพิ่มทักษะให้ที่นี่โดยอัตโนมัติ
+                      </p>
+                    )}
                     {confirmedSkills.map((sk) => (
                       <div
                         key={sk}
-                        className="group flex items-center justify-between gap-2 rounded-full border border-[rgba(15,15,15,0.08)] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#0F0F0F] transition-all hover:border-[rgba(15,15,15,0.2)]"
+                        className="flex items-center gap-1.5 rounded-full border border-[rgba(15,15,15,0.08)] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#0F0F0F]"
                       >
-                        <span className="flex items-center gap-1.5 truncate">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#3BF55C]" />
-                          {sk}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setConfirmedSkills(confirmedSkills.filter((s) => s !== sk))
-                          }
-                          className="text-[11px] font-bold text-[#8A8A8A] opacity-60 hover:opacity-100 hover:text-red-500 transition-opacity"
-                        >
-                          ✕
-                        </button>
+                        <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#3BF55C]" />
+                        <span className="truncate">{sk}</span>
                       </div>
                     ))}
                   </div>
