@@ -1,4 +1,42 @@
-import type { AxisChip, FaqItem, GameStage, Job, RadarAxisDatum, Step } from "./types";
+import type {
+  AxisChip,
+  Company,
+  FaqItem,
+  GameStage,
+  HRUser,
+  Job,
+  JobSeeker,
+  Match,
+  Position,
+  RadarAxisDatum,
+  SoftSkillScores,
+  Step,
+} from "./types";
+
+// Single source of truth for the 6-axis soft-skill taxonomy — same axes
+// shown on the candidate-facing /profile page (RADAR_DATA/AXIS_CHIPS below),
+// reused for company-side Position requirements and JobSeeker scores so
+// there's exactly one soft-skill system across the whole app.
+export const SOFT_SKILL_AXIS_ORDER: (keyof SoftSkillScores)[] = [
+  "learningAgility",
+  "resilienceAdaptability",
+  "criticalThinking",
+  "decisionMakingUnderPressure",
+  "riskTolerance",
+  "collaborationMindset",
+];
+
+export const SOFT_SKILL_AXIS_META: Record<
+  keyof SoftSkillScores,
+  { en: string; th: string; color: string }
+> = {
+  learningAgility: { en: "Learning Agility", th: "ความคล่องตัวในการเรียนรู้", color: "#FF6E5C" },
+  resilienceAdaptability: { en: "Resilience & Adaptability", th: "ความยืดหยุ่นและปรับตัว", color: "#3BF55C" },
+  criticalThinking: { en: "Critical Thinking", th: "การคิดวิเคราะห์", color: "#4D7CFF" },
+  decisionMakingUnderPressure: { en: "Decision Making under Pressure", th: "ตัดสินใจภายใต้แรงกดดัน", color: "#F5D949" },
+  riskTolerance: { en: "Risk Tolerance", th: "การยอมรับความเสี่ยง", color: "#B14DFF" },
+  collaborationMindset: { en: "Collaboration Mindset", th: "การทำงานร่วมกับผู้อื่น", color: "#FF5CA8" },
+};
 
 export const RADAR_DATA: RadarAxisDatum[] = [
   { axis: "Learning Agility", value: 78 },
@@ -361,4 +399,167 @@ export const CATEGORY_TABS: { key: "all" | "dev" | "marketing" | "design"; label
   { key: "dev", label: "Software & Data" },
   { key: "marketing", label: "Marketing" },
   { key: "design", label: "Design" },
+];
+
+// --- Company / HR mock data (types only for now — no real auth/backend yet) ---
+
+export const MOCK_COMPANIES: Company[] = [
+  { id: "co_techcorp", name: "TechCorp Global", industry: "Software", createdAt: "2025-01-14", domain: "techcorpglobal.com" },
+  { id: "co_datadrive", name: "DataDrive Insights", industry: "Data & Analytics", createdAt: "2025-02-03", domain: "datadrive.io" },
+  { id: "co_fintech", name: "FinTech Dynamics", industry: "Fintech", createdAt: "2025-03-19", domain: "fintechdynamics.com" },
+  { id: "co_creativelab", name: "Creative Lab Studio", industry: "Design Agency", createdAt: "2025-04-22", domain: "creativelabstudio.com" },
+];
+
+export const MOCK_HR_USERS: HRUser[] = [
+  { id: "hr_001", companyId: "co_techcorp", name: "ปวีณา ศรีสุข", email: "paveena@techcorpglobal.com" },
+  { id: "hr_002", companyId: "co_techcorp", name: "ธนกร วงศ์ไพศาล", email: "thanakorn@techcorpglobal.com" },
+  { id: "hr_003", companyId: "co_datadrive", name: "อรุณี ชัยพัฒน์", email: "arunee@datadrive.io" },
+  { id: "hr_004", companyId: "co_fintech", name: "ณัฐพล เจริญสุข", email: "nattapon@fintechdynamics.com" },
+  { id: "hr_005", companyId: "co_creativelab", name: "กมลชนก ทองดี", email: "kamonchanok@creativelabstudio.com" },
+];
+
+// requiredHardSkills values are drawn from onetSkills.hardSkills
+// (src/data/onet_skills_dictionary_full.json) — verified present in that
+// dictionary, same source the resume scanner (src/lib/pdf.ts +
+// src/lib/ahoCorasick.ts) matches against.
+export const MOCK_POSITIONS: Position[] = [
+  {
+    id: "pos_001",
+    companyId: "co_techcorp",
+    title: "Senior Frontend Developer",
+    requiredHardSkills: ["React", "TypeScript", "Git"],
+    // Thresholds mirror this same title's skillTags in the JOBS array above.
+    requiredSoftSkills: { criticalThinking: 80, learningAgility: 75, collaborationMindset: 85 },
+    open: true,
+  },
+  {
+    id: "pos_002",
+    companyId: "co_techcorp",
+    title: "QA Automation Engineer",
+    requiredHardSkills: ["Docker", "Linux", "Git"],
+    requiredSoftSkills: { criticalThinking: 80, resilienceAdaptability: 70, decisionMakingUnderPressure: 65 },
+    open: true,
+  },
+  {
+    id: "pos_003",
+    companyId: "co_datadrive",
+    title: "AI Data Scientist & Analyst",
+    requiredHardSkills: ["Python", "PostgreSQL", "Tableau"],
+    requiredSoftSkills: { criticalThinking: 80, decisionMakingUnderPressure: 65, learningAgility: 75 },
+    open: true,
+  },
+  {
+    id: "pos_004",
+    companyId: "co_fintech",
+    title: "Growth Marketing Specialist",
+    requiredHardSkills: ["Google Ads", "Google Analytics", "TikTok"],
+    requiredSoftSkills: { riskTolerance: 60, collaborationMindset: 85, resilienceAdaptability: 70 },
+    open: true,
+  },
+  {
+    id: "pos_005",
+    companyId: "co_creativelab",
+    title: "UI/UX Product Designer",
+    requiredHardSkills: ["Figma", "Adobe Illustrator"],
+    requiredSoftSkills: { resilienceAdaptability: 70, learningAgility: 75, collaborationMindset: 85 },
+    open: true,
+  },
+];
+
+export const MOCK_MATCHES: Match[] = [
+  { positionId: "pos_001", jobSeekerId: "js_a12f", matchScore: 92, status: "contacted" },
+  { positionId: "pos_001", jobSeekerId: "js_b7k9", matchScore: 84, status: "pending" },
+  { positionId: "pos_001", jobSeekerId: "js_c3mx", matchScore: 71, status: "pending" },
+  { positionId: "pos_003", jobSeekerId: "js_d8qz", matchScore: 88, status: "pending" },
+  { positionId: "pos_004", jobSeekerId: "js_e2rv", matchScore: 79, status: "contacted" },
+  { positionId: "pos_005", jobSeekerId: "js_f5nt", matchScore: 90, status: "pending" },
+];
+
+// realName, currentRole, yearsOfExperience, and contact are all withheld in
+// the UI (Blind Review) until the candidate's match status is "contacted" —
+// see companyStore.ts's getCandidateReport.
+export const MOCK_JOB_SEEKERS: JobSeeker[] = [
+  {
+    id: "js_a12f",
+    realName: "ณิชา วัฒนกุล",
+    currentRole: "Frontend Developer ที่ StartUp Hub",
+    yearsOfExperience: 4,
+    contact: { email: "nicha.watt@example.com", phone: "081-234-5678", location: "กรุงเทพฯ" },
+    hardSkills: [
+      { skill: "React", status: "verified" },
+      { skill: "TypeScript", status: "verified" },
+      { skill: "Git", status: "verified" },
+    ],
+    softSkills: { learningAgility: 82, resilienceAdaptability: 75, criticalThinking: 88, decisionMakingUnderPressure: 70, riskTolerance: 60, collaborationMindset: 85 },
+    aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพของน้องตรงปก ผู้สมัครมีทักษะด้านเทคนิคที่ยืนยันแล้วครบทั้ง React, TypeScript และ Git ซึ่งสอดคล้องกับประสบการณ์การทำงานที่ระบุไว้ในเรซูเม่ ประกอบกับผลประเมิน 6 มิติที่โดดเด่นเป็นพิเศษด้าน Critical Thinking (88%) และ Collaboration Mindset (85%) ที่สูงกว่าเกณฑ์ของตำแหน่งนี้อย่างชัดเจน รวมถึง Learning Agility (82%) ที่สะท้อนความสามารถในการเรียนรู้เทคโนโลยีใหม่ได้อย่างรวดเร็ว แม้ Risk Tolerance (60%) จะอยู่ในระดับปานกลางซึ่งเป็นเรื่องปกติสำหรับสายงานที่เน้นความแม่นยำมากกว่าความเสี่ยง ภาพรวมจึงเป็นผู้สมัครที่มีทั้งฝีมือเชิงเทคนิคและศักยภาพเชิงพฤติกรรมที่เหมาะสมอย่างยิ่งกับตำแหน่ง Senior Frontend Developer ที่ต้องตัดสินใจเชิงเทคนิคด้วยตนเองและทำงานร่วมกับทีมได้อย่างราบรื่น",
+  },
+  {
+    id: "js_b7k9",
+    realName: "ภูวดล เจริญพร",
+    currentRole: "Frontend Developer ที่ Freelance",
+    yearsOfExperience: 2,
+    contact: { email: "phuwadol.j@example.com", phone: "082-345-6789", location: "นนทบุรี" },
+    hardSkills: [
+      { skill: "React", status: "verified" },
+      { skill: "TypeScript", status: "partial" },
+      { skill: "Git", status: "verified" },
+    ],
+    softSkills: { learningAgility: 68, resilienceAdaptability: 62, criticalThinking: 72, decisionMakingUnderPressure: 58, riskTolerance: 55, collaborationMindset: 66 },
+    aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพ ผู้สมัครมีทักษะ React และ Git ที่ยืนยันแล้วจากทั้งเรซูเม่และบทสนทนา แต่ TypeScript ยังพบหลักฐานเพียงบางส่วนเท่านั้น ยังไม่สามารถยืนยันความเชี่ยวชาญได้เต็มที่ ด้านผลประเมิน 6 มิติอยู่ในระดับปานกลางทุกด้าน โดย Critical Thinking (72%) และ Collaboration Mindset (66%) เป็นจุดที่ค่อนข้างดีที่สุด ขณะที่ Decision Making under Pressure (58%) และ Risk Tolerance (55%) ยังต่ำกว่าเกณฑ์ของตำแหน่งนี้อยู่พอสมควร ภาพรวมจึงเป็นผู้สมัครที่มีพื้นฐานดีแต่ยังไม่ครบทุกด้าน ควรสอบถามเชิงลึกเรื่อง TypeScript และทดสอบการตัดสินใจภายใต้ความกดดันเพิ่มเติมในรอบสัมภาษณ์ก่อนตัดสินใจ",
+  },
+  {
+    id: "js_c3mx",
+    realName: "กัญญาณัฐ สุขใจ",
+    currentRole: "จบใหม่ / เคยฝึกงานสาย Frontend",
+    yearsOfExperience: 0,
+    contact: { email: "kanyanat.s@example.com", phone: "083-456-7890", location: "กรุงเทพฯ" },
+    hardSkills: [
+      { skill: "React", status: "partial" },
+      { skill: "TypeScript", status: "unclear" },
+      { skill: "Git", status: "verified" },
+    ],
+    softSkills: { learningAgility: 58, resilienceAdaptability: 55, criticalThinking: 56, decisionMakingUnderPressure: 50, riskTolerance: 52, collaborationMindset: 60 },
+    aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพ มีเพียง Git ที่ยืนยันได้ชัดเจน ส่วน React พบหลักฐานเพียงบางส่วนและ TypeScript ยังไม่สามารถยืนยันได้จากทั้งเรซูเม่และบทสนทนา ด้านผลประเมิน 6 มิติอยู่ในระดับกลางค่อนไปทางต่ำแทบทุกด้าน (50-60%) โดยไม่มีจุดใดโดดเด่นเป็นพิเศษ ทั้ง Critical Thinking (56%) และ Decision Making under Pressure (50%) ยังห่างจากเกณฑ์ของตำแหน่งระดับ Senior อยู่พอสมควร ภาพรวมจึงเหมาะกับตำแหน่งระดับ Junior ที่มีพี่เลี้ยงคอยซัพพอร์ตและมีเวลาพัฒนาทักษะเพิ่มเติม มากกว่าบทบาทที่ต้องตัดสินใจเชิงเทคนิคด้วยตนเอง",
+  },
+  {
+    id: "js_d8qz",
+    realName: "ธีรภัทร มั่นคง",
+    currentRole: "Data Analyst ที่ FinServe Co.",
+    yearsOfExperience: 3,
+    contact: { email: "theerapat.m@example.com", phone: "084-567-8901", location: "กรุงเทพฯ" },
+    hardSkills: [
+      { skill: "Python", status: "verified" },
+      { skill: "PostgreSQL", status: "verified" },
+      { skill: "Tableau", status: "partial" },
+    ],
+    softSkills: { learningAgility: 80, resilienceAdaptability: 68, criticalThinking: 85, decisionMakingUnderPressure: 72, riskTolerance: 58, collaborationMindset: 65 },
+    aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพ ผู้สมัครมีทักษะ Python และ PostgreSQL ที่ยืนยันแล้วอย่างแข็งแรงจากทั้งเรซูเม่และบทสนทนา ส่วน Tableau ยังพบหลักฐานไม่ครบถ้วนนัก ด้านผลประเมิน 6 มิติโดดเด่นชัดเจนที่ Critical Thinking (85%) และ Learning Agility (80%) ซึ่งสูงกว่าเกณฑ์ของตำแหน่งนี้ รวมถึง Decision Making under Pressure (72%) ที่อยู่ในระดับดี สอดคล้องกับงานวิเคราะห์ข้อมูลที่ต้องปรับมุมมอง ประมวลผลข้อมูลจำนวนมาก และตัดสินใจภายใต้ deadline ที่กดดันอยู่เสมอ ภาพรวมจึงเป็นผู้สมัครที่มีทั้งทักษะเทคนิคเชิงลึกและศักยภาพเชิงพฤติกรรมที่เหมาะสมอย่างยิ่งกับตำแหน่ง AI Data Scientist & Analyst",
+  },
+  {
+    id: "js_e2rv",
+    realName: "ปวริศา แสงทอง",
+    currentRole: "Performance Marketing Executive ที่ AdReach Agency",
+    yearsOfExperience: 3,
+    contact: { email: "pawarisa.s@example.com", phone: "085-678-9012", location: "กรุงเทพฯ" },
+    hardSkills: [
+      { skill: "Google Ads", status: "verified" },
+      { skill: "Google Analytics", status: "partial" },
+      { skill: "TikTok", status: "verified" },
+    ],
+    softSkills: { learningAgility: 65, resilienceAdaptability: 74, criticalThinking: 62, decisionMakingUnderPressure: 60, riskTolerance: 68, collaborationMindset: 72 },
+    aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพ ผู้สมัครมีทักษะ Google Ads และ TikTok ที่ยืนยันแล้วจากประสบการณ์ยิงแอดจริงตามที่ระบุในเรซูเม่ ส่วน Google Analytics พบหลักฐานเพียงบางส่วน ด้านผลประเมิน 6 มิติค่อนข้างสมดุล โดย Resilience & Adaptability (74%) และ Collaboration Mindset (72%) อยู่ในระดับดี ประกอบกับ Risk Tolerance (68%) ที่สูงกว่าค่าเฉลี่ย สะท้อนว่ากล้าทดลองแคมเปญใหม่และปรับตัวเมื่อผลลัพธ์ไม่เป็นไปตามแผน ขณะที่ Critical Thinking (62%) ยังเป็นจุดที่พัฒนาต่อได้ ภาพรวมเหมาะกับตำแหน่งการตลาดที่ต้องทดลองและปรับกลยุทธ์อย่างต่อเนื่อง",
+  },
+  {
+    id: "js_f5nt",
+    realName: "อภิสิทธิ์ รุ่งเรือง",
+    currentRole: "Product Designer ที่ Studio Nine",
+    yearsOfExperience: 5,
+    contact: { email: "apisit.r@example.com", phone: "086-789-0123", location: "เชียงใหม่" },
+    hardSkills: [
+      { skill: "Figma", status: "verified" },
+      { skill: "Adobe Illustrator", status: "verified" },
+    ],
+    softSkills: { learningAgility: 78, resilienceAdaptability: 80, criticalThinking: 70, decisionMakingUnderPressure: 62, riskTolerance: 58, collaborationMindset: 90 },
+    aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพ ผู้สมัครมีทักษะ Figma และ Adobe Illustrator ที่ยืนยันแล้วครบทั้งสองรายการจากทั้งเรซูเม่และบทสนทนา ด้านผลประเมิน 6 มิติโดดเด่นเป็นพิเศษที่ Collaboration Mindset สูงถึง 90% รวมถึง Resilience & Adaptability (80%) และ Learning Agility (78%) ที่สูงกว่าเกณฑ์ของตำแหน่งนี้อย่างชัดเจน สะท้อนว่าเป็นนักออกแบบที่ทั้งมีฝีมือและทำงานร่วมกับทีม/ผู้มีส่วนได้ส่วนเสียได้อย่างราบรื่นเป็นพิเศษ พร้อมปรับตัวไวเมื่อโจทย์งานหรือ feedback เปลี่ยนแปลงกะทันหัน ภาพรวมจึงเหมาะสมอย่างยิ่งกับตำแหน่ง UI/UX Product Designer ที่ต้องทำงานร่วมกับหลายฝ่ายอย่างต่อเนื่อง",
+  },
 ];
