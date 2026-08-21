@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BarChart3, Building2, Compass, EyeOff, Gamepad2 } from "lucide-react";
 import { Faq } from "@/components/Faq";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
@@ -11,22 +12,22 @@ export const metadata: Metadata = {
 
 const FEATURES = [
   {
-    icon: "🕶️",
+    icon: EyeOff,
     title: "Blind Review ไร้อคติ",
     desc: "รอบพิจารณาแรกเห็นแค่กราฟทักษะและ Hard Skill ไม่เห็นชื่อ รูป หรือข้อมูลที่นำไปสู่อคติ เปิดเผยตัวตนก็ต่อเมื่อนัดสัมภาษณ์",
   },
   {
-    icon: "🎮",
+    icon: Gamepad2,
     title: "วัด Soft Skill จากพฤติกรรมจริง",
     desc: "ผู้สมัครเล่นมินิเกมประสาทวิทยาศาสตร์ (Neuroscience Games) ที่พัฒนาจากมาตรฐานงานวิจัย วัดจากพฤติกรรมจริง ไม่ใช่คำตอบที่เตรียมมา",
   },
   {
-    icon: "🧭",
+    icon: Compass,
     title: "น้องตรงปกให้เหตุผลทุกคำแนะนำ",
     desc: 'ไม่ใช่แค่ตัวเลข Match Rate ลอยๆ แต่มาพร้อมเหตุผลที่อ่านเข้าใจง่าย เช่น "ปรับตัวเรียนรู้ไวกว่าเกณฑ์ และมีทักษะตรงกับตำแหน่งนี้"',
   },
   {
-    icon: "📊",
+    icon: BarChart3,
     title: "ติดตามสถานะแบบเรียลไทม์",
     desc: "จัดการทุกตำแหน่งงานและผู้สมัครในที่เดียว นัดสัมภาษณ์และแจ้งผลได้ในระบบโดยตรง ไม่ต้องสลับไปช่องทางอื่น",
   },
@@ -89,7 +90,9 @@ export default function CompanyPage() {
               <div className="flex items-center gap-2 border-b border-[rgba(15,15,15,0.06)] px-5 py-2 text-[11px] text-[#8A8A8A]">
                 <span>เรียงตาม</span>
                 <span className="font-bold text-[#0F0F0F]">Match Rate ↓</span>
-                <span className="ml-auto">Blind Review Mode 🕶️</span>
+                <span className="ml-auto inline-flex items-center gap-1">
+                  <EyeOff className="h-3 w-3" strokeWidth={2} /> Blind Review Mode
+                </span>
               </div>
 
               {/* Candidate rows */}
@@ -139,7 +142,8 @@ export default function CompanyPage() {
           {/* Text — right */}
           <div className="min-w-0 flex-[1_1_400px]">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[rgba(15,15,15,0.12)] bg-[#FAFAFA] px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
-              <span>✨ For Enterprises &amp; HR</span>
+              <Building2 className="h-3.5 w-3.5" strokeWidth={2} />
+              <span>For Enterprises &amp; HR</span>
             </div>
 
             <h1 className="mb-[22px] text-[clamp(36px,6vw,60px)] leading-[1.08] font-extrabold tracking-[-0.03em]">
@@ -153,7 +157,7 @@ export default function CompanyPage() {
             </p>
             <div className="mb-[18px] flex flex-wrap gap-3">
               <Link
-                href="/register"
+                href="/company/register"
                 className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white transition-all hover:opacity-90 active:scale-95"
               >
                 เริ่มใช้งานฟรี
@@ -181,7 +185,9 @@ export default function CompanyPage() {
         <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
           {FEATURES.map((f) => (
             <div key={f.title} className="rounded-2xl border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-6">
-              <div className="mb-4 text-2xl">{f.icon}</div>
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white border border-[rgba(15,15,15,0.08)]">
+                <f.icon className="h-5 w-5 text-[#0F0F0F]" strokeWidth={1.75} />
+              </div>
               <div className="mb-2 text-base font-extrabold tracking-[-0.01em]">{f.title}</div>
               <div className="text-sm leading-[1.7] text-[#5C5C5C]">{f.desc}</div>
             </div>
@@ -231,7 +237,7 @@ export default function CompanyPage() {
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <Link
-              href="/register"
+              href="/company/register"
               className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white transition-all hover:opacity-90 active:scale-95"
             >
               เริ่มใช้งานฟรี
