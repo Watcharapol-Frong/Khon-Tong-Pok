@@ -24,7 +24,10 @@ export function Footer() {
             className="h-auto w-[90px] flex-shrink-0 object-contain sm:w-[110px]"
           />
           <div>
-            <h3 className="text-base font-extrabold sm:text-lg">คนตรงปก (KhonTongPok)</h3>
+            <h3 className="tracking-[-0.01em]">
+              <span className="text-xl font-extrabold text-white sm:text-2xl">คนตรงปก</span>{" "}
+              <span className="text-[11px] font-medium text-[#7A7A7A] sm:text-xs">(KhonTongPok)</span>
+            </h3>
             <div className="mt-1.5 max-w-[280px] text-[13px] leading-[1.7] text-[#9A9A9A]">
               พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ ประเมินศักยภาพก่อน ระบบช่วยสร้างเรซูเม่ได้เลย
             </div>
