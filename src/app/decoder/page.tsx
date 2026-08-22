@@ -69,6 +69,30 @@ export default function DecoderPage() {
   const [resumeSkills, setResumeSkills] = useState<string[]>([]);
   const [chatSkills, setChatSkills] = useState<string[]>([]);
   const confirmedSkills = Array.from(new Set([...resumeSkills, ...chatSkills]));
+  // Skills merged in the last ~1.6s — the sidebar panel gives these a
+  // brief highlight so a newly-detected skill is noticeable instead of
+  // just silently appearing in the list.
+  const [recentlyAddedSkills, setRecentlyAddedSkills] = useState<Set<string>>(new Set());
+
+  // Merges newly-found skills into chatSkills and flags whichever of them
+  // weren't already in the combined list for the brief highlight above.
+  // Used for both the local matcher (runs on every message, immediately —
+  // no need to wait on Gemini) and Gemini's own returned skills.
+  const mergeChatSkills = (found: string[]) => {
+    if (!found.length) return;
+    const brandNew = found.filter((s) => !confirmedSkills.includes(s));
+    setChatSkills((prev) => Array.from(new Set([...prev, ...found])));
+    if (brandNew.length) {
+      setRecentlyAddedSkills((prev) => new Set([...prev, ...brandNew]));
+      setTimeout(() => {
+        setRecentlyAddedSkills((prev) => {
+          const next = new Set(prev);
+          brandNew.forEach((s) => next.delete(s));
+          return next;
+        });
+      }, 1600);
+    }
+  };
   const [isChatLoading, setIsChatLoading] = useState(false);
   // Which scripted question turn we're on (0-indexed); reaching
   // TOTAL_QUESTION_STAGES marks the guided conversation as complete.
@@ -166,18 +190,19 @@ export default function DecoderPage() {
       : `\n\n${SCRIPTED_PROMPTS[currentStage]}`;
     setQuestionStage(currentStage + 1);
 
+    // Runs on every message, not just as a Gemini-unavailable fallback —
+    // it's a local, synchronous match, so the skills panel can update
+    // immediately instead of waiting on a network round-trip, and it
+    // catches anything Gemini's own extraction might miss.
+    const locallyMatchedSkills = matchSkills(userQuery, [
+      ...onetSkills.hardSkills,
+      ...onetSkills.softSkills,
+    ]);
+    mergeChatSkills(locallyMatchedSkills);
+
     const replyWithLocalMatcher = () => {
-      const matchedSkills = matchSkills(userQuery, [
-        ...onetSkills.hardSkills,
-        ...onetSkills.softSkills,
-      ]);
-
-      if (matchedSkills.length) {
-        setChatSkills((prev) => Array.from(new Set([...prev, ...matchedSkills])));
-      }
-
-      const baseText = matchedSkills.length
-        ? `เยี่ยมมากครับ${greetName}! จากประสบการณ์ที่คุณเล่าเรื่อง "${userQuery.slice(0, 25)}..." ระบบสกัดและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้ว`
+      const baseText = locallyMatchedSkills.length
+        ? `เยี่ยมมากครับ${greetName}! จากประสบการณ์ที่คุณเล่าเรื่อง "${userQuery.slice(0, 25)}..." ระบบสกัดและเพิ่มทักษะที่เกี่ยวข้อง ${locallyMatchedSkills.length} รายการให้อัตโนมัติแล้ว`
         : `ขอบคุณครับ${greetName}! ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะจากข้อความนี้ครับ`;
 
       const aiReply: ChatMessage = {
@@ -185,7 +210,7 @@ export default function DecoderPage() {
         sender: "ai",
         text: `${baseText}${stageSuffix}`,
         time: nowLabel(),
-        ...(matchedSkills.length ? { extractedSkills: matchedSkills } : {}),
+        ...(locallyMatchedSkills.length ? { extractedSkills: locallyMatchedSkills } : {}),
       };
       setMessages((prev) => [...prev, aiReply]);
     };
@@ -223,9 +248,10 @@ export default function DecoderPage() {
         throw new Error("/api/chat returned an empty reply");
       }
 
-      if (skills.length) {
-        setChatSkills((prev) => Array.from(new Set([...prev, ...skills])));
-      }
+      // locallyMatchedSkills was already merged above; Gemini may surface
+      // additional skills beyond what the local matcher caught (or none
+      // new at all) — mergeChatSkills dedupes either way.
+      mergeChatSkills(skills);
 
       const aiReply: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -600,15 +626,23 @@ export default function DecoderPage() {
                         ยังไม่มีทักษะที่สกัดได้ — แนบเรซูเม่ PDF หรือพิมพ์เล่าประสบการณ์ในแชท แล้วน้องตรงปกจะสกัดและเพิ่มทักษะให้ที่นี่โดยอัตโนมัติ
                       </p>
                     )}
-                    {confirmedSkills.map((sk) => (
-                      <div
-                        key={sk}
-                        className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#0F0F0F]"
-                      >
-                        <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#3BF55C]" />
-                        <span className="truncate">{sk}</span>
-                      </div>
-                    ))}
+                    {confirmedSkills.map((sk) => {
+                      // Brief highlight so a skill that just got detected
+                      // mid-conversation is noticeable, not just a silent
+                      // new row in the list — see mergeChatSkills.
+                      const isNew = recentlyAddedSkills.has(sk);
+                      return (
+                        <div
+                          key={sk}
+                          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold text-[#0F0F0F] transition-colors duration-[1400ms] ${
+                            isNew ? "bg-[rgba(77,124,255,0.18)] ring-1 ring-[#4D7CFF]" : "bg-white"
+                          }`}
+                        >
+                          <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#3BF55C]" />
+                          <span className="truncate">{sk}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
