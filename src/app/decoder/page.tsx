@@ -52,6 +52,25 @@ const COMPLETION_MESSAGE =
 const SKILL_PROBE_FOLLOWUP =
   "ลองเจาะจงอีกนิดได้ไหมครับ — ตอนนั้นคุณใช้เครื่องมือ ซอฟต์แวร์ หรือทักษะเฉพาะอะไรบ้าง? (เช่น ชื่อโปรแกรม ภาษาที่ใช้เขียนโค้ด หรือ Framework ที่ถนัด)";
 
+// Catches replies to "what's your name" that are clearly sentences, not a
+// name — negation ("ไม่มี"), casual particles ("อ่ะ"), or topic words that
+// leaked in from the surrounding conversation ("เรซูเม่"). Not exhaustive
+// (a determined typo can still slip through), but it catches the obvious
+// case of a whole sentence like "ไม่มีเรซูเม่อ่ะ" getting accepted as a name
+// verbatim, which a plain non-empty-string check doesn't.
+const NON_NAME_REPLY_PATTERN =
+  /ไม่มี|ไม่ใช่|ไม่รู้|ไม่ทราบ|เปล่า|มั้ง|อ่ะ|จ้า|จ๊ะ|เรซูเม่|resume|ทักษะ|skill|help|ช่วย|\?/i;
+function looksLikeChatName(text: string): boolean {
+  if (text.length > 24) return false;
+  if (NON_NAME_REPLY_PATTERN.test(text)) return false;
+  return true;
+}
+
+// No trailing \b — JS regex word boundaries are ASCII-only, so "\b" right
+// after Thai script (e.g. between "ใช่" and "ครับ" in "ใช่ครับ", both
+// non-word characters to the regex engine) never actually matches.
+const AFFIRMATIVE_REPLY_PATTERN = /^(ใช่|ถูกต้อง|ถูก|ครับ|ค่ะ|โอเค|okay|ok|yes|y|correct)/i;
+
 function nowLabel() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -73,6 +92,11 @@ export default function DecoderPage() {
   // instead of being run through skill extraction / STAR-stage logic, so
   // "what's your name" always comes before anything else, exactly once.
   const [awaitingNameReply, setAwaitingNameReply] = useState(true);
+  // Set when a name reply looks like it might not actually be a name (see
+  // looksLikeChatName) — holds the questionable text while we ask the
+  // candidate to confirm it, instead of silently accepting something like
+  // "ไม่มีเรซูเม่อ่ะ" as their name. Cleared once confirmed or rejected.
+  const [pendingNameCandidate, setPendingNameCandidate] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
   const [isParsingResume, setIsParsingResume] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState<"chat" | "skills">("chat");
@@ -165,29 +189,71 @@ export default function DecoderPage() {
     // meant for skill/STAR answers, and this turn must not consume one of
     // the 4 bounded question stages.
     if (awaitingNameReply) {
-      const name = userQuery;
-      setUserName(name);
-      setAwaitingNameReply(false);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("ktp_username", name);
+      const acceptName = (name: string) => {
+        setUserName(name);
+        setAwaitingNameReply(false);
+        setPendingNameCandidate(null);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("ktp_username", name);
+        }
+
+        // Resume-derived skills already answer "what are you good at" —
+        // no point asking the candidate to repeat it, so skip straight to
+        // the first STAR question when the resume already covered stage 0.
+        const skipSkillStage = resumeSkills.length > 0;
+        setTimeout(() => {
+          const aiReply: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            sender: "ai",
+            text: skipSkillStage
+              ? `ยินดีที่ได้รู้จักคุณ${name}นะครับ! เรซูเม่ของคุณให้ข้อมูลทักษะไว้ครบแล้ว ข้ามคำถามเรื่องทักษะไปได้เลย งั้นไปต่อกันที่คำถามถัดไปครับ\n\n${SCRIPTED_PROMPTS[0]}`
+              : `ยินดีที่ได้รู้จักคุณ${name}นะครับ! ทีนี้มาเริ่มกันเลย — มีเครื่องมือ ซอฟต์แวร์ หรือทักษะอะไรที่คุณถนัดบ้างครับ?`,
+            time: nowLabel(),
+          };
+          setMessages((prev) => [...prev, aiReply]);
+          if (skipSkillStage) setQuestionStage(1);
+        }, 500);
+      };
+
+      // Second half of a confirm round-trip — this reply answers "is that
+      // really your name", not a fresh name attempt.
+      if (pendingNameCandidate) {
+        const candidate = pendingNameCandidate;
+        if (AFFIRMATIVE_REPLY_PATTERN.test(userQuery)) {
+          acceptName(candidate);
+        } else {
+          setPendingNameCandidate(null);
+          setTimeout(() => {
+            const aiReply: ChatMessage = {
+              id: (Date.now() + 1).toString(),
+              sender: "ai",
+              text: "อ๋อ ขอโทษครับ! รบกวนพิมพ์ชื่อของคุณอีกครั้งได้ไหมครับ",
+              time: nowLabel(),
+            };
+            setMessages((prev) => [...prev, aiReply]);
+          }, 500);
+        }
+        return;
       }
 
-      // Resume-derived skills already answer "what are you good at" — no
-      // point asking the candidate to repeat it, so skip straight to the
-      // first STAR question when the resume already covered stage 0.
-      const skipSkillStage = resumeSkills.length > 0;
-      setTimeout(() => {
-        const aiReply: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          sender: "ai",
-          text: skipSkillStage
-            ? `ยินดีที่ได้รู้จักคุณ${name}นะครับ! เรซูเม่ของคุณให้ข้อมูลทักษะไว้ครบแล้ว ข้ามคำถามเรื่องทักษะไปได้เลย งั้นไปต่อกันที่คำถามถัดไปครับ\n\n${SCRIPTED_PROMPTS[0]}`
-            : `ยินดีที่ได้รู้จักคุณ${name}นะครับ! ทีนี้มาเริ่มกันเลย — มีเครื่องมือ ซอฟต์แวร์ หรือทักษะอะไรที่คุณถนัดบ้างครับ?`,
-          time: nowLabel(),
-        };
-        setMessages((prev) => [...prev, aiReply]);
-        if (skipSkillStage) setQuestionStage(1);
-      }, 500);
+      // A whole sentence ("ไม่มีเรซูเม่อ่ะ") slipping through as a "name"
+      // verbatim was a real bug — anything that doesn't look name-shaped
+      // gets confirmed before being accepted, instead of trusted outright.
+      if (!looksLikeChatName(userQuery)) {
+        setPendingNameCandidate(userQuery);
+        setTimeout(() => {
+          const aiReply: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            sender: "ai",
+            text: `"${userQuery}" นี่คือชื่อของคุณใช่ไหมครับ?`,
+            time: nowLabel(),
+          };
+          setMessages((prev) => [...prev, aiReply]);
+        }, 500);
+        return;
+      }
+
+      acceptName(userQuery);
       return;
     }
 
@@ -248,7 +314,7 @@ export default function DecoderPage() {
     const replyWithLocalMatcher = () => {
       const baseText = locallyMatchedSkills.length
         ? `เยี่ยมมากครับ${greetName}! จากประสบการณ์ที่คุณเล่าเรื่อง "${userQuery.slice(0, 25)}..." ระบบสกัดและเพิ่มทักษะที่เกี่ยวข้อง ${locallyMatchedSkills.length} รายการให้อัตโนมัติแล้ว`
-        : `ขอบคุณครับ${greetName}! ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะจากข้อความนี้ครับ`;
+        : `ขอบคุณครับ${greetName}! ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะจากข้อความนี้ครับ ลองพิมพ์ชื่อเครื่องมือให้ชัดเจนและสะกดถูกต้อง เช่น Python, NumPy, scikit-learn ดูนะครับ`;
 
       const aiReply: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -378,7 +444,7 @@ export default function DecoderPage() {
           sender: "ai",
           text: matchedSkills.length
             ? `${nameLine}น้องตรงปกวิเคราะห์ไฟล์ PDF "${file.name}" เรียบร้อยแล้ว! พบและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้วครับ${starSuffix}${nameAskSuffix}`
-            : `${nameLine}น้องตรงปกอ่านไฟล์ PDF "${file.name}" ได้แล้วครับ แต่ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะ ลองพิมพ์เล่าประสบการณ์เพิ่มเติมในแชทได้เลยครับ${nameAskSuffix}`,
+            : `${nameLine}น้องตรงปกอ่านไฟล์ PDF "${file.name}" ได้แล้วครับ แต่ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะ ลองพิมพ์ชื่อเครื่องมือให้ชัดเจนและสะกดถูกต้อง เช่น Python, NumPy, scikit-learn ในแชทได้เลยครับ${nameAskSuffix}`,
           time: nowLabel(),
           ...(matchedSkills.length ? { extractedSkills: matchedSkills } : {}),
         },
