@@ -45,6 +45,12 @@ const SCRIPTED_PROMPTS = [
 const COMPLETION_MESSAGE =
   "ขอบคุณมากครับ! น้องตรงปกเก็บข้อมูลครบตามที่ต้องการแล้ว พร้อมไปดู Smart Profile ของคุณได้เลยครับ";
 
+// Shown when a reply yields zero hard skills — asks specifically for
+// tools/software instead of silently moving on to the next scripted
+// question, since a vague answer otherwise just slips through unprobed.
+const SKILL_PROBE_FOLLOWUP =
+  "ลองเจาะจงอีกนิดได้ไหมครับ — ตอนนั้นคุณใช้เครื่องมือ ซอฟต์แวร์ หรือทักษะเฉพาะอะไรบ้าง? (เช่น ชื่อโปรแกรม ภาษาที่ใช้เขียนโค้ด หรือ Framework ที่ถนัด)";
+
 function nowLabel() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -98,6 +104,11 @@ export default function DecoderPage() {
   // TOTAL_QUESTION_STAGES marks the guided conversation as complete.
   const [questionStage, setQuestionStage] = useState(0);
   const isConversationComplete = questionStage >= TOTAL_QUESTION_STAGES;
+  // True once the current stage has already been probed for skills once
+  // (see handleSendMessage) — a vague, skill-free answer gets asked to be
+  // more specific instead of the flow just moving on, but only once per
+  // stage so a candidate who genuinely has nothing more to add isn't stuck.
+  const [probedThisStage, setProbedThisStage] = useState(false);
 
   // /profile reads both of these — the union for the skills list itself,
   // and resumeSkills separately so it can show "Verified" (came from an
@@ -179,26 +190,39 @@ export default function DecoderPage() {
 
     const greetName = `คุณ${userName}`;
 
-    // This message's turn in the bounded flow — captured once so both the
-    // Gemini path and its local-matcher fallback append the same next
-    // scripted prompt (or the completion message on the final turn)
-    // regardless of which one ends up serving the reply.
-    const currentStage = questionStage;
-    const isFinalStage = currentStage === TOTAL_QUESTION_STAGES - 1;
-    const stageSuffix = isFinalStage
-      ? `\n\n${COMPLETION_MESSAGE}`
-      : `\n\n${SCRIPTED_PROMPTS[currentStage]}`;
-    setQuestionStage(currentStage + 1);
-
     // Runs on every message, not just as a Gemini-unavailable fallback —
     // it's a local, synchronous match, so the skills panel can update
     // immediately instead of waiting on a network round-trip, and it
-    // catches anything Gemini's own extraction might miss.
+    // catches anything Gemini's own extraction might miss. It also drives
+    // the adaptive-probe decision below, so it has to run before that.
     const locallyMatchedSkills = matchSkills(userQuery, [
       ...onetSkills.hardSkills,
       ...onetSkills.softSkills,
     ]);
     mergeChatSkills(locallyMatchedSkills);
+
+    // This message's turn in the bounded flow — captured once so both the
+    // Gemini path and its local-matcher fallback append the same suffix
+    // regardless of which one ends up serving the reply.
+    const currentStage = questionStage;
+    const isFinalStage = currentStage === TOTAL_QUESTION_STAGES - 1;
+    // A fixed script would move to the next scripted question even from a
+    // vague, skill-free answer, leaving real hard skills uncollected. If
+    // this reply found nothing and we haven't already asked once this
+    // stage, probe for specifics instead of advancing — only once, so a
+    // candidate who genuinely has nothing more isn't stuck repeating.
+    const shouldProbe = locallyMatchedSkills.length === 0 && !probedThisStage;
+    const stageSuffix = shouldProbe
+      ? `\n\n${SKILL_PROBE_FOLLOWUP}`
+      : isFinalStage
+        ? `\n\n${COMPLETION_MESSAGE}`
+        : `\n\n${SCRIPTED_PROMPTS[currentStage]}`;
+    if (shouldProbe) {
+      setProbedThisStage(true);
+    } else {
+      setQuestionStage(currentStage + 1);
+      setProbedThisStage(false);
+    }
 
     const replyWithLocalMatcher = () => {
       const baseText = locallyMatchedSkills.length
