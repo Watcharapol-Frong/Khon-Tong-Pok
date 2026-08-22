@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// url connects through Supabase's pgbouncer transaction pooler (port 6543)
+// for normal app queries; directUrl bypasses the pooler (port 5432) for
+// Prisma Migrate, which needs a real session for advisory locks that
+// pgbouncer's transaction mode doesn't support.
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Company {
+  id       String    @id @default(cuid())
+  name     String
+  domain   String    @unique
+  hrUsers  HRUser[]
+  positions Position[]
+}
+
+model HRUser {
+  id        String  @id @default(cuid())
+  name      String
+  email     String  @unique
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+}
+
+model Position {
+  id                  String   @id @default(cuid())
+  companyId           String
+  company             Company  @relation(fields: [companyId], references: [id])
+  title               String
+  requiredHardSkills  String[]
+  requiredSoftSkills  Json
+  status              String   @default("open")
+  matches             Match[]
+}
+
+model Match {
+  id            String        @id @default(cuid())
+  positionId    String
+  position      Position      @relation(fields: [positionId], references: [id])
+  jobSeekerId   String
+  jobSeeker     JobSeeker     @relation(fields: [jobSeekerId], references: [id])
+  matchScore    Int
+  isStandout    Boolean       @default(false)
+  status        String        @default("pending")
+  interviewSlot InterviewSlot?
+}
+
+model InterviewSlot {
+  id             String   @id @default(cuid())
+  matchId        String   @unique
+  match          Match    @relation(fields: [matchId], references: [id])
+  proposedTimes  String[]
+  status         String   @default("pending")
+  confirmedTime  String?
+}
+
+model JobSeeker {
+  id                String            @id @default(cuid())
+  name              String
+  email             String            @unique
+  resumeExtraction  ResumeExtraction?
+  chatVerifications ChatVerification[]
+  gameResult        GameResult?
+  aiSummary         AISummary?
+  matches           Match[]
+  createdAt         DateTime          @default(now())
+}
+
+model ResumeExtraction {
+  id          String    @id @default(cuid())
+  jobSeekerId String    @unique
+  jobSeeker   JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  hardSkills  String[]
+  rawText     String
+  updatedAt   DateTime  @updatedAt
+}
+
+model ChatVerification {
+  id               String    @id @default(cuid())
+  jobSeekerId      String
+  jobSeeker        JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  skill            String
+  status           String
+  conversationLog  Json
+  updatedAt        DateTime  @updatedAt
+}
+
+model GameResult {
+  id                   String    @id @default(cuid())
+  jobSeekerId          String    @unique
+  jobSeeker            JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  riskTolerance        Int
+  cognitiveFlexibility Int
+  selectiveAttention   Int
+  prosociality         Int
+  updatedAt            DateTime  @updatedAt
+}
+
+model AISummary {
+  id           String    @id @default(cuid())
+  jobSeekerId  String    @unique
+  jobSeeker    JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  summaryText  String
+  generatedAt  DateTime  @default(now())
+  sourceHash   String
+}
