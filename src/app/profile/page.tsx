@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  Brain,
   Briefcase,
   Camera,
   Check,
@@ -17,6 +18,7 @@ import {
   Target,
   TrendingUp,
   User,
+  Wrench,
 } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
@@ -452,7 +454,11 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr] lg:gap-0">
             {/* Soft Skills */}
             <div className="lg:pr-8">
-              <h3 className="text-sm sm:text-base font-extrabold text-[#0F0F0F]">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-[rgba(59,245,92,0.15)] px-3 py-1 text-[11px] font-extrabold tracking-[0.03em] text-[#0f5c22] uppercase">
+                <Brain className="h-3.5 w-3.5" strokeWidth={2.25} />
+                Soft Skills
+              </div>
+              <h3 className="mt-2.5 text-base sm:text-lg font-extrabold text-[#0F0F0F]">
                 กราฟ Soft Skills 6 ด้าน
               </h3>
               <p className="mt-0.5 text-[11px] sm:text-xs text-[#5C5C5C]">
@@ -485,13 +491,24 @@ export default function ProfilePage() {
                 two distinct sub-sections, not one continuous topic. */}
             <div className="border-t border-[rgba(15,15,15,0.08)] pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
               {/* Hard Skills */}
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-sm sm:text-base font-extrabold text-[#0F0F0F]">Hard Skills</h3>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0F0F0F] px-3 py-1 text-[11px] font-extrabold tracking-[0.03em] text-white uppercase">
+                    <Wrench className="h-3.5 w-3.5" strokeWidth={2.25} />
+                    Hard Skills
+                  </div>
+                  <h3 className="mt-2.5 text-base sm:text-lg font-extrabold text-[#0F0F0F]">
+                    ทักษะที่สกัดได้
+                  </h3>
+                  <p className="mt-0.5 text-[11px] sm:text-xs text-[#5C5C5C]">
+                    จากเรซูเม่และบทสนทนากับน้องตรงปก
+                  </p>
+                </div>
                 <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0F0F0F]">
                   {userSkills.length} ทักษะ
                 </span>
               </div>
-
+              <div className="mt-4">
               {userSkills.length === 0 && (
                 <div>
                   <p className="text-xs leading-[1.7] text-[#8A8A8A]">
@@ -543,6 +560,7 @@ export default function ProfilePage() {
                   <span className="font-bold text-[#4D7CFF]">Partial</span> = เล่าในแชทกับน้องตรงปก
                 </p>
               )}
+              </div>
             </div>
           </div>
         </div>
