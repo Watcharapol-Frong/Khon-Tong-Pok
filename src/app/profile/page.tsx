@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Brain,
   Briefcase,
   Camera,
   Check,
@@ -18,7 +17,6 @@ import {
   Target,
   TrendingUp,
   User,
-  Wrench,
 } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
@@ -457,8 +455,7 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr] lg:gap-0">
             {/* Soft Skills */}
             <div className="lg:pr-8">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-[rgba(59,245,92,0.15)] px-3 py-1 text-[11px] font-extrabold tracking-[0.03em] text-[#0f5c22] uppercase">
-                <Brain className="h-3.5 w-3.5" strokeWidth={2.25} />
+              <div className="inline-flex items-center rounded-full bg-[#0F0F0F] px-3 py-1 text-[11px] font-extrabold tracking-[0.03em] text-white uppercase">
                 Soft Skills
               </div>
               <h3 className="mt-2.5 text-base sm:text-lg font-extrabold text-[#0F0F0F]">
@@ -496,8 +493,7 @@ export default function ProfilePage() {
               {/* Hard Skills */}
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0F0F0F] px-3 py-1 text-[11px] font-extrabold tracking-[0.03em] text-white uppercase">
-                    <Wrench className="h-3.5 w-3.5" strokeWidth={2.25} />
+                  <div className="inline-flex items-center rounded-full bg-[#0F0F0F] px-3 py-1 text-[11px] font-extrabold tracking-[0.03em] text-white uppercase">
                     Hard Skills
                   </div>
                   <h3 className="mt-2.5 text-base sm:text-lg font-extrabold text-[#0F0F0F]">
