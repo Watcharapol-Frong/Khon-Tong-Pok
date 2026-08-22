@@ -10,7 +10,7 @@ import { Footer } from "@/components/Footer";
 import { JobSeekerAuthGuard } from "@/components/JobSeekerAuthGuard";
 import { Navbar } from "@/components/Navbar";
 import { getResumeExtraction, syncResumeExtraction } from "@/lib/actions/jobSeeker";
-import { extractTextFromPdf, guessNameFromResumeText } from "@/lib/pdf";
+import { extractTextFromPdf } from "@/lib/pdf";
 import { expandKnownAliases, matchSkills } from "@/lib/ahoCorasick";
 import { useJobSeekerSession } from "@/lib/jobSeekerSessionContext";
 import onetSkills from "@/data/onet_skills_dictionary_full.json";
@@ -23,34 +23,21 @@ interface ChatMessage {
   extractedSkills?: string[];
 }
 
-// The candidate's name now always comes from their logged-in session (see
-// DecoderContent below), so the greeting welcomes them by name up front
-// instead of asking for it — hence this needs the session and is built
-// inside the component rather than as a module-level constant.
-function buildInitialMessages(name: string): ChatMessage[] {
-  return [
-    {
-      id: "1",
-      sender: "ai",
-      text: `สวัสดีครับคุณ${name}! ผมคือน้องตรงปก ผู้ช่วย AI สำหรับวิเคราะห์ทักษะจากประสบการณ์ของคุณ ลองแนบเรซูเม่ PDF ด้านบน หรือพิมพ์เล่าเลยก็ได้ครับ — มีเครื่องมือ ซอฟต์แวร์ หรือทักษะอะไรที่คุณถนัดบ้างครับ? หลังจากนั้นจะมีคำถามสั้นๆ อีก 3 ข้อ ครอบคลุมทั้งทักษะที่ถนัดและสถานการณ์การทำงานจริงครับ`,
-      time: "10:30 น.",
-    },
-  ];
-}
-
-// A bounded, scripted flow rather than open-ended chat: 2 free-text turns
-// for hard-skill extraction (stage 0, stage 3) bookend 2 STAR-format
-// behavioral questions (stage 1, stage 2) that surface soft-skill
-// evidence — after stage 3's reply the conversation is marked complete
-// and the input is replaced with a CTA into the profile, so there's a
-// defined endpoint instead of unlimited free chat.
-const TOTAL_QUESTION_STAGES = 4;
-
+// A bounded, scripted flow rather than open-ended chat: 3 STAR-format
+// behavioral turns that surface soft-skill evidence (hard skills are no
+// longer collected via an open-ended chat question — /decoder's gate
+// guarantees at least one already exists, from a resume upload or the
+// manual form, before this chat is ever reachable at all). After the
+// final turn's reply the conversation is marked complete and the input is
+// replaced with a CTA into the profile, so there's a defined endpoint
+// instead of unlimited free chat.
 const SCRIPTED_PROMPTS = [
   'ก่อนไปต่อ ขอน้องตรงปกถามแบบ STAR สักหน่อยนะครับ — เล่าสถานการณ์ที่คุณเคยเจอปัญหางานยากๆ ให้ฟังหน่อยได้ไหมครับ? (Situation คุณเจอสถานการณ์อะไร และ Task คุณต้องทำอะไร)',
   "แล้วคุณลงมือทำอย่างไรครับ (Action) และผลลัพธ์ที่ได้เป็นอย่างไรบ้าง (Result)?",
   "เกือบเสร็จแล้วครับ! มีเครื่องมือ ซอฟต์แวร์ หรือทักษะอื่นที่คุณถนัดอีกไหมครับ อยากเก็บให้ครบก่อนสรุปโปรไฟล์",
 ] as const;
+
+const TOTAL_QUESTION_STAGES = SCRIPTED_PROMPTS.length;
 
 const COMPLETION_MESSAGE =
   "ขอบคุณมากครับ! น้องตรงปกเก็บข้อมูลครบตามที่ต้องการแล้ว พร้อมไปดู Smart Profile ของคุณได้เลยครับ";
@@ -61,24 +48,22 @@ const COMPLETION_MESSAGE =
 const SKILL_PROBE_FOLLOWUP =
   "ลองเจาะจงอีกนิดได้ไหมครับ — ตอนนั้นคุณใช้เครื่องมือ ซอฟต์แวร์ หรือทักษะเฉพาะอะไรบ้าง? (เช่น ชื่อโปรแกรม ภาษาที่ใช้เขียนโค้ด หรือ Framework ที่ถนัด)";
 
-// Catches replies to "what's your name" that are clearly sentences, not a
-// name — negation ("ไม่มี"), casual particles ("อ่ะ"), or topic words that
-// leaked in from the surrounding conversation ("เรซูเม่"). Not exhaustive
-// (a determined typo can still slip through), but it catches the obvious
-// case of a whole sentence like "ไม่มีเรซูเม่อ่ะ" getting accepted as a name
-// verbatim, which a plain non-empty-string check doesn't.
-const NON_NAME_REPLY_PATTERN =
-  /ไม่มี|ไม่ใช่|ไม่รู้|ไม่ทราบ|เปล่า|มั้ง|อ่ะ|จ้า|จ๊ะ|เรซูเม่|resume|ทักษะ|skill|help|ช่วย|\?/i;
-function looksLikeChatName(text: string): boolean {
-  if (text.length > 24) return false;
-  if (NON_NAME_REPLY_PATTERN.test(text)) return false;
-  return true;
+// The candidate's name always comes from their logged-in session, and by
+// the time this chat is reachable at all (see the gate in DecoderContent)
+// at least one hard skill is already on record — so the greeting welcomes
+// them by name and jumps straight into the first STAR question, instead of
+// asking what they're good at or who they are. Needs the session, hence
+// built inside the component rather than as a module-level constant.
+function buildInitialMessages(name: string): ChatMessage[] {
+  return [
+    {
+      id: "1",
+      sender: "ai",
+      text: `สวัสดีครับคุณ${name}! ผมคือน้องตรงปก ผู้ช่วย AI สำหรับวิเคราะห์ทักษะจากประสบการณ์ของคุณ ผมเห็นข้อมูลทักษะเบื้องต้นที่คุณให้ไว้แล้วครับ ทีนี้ขอถามเพิ่มอีก ${SCRIPTED_PROMPTS.length} ข้อสั้นๆ เพื่อให้เข้าใจประสบการณ์การทำงานจริงของคุณมากขึ้นครับ\n\n${SCRIPTED_PROMPTS[0]}`,
+      time: "10:30 น.",
+    },
+  ];
 }
-
-// No trailing \b — JS regex word boundaries are ASCII-only, so "\b" right
-// after Thai script (e.g. between "ใช่" and "ครับ" in "ใช่ครับ", both
-// non-word characters to the regex engine) never actually matches.
-const AFFIRMATIVE_REPLY_PATTERN = /^(ใช่|ถูกต้อง|ถูก|ครับ|ค่ะ|โอเค|okay|ok|yes|y|correct)/i;
 
 function nowLabel() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -102,18 +87,6 @@ function DecoderContent() {
   // app keeping the latest message in view instead of leaving the reader
   // to notice and scroll down manually.
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [userName, setUserName] = useState<string>(jobSeeker.name);
-  // The candidate's name now always comes from the login session (see
-  // jobSeeker.name above), so this never actually flips true anymore —
-  // kept (rather than deleted) because the name-confirmation branches
-  // below it in handleSendMessage/handleResumeUpload are otherwise still
-  // correct dormant logic, not because it's expected to trigger.
-  const [awaitingNameReply, setAwaitingNameReply] = useState(false);
-  // Set when a name reply looks like it might not actually be a name (see
-  // looksLikeChatName) — holds the questionable text while we ask the
-  // candidate to confirm it, instead of silently accepting something like
-  // "ไม่มีเรซูเม่อ่ะ" as their name. Cleared once confirmed or rejected.
-  const [pendingNameCandidate, setPendingNameCandidate] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
   const [isParsingResume, setIsParsingResume] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState<"chat" | "skills">("chat");
@@ -123,6 +96,13 @@ function DecoderContent() {
   const [resumeSkills, setResumeSkills] = useState<string[]>([]);
   const [chatSkills, setChatSkills] = useState<string[]>([]);
   const confirmedSkills = Array.from(new Set([...resumeSkills, ...chatSkills]));
+  // Chat is only reachable once at least one hard skill is already on
+  // record (from a resume upload or the manual form at /decoder/manual) —
+  // see the gate in the render below. Gated only once hydration confirms
+  // there really is nothing on record yet, not before (isHydrated false
+  // would otherwise flash the gate for a returning candidate who already
+  // has skills, right before their real data loads in).
+  const hasAnySkill = confirmedSkills.length > 0;
   // Skills merged in the last ~1.6s — the sidebar panel gives these a
   // brief highlight so a newly-detected skill is noticeable instead of
   // just silently appearing in the list.
@@ -167,6 +147,14 @@ function DecoderContent() {
   // fetched — the DB-sync effect below must not fire before this, or it
   // would overwrite real prior data with the empty initial state.
   const [isHydrated, setIsHydrated] = useState(false);
+
+  // /profile still reads the candidate's name from localStorage (it wasn't
+  // part of this round's migration) — this used to get written whenever
+  // the chat resolved a name, which no longer happens now that it always
+  // comes from the session, so it's mirrored here once instead.
+  useEffect(() => {
+    localStorage.setItem("ktp_username", jobSeeker.name);
+  }, [jobSeeker.name]);
 
   useEffect(() => {
     let cancelled = false;
@@ -237,81 +225,7 @@ function DecoderContent() {
     // typing right away instead of having to click back in every time.
     inputRef.current?.focus();
 
-    // Name isn't skill/STAR content, so it's captured here before any of
-    // the length/stage checks below apply to it — a short reply like "Bo"
-    // is a perfectly valid name and shouldn't hit the "too short" guard
-    // meant for skill/STAR answers, and this turn must not consume one of
-    // the 4 bounded question stages.
-    if (awaitingNameReply) {
-      const acceptName = (name: string) => {
-        setUserName(name);
-        setAwaitingNameReply(false);
-        setPendingNameCandidate(null);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("ktp_username", name);
-        }
-
-        // Resume-derived skills already answer "what are you good at" —
-        // no point asking the candidate to repeat it, so skip straight to
-        // the first STAR question when the resume already covered stage 0.
-        const skipSkillStage = resumeSkills.length > 0;
-        setTimeout(() => {
-          const aiReply: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            sender: "ai",
-            text: skipSkillStage
-              ? `ยินดีที่ได้รู้จักคุณ${name}นะครับ! เรซูเม่ของคุณให้ข้อมูลทักษะไว้ครบแล้ว ข้ามคำถามเรื่องทักษะไปได้เลย งั้นไปต่อกันที่คำถามถัดไปครับ\n\n${SCRIPTED_PROMPTS[0]}`
-              : `ยินดีที่ได้รู้จักคุณ${name}นะครับ! ทีนี้มาเริ่มกันเลย — มีเครื่องมือ ซอฟต์แวร์ หรือทักษะอะไรที่คุณถนัดบ้างครับ?`,
-            time: nowLabel(),
-          };
-          setMessages((prev) => [...prev, aiReply]);
-          if (skipSkillStage) setQuestionStage(1);
-        }, 500);
-      };
-
-      // Second half of a confirm round-trip — this reply answers "is that
-      // really your name", not a fresh name attempt.
-      if (pendingNameCandidate) {
-        const candidate = pendingNameCandidate;
-        if (AFFIRMATIVE_REPLY_PATTERN.test(userQuery)) {
-          acceptName(candidate);
-        } else {
-          setPendingNameCandidate(null);
-          setTimeout(() => {
-            const aiReply: ChatMessage = {
-              id: (Date.now() + 1).toString(),
-              sender: "ai",
-              text: "อ๋อ ขอโทษครับ! รบกวนพิมพ์ชื่อของคุณอีกครั้งได้ไหมครับ",
-              time: nowLabel(),
-            };
-            setMessages((prev) => [...prev, aiReply]);
-          }, 500);
-        }
-        return;
-      }
-
-      // A whole sentence ("ไม่มีเรซูเม่อ่ะ") slipping through as a "name"
-      // verbatim was a real bug — anything that doesn't look name-shaped
-      // gets confirmed before being accepted, instead of trusted outright.
-      if (!looksLikeChatName(userQuery)) {
-        setPendingNameCandidate(userQuery);
-        setTimeout(() => {
-          const aiReply: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            sender: "ai",
-            text: `"${userQuery}" นี่คือชื่อของคุณใช่ไหมครับ?`,
-            time: nowLabel(),
-          };
-          setMessages((prev) => [...prev, aiReply]);
-        }, 500);
-        return;
-      }
-
-      acceptName(userQuery);
-      return;
-    }
-
-    // A stray typo or an accidental Enter shouldn't burn one of the 4
+    // A stray typo or an accidental Enter shouldn't burn one of the
     // bounded turns — the candidate would lose a real answer slot and
     // we'd still have gained no usable data from it. Ask them to
     // elaborate instead, without advancing questionStage or touching
@@ -329,7 +243,7 @@ function DecoderContent() {
       return;
     }
 
-    const greetName = `คุณ${userName}`;
+    const greetName = `คุณ${jobSeeker.name}`;
 
     // Runs on every message, not just as a Gemini-unavailable fallback —
     // it's a local, synchronous match, so the skills panel can update
@@ -344,7 +258,11 @@ function DecoderContent() {
 
     // This message's turn in the bounded flow — captured once so both the
     // Gemini path and its local-matcher fallback append the same suffix
-    // regardless of which one ends up serving the reply.
+    // regardless of which one ends up serving the reply. questionStage N
+    // means "the reply being processed right now answers
+    // SCRIPTED_PROMPTS[N]" (question 0 was already asked directly in the
+    // greeting — see buildInitialMessages), so the *next* question to ask
+    // is SCRIPTED_PROMPTS[N + 1].
     const currentStage = questionStage;
     const isFinalStage = currentStage === TOTAL_QUESTION_STAGES - 1;
     // A fixed script would move to the next scripted question even from a
@@ -357,7 +275,7 @@ function DecoderContent() {
       ? `\n\n${SKILL_PROBE_FOLLOWUP}`
       : isFinalStage
         ? `\n\n${COMPLETION_MESSAGE}`
-        : `\n\n${SCRIPTED_PROMPTS[currentStage]}`;
+        : `\n\n${SCRIPTED_PROMPTS[currentStage + 1]}`;
     if (shouldProbe) {
       setProbedThisStage(true);
     } else {
@@ -461,52 +379,18 @@ function DecoderContent() {
       // text into ResumeExtraction along with the current skill union.
       setResumeRawText(text);
 
-      // Try to resolve the name from the resume text (simple heuristic —
-      // see guessNameFromResumeText, no Gemini call here). Only guess once;
-      // a later resume swap shouldn't override a name the candidate may
-      // have since typed themselves in chat.
-      const guessedName = awaitingNameReply ? guessNameFromResumeText(text) : null;
-      if (guessedName) {
-        setUserName(guessedName);
-        setAwaitingNameReply(false);
-        if (typeof window !== "undefined") {
-          localStorage.setItem("ktp_username", guessedName);
-        }
-      }
-
-      const nameLine = guessedName ? `ยินดีที่ได้รู้จักคุณ${guessedName}นะครับ! ` : "";
-      // Name is resolved either just now (guessedName) or from earlier in
-      // chat (awaitingNameReply was already false before this upload) —
-      // "!awaitingNameReply" alone would miss the just-now case, since
-      // that state update hasn't committed yet within this same handler.
-      const nameNowResolved = Boolean(guessedName) || !awaitingNameReply;
-      // Skill was just answered by the resume itself — skip stage 0's
-      // "what are you good at" question and jump straight to STAR, but
-      // only once the name question is also resolved.
-      const skipSkillStage = matchedSkills.length > 0 && nameNowResolved;
-      const starSuffix = skipSkillStage
-        ? ` ข้ามคำถามเรื่องทักษะไปได้เลย งั้นไปต่อกันที่คำถามถัดไปครับ\n\n${SCRIPTED_PROMPTS[0]}`
-        : "";
-      // Still unresolved after this upload (no name on the resume, and it
-      // wasn't already answered in chat) — remind before moving on, same
-      // as the very first message, so name always comes before anything
-      // else rather than being silently skipped.
-      const nameAskSuffix =
-        awaitingNameReply && !guessedName ? "\n\nก่อนไปต่อ รบกวนขอทราบชื่อผู้สมัครด้วยนะครับ" : "";
-
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
           sender: "ai",
           text: matchedSkills.length
-            ? `${nameLine}น้องตรงปกวิเคราะห์ไฟล์ PDF "${file.name}" เรียบร้อยแล้ว! พบและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้วครับ${starSuffix}${nameAskSuffix}`
-            : `${nameLine}น้องตรงปกอ่านไฟล์ PDF "${file.name}" ได้แล้วครับ แต่ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะ ลองพิมพ์ชื่อเครื่องมือให้ชัดเจนและสะกดถูกต้อง เช่น Python, NumPy, scikit-learn ในแชทได้เลยครับ${nameAskSuffix}`,
+            ? `น้องตรงปกวิเคราะห์ไฟล์ PDF "${file.name}" เรียบร้อยแล้ว! พบและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้วครับ`
+            : `น้องตรงปกอ่านไฟล์ PDF "${file.name}" ได้แล้วครับ แต่ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะ ลองพิมพ์ชื่อเครื่องมือให้ชัดเจนและสะกดถูกต้อง เช่น Python, NumPy, scikit-learn ในแชทได้เลยครับ`,
           time: nowLabel(),
           ...(matchedSkills.length ? { extractedSkills: matchedSkills } : {}),
         },
       ]);
-      if (skipSkillStage) setQuestionStage(1);
     } catch (err) {
       console.error("Resume PDF parsing failed:", err);
       setMessages((prev) => [
@@ -560,6 +444,76 @@ function DecoderContent() {
               </p>
             </div>
 
+            {!isHydrated ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-16">
+                <Image
+                  src="/mascot/mascot-ai-thinking.png"
+                  alt=""
+                  width={96}
+                  height={96}
+                  className="animate-pulse"
+                  priority
+                />
+                <p className="text-sm text-[#8A8A8A]">กำลังโหลด...</p>
+              </div>
+            ) : !hasAnySkill ? (
+              <div className="rounded-2xl bg-white p-5 text-center sm:p-8">
+                <Image
+                  src="/mascot/mascot-start.png"
+                  alt=""
+                  width={120}
+                  height={120}
+                  className="mx-auto h-[88px] w-[88px] object-contain"
+                />
+                <p className="mx-auto mt-3 max-w-[440px] text-xs leading-relaxed text-[#5C5C5C] sm:text-sm">
+                  กรุณาอัปโหลดเรซูเม่หรือกรอกข้อมูลก่อน เพื่อให้น้องตรงปกเริ่มคุยกับคุณได้
+                </p>
+
+                <div className="mx-auto mt-5 grid max-w-[560px] grid-cols-1 gap-3 sm:grid-cols-2">
+                  {/* Option 1: upload resume PDF — same handleResumeUpload
+                      used post-unlock for re-uploads, so there's only one
+                      parsing code path regardless of when it's triggered. */}
+                  <label
+                    className={`relative flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-5 text-center transition-colors ${
+                      isParsingResume
+                        ? "cursor-not-allowed border-[rgba(15,15,15,0.15)] bg-[#FAFAFA]"
+                        : "border-[rgba(15,15,15,0.2)] hover:border-[#0F0F0F] hover:bg-[#FAFAFA]"
+                    }`}
+                  >
+                    {isParsingResume ? (
+                      <Loader2 className="h-6 w-6 animate-spin text-[#8A8A8A]" strokeWidth={1.75} />
+                    ) : (
+                      <FileText className="h-6 w-6 text-[#8A8A8A]" strokeWidth={1.75} />
+                    )}
+                    <span className="text-xs font-bold text-[#0F0F0F]">
+                      {isParsingResume ? `กำลังอ่านไฟล์ "${uploadedFile}"...` : "อัปโหลดเรซูเม่ PDF"}
+                    </span>
+                    <span className="text-[10px] text-[#8A8A8A]">รองรับ PDF ไม่เกิน 10MB</span>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      disabled={isParsingResume}
+                      onChange={handleResumeUpload}
+                      className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                    />
+                  </label>
+
+                  {/* Option 2: manual entry form (/decoder/manual) — writes
+                      straight to the same ResumeExtraction row via
+                      syncResumeExtraction, so returning here immediately
+                      satisfies hasAnySkill and unlocks chat. */}
+                  <Link
+                    href="/decoder/manual"
+                    className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-[rgba(15,15,15,0.12)] p-5 text-center transition-colors hover:border-[#0F0F0F] hover:bg-[#FAFAFA]"
+                  >
+                    <Sparkle className="h-6 w-6 text-[#8A8A8A]" strokeWidth={1.75} />
+                    <span className="text-xs font-bold text-[#0F0F0F]">กรอกฟอร์มด้วยตัวเอง</span>
+                    <span className="text-[10px] text-[#8A8A8A]">เลือกทักษะที่คุณถนัดเอง</span>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <>
             {/* Mobile View Tab Switcher (Chat vs Confirmed Skills) */}
             <div className="mb-3 flex lg:hidden gap-1 rounded-xl bg-[rgba(15,15,15,0.05)] p-1">
               <button
@@ -753,9 +707,7 @@ function DecoderContent() {
                 ) : (
                   <div className="mt-3">
                     <div className="mb-1.5 text-[10px] font-semibold text-[#8A8A8A]">
-                      {awaitingNameReply
-                        ? "ขั้นตอนแนะนำตัว"
-                        : `คำถามที่ ${questionStage + 1} / ${TOTAL_QUESTION_STAGES}`}
+                      {`คำถามที่ ${questionStage + 1} / ${TOTAL_QUESTION_STAGES}`}
                     </div>
                     <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2">
                       <input
@@ -763,7 +715,7 @@ function DecoderContent() {
                         type="text"
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
-                        placeholder={awaitingNameReply ? "พิมพ์ชื่อของคุณ..." : "พิมพ์ชื่อเครื่องมือ/ทักษะ เช่น Python, Excel..."}
+                        placeholder="พิมพ์คำตอบของคุณ..."
                         disabled={isChatLoading}
                         className="min-w-0 flex-1 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs outline-none focus:border-[#0F0F0F] disabled:opacity-60"
                       />
@@ -833,6 +785,8 @@ function DecoderContent() {
                 </Link>
               </div>
             </div>
+            </>
+            )}
           </div>
         </div>
       </div>

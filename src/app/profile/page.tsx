@@ -45,9 +45,9 @@ export default function ProfilePage() {
   // skills list is a legitimate, honest state ("go run the assessment
   // first"), not something to paper over with fake sample data.
   const [candidateName, setCandidateName] = useState<string>("ผู้สมัคร");
-  // The name is guessed from the resume (see guessNameFromResumeText in
-  // /decoder) — a heuristic, not a guarantee, so it needs to be
-  // correctable here rather than permanently locked to a wrong guess.
+  // The name comes from the candidate's account (mirrored into
+  // localStorage by /decoder on login), but stays editable here in case
+  // the account name doesn't match what they'd want shown on their profile.
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [userSkills, setUserSkills] = useState<string[]>([]);
