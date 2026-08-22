@@ -889,14 +889,21 @@ export default function ProfilePage() {
           "สมัครตำแหน่งนี้" button shouldn't be able to submit it. */}
       {confirmApplyJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-[360px] rounded-[24px] bg-white p-5">
-            <h3 className="text-base font-extrabold text-[#0F0F0F]">ยืนยันการสมัครงาน</h3>
+          <div className="w-full max-w-[440px] rounded-[28px] bg-white p-6 sm:p-7 text-center">
+            <Image
+              src="/mascot/mascot-start.png"
+              alt=""
+              width={200}
+              height={200}
+              className="mx-auto h-[104px] w-[104px] object-contain"
+            />
+            <h3 className="mt-3 text-lg font-extrabold text-[#0F0F0F]">ยืนยันการสมัครงาน</h3>
             <p className="mt-1.5 text-sm leading-[1.6] text-[#5C5C5C]">
               สมัครตำแหน่ง <span className="font-bold text-[#0F0F0F]">{confirmApplyJob.title}</span> ที่{" "}
-              <span className="font-bold text-[#0F0F0F]">{confirmApplyJob.company}</span> ใช่ไหม?
+              {confirmApplyJob.company} ใช่ไหม?
             </p>
 
-            <div className="mt-5 flex gap-2">
+            <div className="mt-6 flex gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmApplyJob(null)}
