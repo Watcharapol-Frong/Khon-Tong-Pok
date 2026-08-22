@@ -347,10 +347,20 @@ export default function ProfilePage() {
       .slice(0, 2);
   }, [recommendedJobs]);
 
+  // Applying isn't reversible from here (no "un-apply" affordance below),
+  // so a misclick shouldn't be able to submit one — the button opens this
+  // confirm step instead of calling handleApply directly.
+  const [confirmApplyJob, setConfirmApplyJob] = useState<{ title: string; company: string } | null>(null);
+
   const handleApply = (title: string) => {
     if (!appliedJobs.includes(title)) {
       setAppliedJobs((prev) => [...prev, title]);
     }
+  };
+
+  const handleConfirmApply = () => {
+    if (confirmApplyJob) handleApply(confirmApplyJob.title);
+    setConfirmApplyJob(null);
   };
 
   return (
@@ -738,7 +748,7 @@ export default function ProfilePage() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleApply(job.title)}
+                          onClick={() => setConfirmApplyJob({ title: job.title, company: job.company })}
                           disabled={isApplied}
                           className={`whitespace-nowrap rounded-full px-4 py-1.5 text-[11px] font-bold transition-all ${
                             isApplied
@@ -868,6 +878,38 @@ export default function ProfilePage() {
                 className="flex-1 cursor-pointer rounded-full bg-[#0F0F0F] py-2.5 text-sm font-bold text-white"
               >
                 ใช้รูปนี้
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm-apply modal — error prevention: applying has no undo
+          affordance on this page, so a single misclick on the small
+          "สมัครตำแหน่งนี้" button shouldn't be able to submit it. */}
+      {confirmApplyJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-[360px] rounded-[24px] bg-white p-5">
+            <h3 className="text-base font-extrabold text-[#0F0F0F]">ยืนยันการสมัครงาน</h3>
+            <p className="mt-1.5 text-sm leading-[1.6] text-[#5C5C5C]">
+              สมัครตำแหน่ง <span className="font-bold text-[#0F0F0F]">{confirmApplyJob.title}</span> ที่{" "}
+              <span className="font-bold text-[#0F0F0F]">{confirmApplyJob.company}</span> ใช่ไหม?
+            </p>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmApplyJob(null)}
+                className="flex-1 cursor-pointer rounded-full border-[1.5px] border-[#0F0F0F] bg-white py-2.5 text-sm font-bold text-[#0F0F0F]"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmApply}
+                className="flex-1 cursor-pointer rounded-full bg-[#0F0F0F] py-2.5 text-sm font-bold text-white"
+              >
+                ยืนยันสมัคร
               </button>
             </div>
           </div>
