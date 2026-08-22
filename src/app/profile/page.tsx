@@ -11,6 +11,7 @@ import {
   FileText,
   GraduationCap,
   Lightbulb,
+  Loader2,
   Paperclip,
   Pencil,
   Sparkle,
@@ -24,9 +25,11 @@ import { Navbar } from "@/components/Navbar";
 import { RadarChart } from "@/components/RadarChart";
 import { SkillIcon } from "@/components/SkillIcon";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
-import { getJobSeekerProfile, getJobSeekerSessionData } from "@/lib/actions/jobSeeker";
+import { generateAIResume, getJobSeekerProfile, getJobSeekerSessionData } from "@/lib/actions/jobSeeker";
 import { AXIS_CHIPS, JOBS, RADAR_DATA } from "@/lib/data";
 import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
+
+type JobSeekerProfileData = Awaited<ReturnType<typeof getJobSeekerProfile>>;
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -58,6 +61,13 @@ export default function ProfilePage() {
   // Verified/Partial distinction HR sees on their own candidate report,
   // computed from real provenance rather than invented.
   const [resumeSkills, setResumeSkills] = useState<string[]>([]);
+  // Full profile record (personal info, education, work experience,
+  // languages) — kept separately from the derived userSkills/resumeSkills
+  // above so the new "เรซูเม่ของคุณ" section can render the whole thing,
+  // not just the skill list. Only ever populated from the database (see
+  // the DB-hydration effect below); there's no localStorage-only version
+  // of this since it never existed before this round.
+  const [profile, setProfile] = useState<JobSeekerProfileData>(null);
   // Blind-candidate mascot until the candidate uploads a real photo —
   // same placeholder convention HR sees for un-revealed candidates.
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -144,6 +154,7 @@ export default function ProfilePage() {
           localStorage.setItem("ktp_username", session.jobSeeker.name);
         }
         if (profile) {
+          setProfile(profile);
           setUserSkills(profile.computerSkills);
           localStorage.setItem("ktp_hard_skills", JSON.stringify(profile.computerSkills));
           const verified = profile.resumeRawText.trim().length > 0 ? profile.computerSkills : [];
@@ -317,6 +328,34 @@ export default function ProfilePage() {
     chartResizeObserverRef.current = observer;
   };
 
+  // "ให้น้องตรงปกช่วยสร้าง" — the Premium-badged button. The badge is a
+  // forward-looking monetization label only; this is a real, working
+  // Gemini call (see generateAIResume), not gated behind any payment flow
+  // since none exists yet for this prototype.
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [isGeneratingResume, setIsGeneratingResume] = useState(false);
+  const [aiResumeResult, setAiResumeResult] = useState<string | null>(null);
+  const [aiResumeError, setAiResumeError] = useState("");
+
+  const handleGenerateAIResume = async () => {
+    setShowAiModal(true);
+    setAiResumeError("");
+    setAiResumeResult(null);
+    const ids = getJobSeekerSessionIds();
+    if (!ids) {
+      setAiResumeError("กรุณาเข้าสู่ระบบก่อน");
+      return;
+    }
+    setIsGeneratingResume(true);
+    const result = await generateAIResume(ids.jobSeekerId);
+    setIsGeneratingResume(false);
+    if ("error" in result) {
+      setAiResumeError(result.error);
+      return;
+    }
+    setAiResumeResult(result.summaryText);
+  };
+
   const handleConfirmProfileAndGoToJobs = () => {
     if (typeof window !== "undefined") {
       localStorage.setItem("ktp_confirmed_skills", JSON.stringify(userSkills));
@@ -487,6 +526,70 @@ export default function ProfilePage() {
             </div>
 
           </div>
+        </div>
+
+        {/* Resume source — checks whether this candidate has an actual
+            uploaded PDF's extracted text, structured data from the manual
+            form, or neither, and always resolves to exactly one of those
+            three states instead of ever rendering blank/broken. Note: only
+            the PDF's extracted TEXT is stored (see /decoder's
+            extractTextFromPdf), never the original file itself — there's
+            no file storage wired up yet, so this shows the parsed text
+            rather than a literal embedded/downloadable PDF. */}
+        <div className="mb-6 sm:mb-8 rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-[clamp(24px,4vw,40px)]">
+          <h2 className="mb-3 text-sm font-extrabold text-[#0F0F0F]">เรซูเม่ของคุณ</h2>
+          {profile && profile.resumeRawText.trim().length > 0 ? (
+            <div className="rounded-2xl bg-white p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold text-[#0F0F0F]">
+                <FileText className="h-4 w-4 flex-shrink-0 text-[#4D7CFF]" strokeWidth={2} />
+                ข้อความที่สกัดจากเรซูเม่ PDF ที่คุณอัปโหลด
+              </div>
+              <p className="max-h-[240px] overflow-y-auto rounded-xl bg-[#FAFAFA] p-3 text-xs leading-relaxed whitespace-pre-wrap text-[#5C5C5C]">
+                {profile.resumeRawText}
+              </p>
+            </div>
+          ) : profile &&
+            (profile.desiredPosition || profile.education.length > 0 || profile.workExperience.length > 0) ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-[11px] text-[#8A8A8A]">ข้อมูลจากฟอร์มที่คุณกรอกไว้ (ยังไม่ได้อัปโหลดเรซูเม่ PDF)</p>
+              {profile.desiredPosition && (
+                <div className="rounded-2xl bg-white p-3.5">
+                  <div className="text-[10px] font-bold text-[#8A8A8A]">ตำแหน่งงานที่สนใจ</div>
+                  <div className="text-xs font-extrabold text-[#0F0F0F]">{profile.desiredPosition}</div>
+                </div>
+              )}
+              {profile.education.length > 0 && (
+                <div className="rounded-2xl bg-white p-3.5">
+                  <div className="mb-1.5 text-[10px] font-bold text-[#8A8A8A]">ประวัติการศึกษา</div>
+                  <div className="flex flex-col gap-1">
+                    {profile.education.map((e) => (
+                      <div key={e.id} className="text-xs text-[#0F0F0F]">
+                        {e.level} · {e.institution}
+                        {e.fieldOfStudy ? ` · สาขา${e.fieldOfStudy}` : ""}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {profile.workExperience.length > 0 && (
+                <div className="rounded-2xl bg-white p-3.5">
+                  <div className="mb-1.5 text-[10px] font-bold text-[#8A8A8A]">ประสบการณ์ทำงาน</div>
+                  <div className="flex flex-col gap-1">
+                    {profile.workExperience.map((w) => (
+                      <div key={w.id} className="text-xs text-[#0F0F0F]">
+                        {w.jobTitle} · {w.companyName}
+                        {w.isCurrent ? " (ปัจจุบัน)" : ""}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs leading-relaxed text-[#8A8A8A]">
+              คุณยังไม่มีเรซูเม่ในระบบ — เลือกวิธีสร้างเรซูเม่ได้ที่ด้านล่างของหน้านี้
+            </p>
+          )}
         </div>
 
         {/* Big Dashboard — one merged card under a single "Dynamic Smart
@@ -820,6 +923,13 @@ export default function ProfilePage() {
       {/* Bottom CTA — Next Step in Flow */}
       <div className="mx-auto w-full max-w-[1400px] px-3 sm:px-[clamp(20px,4vw,56px)] pb-[clamp(48px,7vw,80px)]">
         <div className="rounded-[28px] bg-[#F5F5F5] p-[clamp(32px,5vw,52px)] text-center">
+          <Image
+            src="/mascot/mascot-ai-summary.png"
+            alt=""
+            width={120}
+            height={120}
+            className="mx-auto mb-3 h-[88px] w-[88px] object-contain"
+          />
           <div className="mb-2 text-xs font-bold tracking-[0.06em] text-[#8A8A8A] uppercase">ขั้นตอนถัดไป</div>
           <h2 className="mb-2 text-[clamp(20px,2.8vw,28px)] font-extrabold tracking-[-0.02em]">
             สร้าง Resume เพื่อยื่นสมัครงาน
@@ -828,25 +938,34 @@ export default function ProfilePage() {
             เลือกสร้างแบบทั่วไป หรือให้น้องตรงปกช่วยรวมข้อมูลตัวตนและทักษะจาก Smart Profile ลงไปด้วย — ได้ Resume ที่บอกว่าคุณเป็นใคร ไม่ใช่แค่ทำอะไรมา
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
+            {/* Real Gemini call (see generateAIResume) — "Premium" is a
+                forward-looking badge only, not an actual payment gate,
+                since none exists yet for this prototype. */}
             <button
               type="button"
+              onClick={handleGenerateAIResume}
               className="relative inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[#0F0F0F] px-7 py-4 text-[14px] font-extrabold text-white transition-all hover:opacity-90 active:scale-[0.98]"
             >
               <Sparkle className="h-3.5 w-3.5" strokeWidth={2} />
               ให้น้องตรงปกช่วยสร้าง
               <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold tracking-wide">Premium</span>
             </button>
-            <button
-              type="button"
+            <Link
+              href="/decoder/manual"
               className="cursor-pointer rounded-full bg-white px-7 py-[15px] text-[14px] font-bold text-[#0F0F0F] transition-all hover:bg-[#0F0F0F] hover:text-white active:scale-[0.98]"
             >
               สร้างแบบทั่วไป
-            </button>
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-white px-7 py-[15px] text-[14px] font-bold text-[#5C5C5C] transition-colors hover:bg-[#F0F0F0] hover:text-[#0F0F0F] active:scale-[0.98]">
+            </Link>
+            {/* Reuses /decoder's own upload flow (its resume-upload box is
+                always reachable from the chat panel once unlocked) instead
+                of duplicating PDF-parsing logic on this page too. */}
+            <Link
+              href="/decoder"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-white px-7 py-[15px] text-[14px] font-bold text-[#5C5C5C] transition-colors hover:bg-[#F0F0F0] hover:text-[#0F0F0F] active:scale-[0.98]"
+            >
               <Paperclip className="h-3.5 w-3.5" strokeWidth={2} />
               อัปโหลด Resume ที่มีอยู่
-              <input type="file" accept=".pdf,.doc,.docx" className="sr-only" />
-            </label>
+            </Link>
           </div>
           <button
             type="button"
@@ -966,6 +1085,47 @@ export default function ProfilePage() {
                 className="flex-1 cursor-pointer rounded-full bg-[#0F0F0F] py-2.5 text-sm font-bold text-white"
               >
                 ยืนยันสมัคร
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI resume-generation modal — opens immediately on click (showing
+          a loading state) rather than waiting for the request to resolve
+          first, so the button click always gives instant feedback. */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-[480px] rounded-[28px] bg-white p-6 sm:p-7">
+            <div className="flex items-start gap-3">
+              <Image
+                src="/mascot/mascot-ai-summary.png"
+                alt=""
+                width={80}
+                height={80}
+                className="h-14 w-14 flex-shrink-0 object-contain sm:h-16 sm:w-16"
+              />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-extrabold text-[#0F0F0F]">น้องตรงปกช่วยสร้าง Resume</h3>
+                {isGeneratingResume ? (
+                  <p className="mt-2 flex items-center gap-2 text-xs text-[#8A8A8A]">
+                    <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin" strokeWidth={2} />
+                    กำลังประมวลผลข้อมูลโปรไฟล์ของคุณ...
+                  </p>
+                ) : aiResumeError ? (
+                  <p className="mt-2 text-xs font-bold text-red-600">{aiResumeError}</p>
+                ) : (
+                  <p className="mt-2 text-xs leading-relaxed whitespace-pre-wrap text-[#0F0F0F]">{aiResumeResult}</p>
+                )}
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAiModal(false)}
+                className="cursor-pointer rounded-full bg-[#0F0F0F] px-5 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90"
+              >
+                ปิด
               </button>
             </div>
           </div>

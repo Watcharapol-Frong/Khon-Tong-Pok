@@ -347,3 +347,130 @@ export async function markChatFlowComplete(
     return { error: "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
   }
 }
+
+/** Whatever's currently on record — either markChatFlowComplete's basic template or generateAIResume's real Gemini narrative below, whichever ran most recently. Used by /profile to show something instead of nothing once either has ever run. */
+export async function getAISummary(jobSeekerId: string) {
+  return prisma.aISummary.findUnique({ where: { jobSeekerId } });
+}
+
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+function formatProfileForPrompt(
+  profile: NonNullable<Awaited<ReturnType<typeof getJobSeekerProfile>>>,
+  name: string
+): string {
+  const lines: string[] = [`ชื่อ: ${name}`];
+  if (profile.desiredPosition) lines.push(`ตำแหน่งงานที่สนใจ: ${profile.desiredPosition}`);
+  if (profile.education.length > 0) {
+    lines.push(
+      "ประวัติการศึกษา:",
+      ...profile.education.map(
+        (e) => `- ${e.level} ${e.institution}${e.fieldOfStudy ? ` สาขา${e.fieldOfStudy}` : ""}`
+      )
+    );
+  }
+  if (profile.workExperience.length > 0) {
+    lines.push(
+      "ประสบการณ์ทำงาน:",
+      ...profile.workExperience.map(
+        (w) =>
+          `- ${w.jobTitle} ที่ ${w.companyName}${w.isCurrent ? " (ปัจจุบัน)" : ""}${
+            w.responsibilities ? `: ${w.responsibilities}` : ""
+          }`
+      )
+    );
+  }
+  if (profile.computerSkills.length > 0) {
+    lines.push(`ทักษะคอมพิวเตอร์/โปรแกรม: ${profile.computerSkills.join(", ")}`);
+  }
+  if (profile.languageSkills.length > 0) {
+    lines.push(`ทักษะภาษา: ${profile.languageSkills.map((l) => l.language).join(", ")}`);
+  }
+  return lines.join("\n");
+}
+
+/**
+ * The "ให้น้องตรงปกช่วยสร้าง" (Premium-badged) resume feature — asks
+ * Gemini to turn the candidate's structured profile into a short narrative
+ * summary instead of a raw data dump. Deliberately does NOT include
+ * soft-skill/game data: GameResult isn't wired to real per-candidate data
+ * yet (still the same static mock every /profile visitor sees), so folding
+ * it in here would present fabricated numbers as if they were real. Reuses
+ * the AISummary row markChatFlowComplete creates — this replaces that
+ * basic template with the real generated narrative once the candidate asks
+ * for it, rather than keeping two separate "summary" records.
+ */
+export async function generateAIResume(jobSeekerId: string): Promise<{ summaryText: string } | { error: string }> {
+  const [profile, jobSeeker] = await Promise.all([
+    getJobSeekerProfile(jobSeekerId),
+    prisma.jobSeeker.findUnique({ where: { id: jobSeekerId } }),
+  ]);
+  if (!jobSeeker) return { error: "ไม่พบผู้ใช้" };
+  if (!profile || (profile.computerSkills.length === 0 && profile.workExperience.length === 0 && profile.education.length === 0)) {
+    return { error: "กรุณากรอกข้อมูลโปรไฟล์หรืออัปโหลดเรซูเม่ก่อน จึงจะให้น้องตรงปกช่วยสร้างได้" };
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return { error: "ระบบ AI ยังไม่พร้อมใช้งานในขณะนี้ (ไม่ได้ตั้งค่า API key) กรุณาลองใหม่ภายหลัง" };
+  }
+
+  const prompt = `คุณคือ "น้องตรงปก" ผู้ช่วยเขียน Resume ให้ผู้สมัครงาน เพศชาย ภาษาไทย
+เขียนสรุปโปรไฟล์ผู้สมัคร (professional summary) ความยาว 3-5 ประโยค ที่เชื่อมโยงข้อมูลด้านล่างให้เป็นเรื่องราวที่เป็นธรรมชาติ ไม่ใช่แค่ list ข้อมูลดิบทีละบรรทัด — เน้นบอกว่าผู้สมัครคนนี้ "เป็นใคร" (จุดแข็ง ทิศทางอาชีพ) ไม่ใช่แค่ "ทำอะไรมา"
+ห้ามใส่ข้อมูลที่ไม่ได้ให้มาด้านล่างนี้ (ห้ามเดาหรือแต่งเพิ่ม) น้ำเสียงมืออาชีพแต่อบอุ่น
+ใช้คำลงท้ายประโยคว่า "ครับ" เท่านั้น ห้ามใช้ "ค่ะ", "คะ", หรือคำลงท้ายเพศหญิงอื่นๆ เด็ดขาด (ให้บุคลิกของน้องตรงปกสม่ำเสมอกับส่วนอื่นของแอป)
+
+ข้อมูลผู้สมัคร:
+${formatProfileForPrompt(profile, jobSeeker.name)}`;
+
+  try {
+    const geminiRes = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: { summaryText: { type: "string" } },
+            required: ["summaryText"],
+          },
+        },
+      }),
+      signal: AbortSignal.timeout(20_000),
+    });
+
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      console.error("generateAIResume: Gemini API error", geminiRes.status, errText);
+      return { error: "น้องตรงปกสร้าง Resume ไม่สำเร็จในขณะนี้ กรุณาลองใหม่อีกครั้ง" };
+    }
+
+    const data = await geminiRes.json();
+    const rawText: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) {
+      console.error("generateAIResume: Gemini returned an empty response", data);
+      return { error: "น้องตรงปกสร้าง Resume ไม่สำเร็จในขณะนี้ กรุณาลองใหม่อีกครั้ง" };
+    }
+
+    const parsed: { summaryText?: unknown } = JSON.parse(rawText);
+    const summaryText = typeof parsed.summaryText === "string" ? parsed.summaryText.trim() : "";
+    if (!summaryText) {
+      return { error: "น้องตรงปกสร้าง Resume ไม่สำเร็จในขณะนี้ กรุณาลองใหม่อีกครั้ง" };
+    }
+
+    const sourceHash = createHash("sha256").update(JSON.stringify(profile)).digest("hex");
+    await prisma.aISummary.upsert({
+      where: { jobSeekerId },
+      create: { jobSeekerId, summaryText, sourceHash },
+      update: { summaryText, sourceHash, generatedAt: new Date() },
+    });
+
+    return { summaryText };
+  } catch (err) {
+    console.error("generateAIResume failed:", err);
+    return { error: "น้องตรงปกสร้าง Resume ไม่สำเร็จในขณะนี้ กรุณาลองใหม่อีกครั้ง" };
+  }
+}
