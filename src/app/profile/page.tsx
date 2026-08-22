@@ -24,13 +24,16 @@ import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { RadarChart } from "@/components/RadarChart";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { AXIS_CHIPS, JOBS, RADAR_DATA } from "@/lib/data";
-
-// On-screen size (px) of the square crop viewport in the adjust-photo modal.
-const CROP_VIEWPORT_SIZE = 280;
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { isMobile } = useBreakpoint();
+  // On-screen size (px) of the square crop viewport in the adjust-photo
+  // modal — sized close to how the avatar circle actually reads, not a
+  // cramped fixed box, while still fitting small screens.
+  const cropViewportSize = isMobile ? 300 : 420;
   const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
   // Hard skills used to be their own third tab — moved into the left
   // column below the radar chart instead (see main render) so both
@@ -128,12 +131,12 @@ export default function ProfilePage() {
       // the DOM constructor — window.Image is the real HTMLImageElement.
       const img = new window.Image();
       img.onload = () => {
-        const baseScale = CROP_VIEWPORT_SIZE / Math.min(img.naturalWidth, img.naturalHeight);
+        const baseScale = cropViewportSize / Math.min(img.naturalWidth, img.naturalHeight);
         setCropImgSize({ w: img.naturalWidth, h: img.naturalHeight });
         setCropZoom(1);
         setCropOffset({
-          x: (CROP_VIEWPORT_SIZE - img.naturalWidth * baseScale) / 2,
-          y: (CROP_VIEWPORT_SIZE - img.naturalHeight * baseScale) / 2,
+          x: (cropViewportSize - img.naturalWidth * baseScale) / 2,
+          y: (cropViewportSize - img.naturalHeight * baseScale) / 2,
         });
         setCropSrc(dataUrl);
       };
@@ -142,15 +145,15 @@ export default function ProfilePage() {
     reader.readAsDataURL(file);
   };
 
-  const cropBaseScale = cropImgSize ? CROP_VIEWPORT_SIZE / Math.min(cropImgSize.w, cropImgSize.h) : 1;
+  const cropBaseScale = cropImgSize ? cropViewportSize / Math.min(cropImgSize.w, cropImgSize.h) : 1;
   const cropScale = cropBaseScale * cropZoom;
 
   const clampCropOffset = (offset: { x: number; y: number }, scale: number) => {
     if (!cropImgSize) return offset;
     const dispW = cropImgSize.w * scale;
     const dispH = cropImgSize.h * scale;
-    const minX = Math.min(0, CROP_VIEWPORT_SIZE - dispW);
-    const minY = Math.min(0, CROP_VIEWPORT_SIZE - dispH);
+    const minX = Math.min(0, cropViewportSize - dispW);
+    const minY = Math.min(0, cropViewportSize - dispH);
     return {
       x: Math.min(0, Math.max(minX, offset.x)),
       y: Math.min(0, Math.max(minY, offset.y)),
@@ -204,7 +207,7 @@ export default function ProfilePage() {
       canvas.height = OUTPUT_SIZE;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      const srcSize = CROP_VIEWPORT_SIZE / cropScale;
+      const srcSize = cropViewportSize / cropScale;
       ctx.drawImage(
         img,
         -cropOffset.x / cropScale,
@@ -802,13 +805,13 @@ export default function ProfilePage() {
           of the raw upload being used as-is. */}
       {cropSrc && cropImgSize && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-[360px] rounded-[24px] bg-white p-5">
+          <div className="w-full max-w-[460px] rounded-[24px] bg-white p-5 sm:p-6">
             <h3 className="text-base font-extrabold text-[#0F0F0F]">ปรับตำแหน่งรูปโปรไฟล์</h3>
             <p className="mt-1 mb-4 text-xs text-[#8A8A8A]">ลากรูปเพื่อเลื่อน และใช้แถบด้านล่างเพื่อซูม</p>
 
             <div
               className="relative mx-auto touch-none select-none overflow-hidden rounded-2xl bg-[#F5F5F5]"
-              style={{ width: CROP_VIEWPORT_SIZE, height: CROP_VIEWPORT_SIZE, cursor: "grab" }}
+              style={{ width: cropViewportSize, height: cropViewportSize, cursor: "grab" }}
               onPointerDown={handleCropPointerDown}
               onPointerMove={handleCropPointerMove}
               onPointerUp={handleCropPointerUp}
@@ -824,6 +827,13 @@ export default function ProfilePage() {
                 draggable={false}
                 className="pointer-events-none absolute"
                 style={{
+                  // Tailwind's preflight sets `img { max-width: 100%;
+                  // height: auto }` — max-width alone was silently
+                  // clamping this to the viewport box while height stayed
+                  // pixel-exact, squashing non-square photos. Overriding
+                  // both here lets the explicit px size actually apply.
+                  maxWidth: "none",
+                  maxHeight: "none",
                   width: cropImgSize.w * cropScale,
                   height: cropImgSize.h * cropScale,
                   left: cropOffset.x,
