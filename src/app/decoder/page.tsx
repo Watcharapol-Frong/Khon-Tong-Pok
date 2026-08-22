@@ -23,7 +23,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "1",
     sender: "ai",
-    text: "สวัสดีครับ! ผมคือน้องตรงปก ผู้ช่วย AI สำหรับวิเคราะห์ทักษะจากประสบการณ์ของคุณ บทสนทนานี้จะมีทั้งหมด 4 คำถามสั้นๆ ครอบคลุมทั้งทักษะที่ถนัดและสถานการณ์การทำงานจริง เริ่มได้เลยด้วยการแนบไฟล์เรซูเม่ PDF ด้านบน หรือพิมพ์เล่าประสบการณ์/ชื่อเครื่องมือที่คุณถนัดในแชทนี้ได้เลยครับ",
+    text: "สวัสดีครับ! ผมคือน้องตรงปก ผู้ช่วย AI สำหรับวิเคราะห์ทักษะจากประสบการณ์ของคุณ ก่อนอื่นขอทราบชื่อผู้สมัครหน่อยได้ไหมครับ? (หรือถ้าแนบเรซูเม่ PDF ด้านบน ผมจะลองอ่านชื่อจากในไฟล์ให้อัตโนมัติเลยครับ) หลังจากนั้นจะมีคำถามสั้นๆ อีก 4 ข้อ ครอบคลุมทั้งทักษะที่ถนัดและสถานการณ์การทำงานจริงครับ",
     time: "10:30 น.",
   },
 ];
@@ -53,6 +53,13 @@ export default function DecoderPage() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState("");
   const [userName, setUserName] = useState<string>("");
+  // True until the candidate's name is resolved — either guessed from an
+  // uploaded resume (see handleResumeUpload) or given in reply to the
+  // initial greeting's name question (see handleSendMessage). While true,
+  // the next chat message the candidate sends is captured as their name
+  // instead of being run through skill extraction / STAR-stage logic, so
+  // "what's your name" always comes before anything else, exactly once.
+  const [awaitingNameReply, setAwaitingNameReply] = useState(true);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
   const [isParsingResume, setIsParsingResume] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState<"chat" | "skills">("chat");
@@ -96,6 +103,38 @@ export default function DecoderPage() {
     setMessages((prev) => [...prev, userMsg]);
     setInputText("");
 
+    // Name isn't skill/STAR content, so it's captured here before any of
+    // the length/stage checks below apply to it — a short reply like "Bo"
+    // is a perfectly valid name and shouldn't hit the "too short" guard
+    // meant for skill/STAR answers, and this turn must not consume one of
+    // the 4 bounded question stages.
+    if (awaitingNameReply) {
+      const name = userQuery;
+      setUserName(name);
+      setAwaitingNameReply(false);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("ktp_username", name);
+      }
+
+      // Resume-derived skills already answer "what are you good at" — no
+      // point asking the candidate to repeat it, so skip straight to the
+      // first STAR question when the resume already covered stage 0.
+      const skipSkillStage = resumeSkills.length > 0;
+      setTimeout(() => {
+        const aiReply: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          sender: "ai",
+          text: skipSkillStage
+            ? `ยินดีที่ได้รู้จักคุณ${name}นะครับ! เรซูเม่ของคุณให้ข้อมูลทักษะไว้ครบแล้ว ข้ามคำถามเรื่องทักษะไปได้เลย งั้นไปต่อกันที่คำถามถัดไปครับ\n\n${SCRIPTED_PROMPTS[0]}`
+            : `ยินดีที่ได้รู้จักคุณ${name}นะครับ! ทีนี้มาเริ่มกันเลย — มีเครื่องมือ ซอฟต์แวร์ หรือทักษะอะไรที่คุณถนัดบ้างครับ?`,
+          time: nowLabel(),
+        };
+        setMessages((prev) => [...prev, aiReply]);
+        if (skipSkillStage) setQuestionStage(1);
+      }, 500);
+      return;
+    }
+
     // A stray typo or an accidental Enter shouldn't burn one of the 4
     // bounded turns — the candidate would lose a real answer slot and
     // we'd still have gained no usable data from it. Ask them to
@@ -114,10 +153,7 @@ export default function DecoderPage() {
       return;
     }
 
-    // The candidate's name comes from their resume (see the upload handler
-    // below) rather than being asked in chat, so every message here goes
-    // straight to skill extraction — no first-message name-collection step.
-    const greetName = userName ? `คุณ${userName}` : "คุณ";
+    const greetName = `คุณ${userName}`;
 
     // This message's turn in the bounded flow — captured once so both the
     // Gemini path and its local-matcher fallback append the same next
@@ -231,21 +267,38 @@ export default function DecoderPage() {
       // out. Chat-derived skills are untouched.
       setResumeSkills(matchedSkills);
 
-      // The candidate's name is read straight from their resume — never
-      // asked for in chat. Only guess once; a later resume swap shouldn't
-      // override a name the candidate may have since typed themselves.
-      let greetedName = userName;
-      if (!greetedName) {
-        const guessedName = guessNameFromResumeText(text);
-        if (guessedName) {
-          greetedName = guessedName;
-          setUserName(guessedName);
-          if (typeof window !== "undefined") {
-            localStorage.setItem("ktp_username", guessedName);
-          }
+      // Try to resolve the name from the resume text (simple heuristic —
+      // see guessNameFromResumeText, no Gemini call here). Only guess once;
+      // a later resume swap shouldn't override a name the candidate may
+      // have since typed themselves in chat.
+      const guessedName = awaitingNameReply ? guessNameFromResumeText(text) : null;
+      if (guessedName) {
+        setUserName(guessedName);
+        setAwaitingNameReply(false);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("ktp_username", guessedName);
         }
       }
-      const nameLine = greetedName && greetedName !== userName ? `ยินดีที่ได้รู้จักคุณ${greetedName}นะครับ! ` : "";
+
+      const nameLine = guessedName ? `ยินดีที่ได้รู้จักคุณ${guessedName}นะครับ! ` : "";
+      // Name is resolved either just now (guessedName) or from earlier in
+      // chat (awaitingNameReply was already false before this upload) —
+      // "!awaitingNameReply" alone would miss the just-now case, since
+      // that state update hasn't committed yet within this same handler.
+      const nameNowResolved = Boolean(guessedName) || !awaitingNameReply;
+      // Skill was just answered by the resume itself — skip stage 0's
+      // "what are you good at" question and jump straight to STAR, but
+      // only once the name question is also resolved.
+      const skipSkillStage = matchedSkills.length > 0 && nameNowResolved;
+      const starSuffix = skipSkillStage
+        ? ` ข้ามคำถามเรื่องทักษะไปได้เลย งั้นไปต่อกันที่คำถามถัดไปครับ\n\n${SCRIPTED_PROMPTS[0]}`
+        : "";
+      // Still unresolved after this upload (no name on the resume, and it
+      // wasn't already answered in chat) — remind before moving on, same
+      // as the very first message, so name always comes before anything
+      // else rather than being silently skipped.
+      const nameAskSuffix =
+        awaitingNameReply && !guessedName ? "\n\nก่อนไปต่อ รบกวนขอทราบชื่อผู้สมัครด้วยนะครับ" : "";
 
       setMessages((prev) => [
         ...prev,
@@ -253,12 +306,13 @@ export default function DecoderPage() {
           id: Date.now().toString(),
           sender: "ai",
           text: matchedSkills.length
-            ? `${nameLine}น้องตรงปกวิเคราะห์ไฟล์ PDF "${file.name}" เรียบร้อยแล้ว! พบและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้วครับ`
-            : `${nameLine}น้องตรงปกอ่านไฟล์ PDF "${file.name}" ได้แล้วครับ แต่ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะ ลองพิมพ์เล่าประสบการณ์เพิ่มเติมในแชทได้เลยครับ`,
+            ? `${nameLine}น้องตรงปกวิเคราะห์ไฟล์ PDF "${file.name}" เรียบร้อยแล้ว! พบและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้วครับ${starSuffix}${nameAskSuffix}`
+            : `${nameLine}น้องตรงปกอ่านไฟล์ PDF "${file.name}" ได้แล้วครับ แต่ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะ ลองพิมพ์เล่าประสบการณ์เพิ่มเติมในแชทได้เลยครับ${nameAskSuffix}`,
           time: nowLabel(),
           ...(matchedSkills.length ? { extractedSkills: matchedSkills } : {}),
         },
       ]);
+      if (skipSkillStage) setQuestionStage(1);
     } catch (err) {
       console.error("Resume PDF parsing failed:", err);
       setMessages((prev) => [
@@ -494,14 +548,16 @@ export default function DecoderPage() {
                 ) : (
                   <div className="mt-3">
                     <div className="mb-1.5 text-[10px] font-semibold text-[#8A8A8A]">
-                      คำถามที่ {questionStage + 1} / {TOTAL_QUESTION_STAGES}
+                      {awaitingNameReply
+                        ? "ขั้นตอนแนะนำตัว"
+                        : `คำถามที่ ${questionStage + 1} / ${TOTAL_QUESTION_STAGES}`}
                     </div>
                     <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2">
                       <input
                         type="text"
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
-                        placeholder="พิมพ์ชื่อเครื่องมือ/ทักษะ เช่น Python, Excel..."
+                        placeholder={awaitingNameReply ? "พิมพ์ชื่อของคุณ..." : "พิมพ์ชื่อเครื่องมือ/ทักษะ เช่น Python, Excel..."}
                         disabled={isChatLoading}
                         className="min-w-0 flex-1 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs outline-none focus:border-[#0F0F0F] disabled:opacity-60"
                       />
