@@ -57,7 +57,7 @@ export function Footer() {
         </div>
       </div>
       <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-center gap-3 pt-5">
-        <div className="text-[13px] text-[#8A8A8A]">© 2026 คนตรงปก (KhonTongPok) · พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ</div>
+        <div className="text-[13px] text-[#8A8A8A]">© 2026 · พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ</div>
       </div>
     </div>
   );
