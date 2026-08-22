@@ -22,6 +22,7 @@ import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { RadarChart } from "@/components/RadarChart";
+import { SkillIcon } from "@/components/SkillIcon";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { AXIS_CHIPS, JOBS, RADAR_DATA } from "@/lib/data";
 
@@ -549,6 +550,7 @@ export default function ProfilePage() {
                       key={skill}
                       className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#0F0F0F]"
                     >
+                      <SkillIcon skill={skill} size={14} />
                       <span>{skill}</span>
                       <span
                         className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
