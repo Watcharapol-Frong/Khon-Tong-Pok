@@ -328,12 +328,13 @@ export default function ProfilePage() {
             without crowding; Hard Skills is a plain skill list and
             needs comparatively little. Both fully visible, nothing
             hidden behind a tab or a narrow sidebar. */}
+        <div className="mb-3 flex items-center gap-2 text-[11px] sm:text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#3BF55C]" />
+          Dynamic Smart Profile
+        </div>
         <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
           {/* Soft Skills */}
           <div className="rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-7">
-            <div className="mb-1 text-[11px] sm:text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
-              Dynamic Smart Profile
-            </div>
             <h2 className="text-base sm:text-xl font-extrabold text-[#0F0F0F]">
               กราฟ Soft Skills 6 ด้าน
             </h2>
@@ -364,9 +365,6 @@ export default function ProfilePage() {
 
           {/* Hard Skills */}
           <div className="rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-7">
-            <div className="mb-1 text-[11px] sm:text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
-              Dynamic Smart Profile
-            </div>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-base sm:text-xl font-extrabold text-[#0F0F0F]">Hard Skills</h2>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0F0F0F]">
