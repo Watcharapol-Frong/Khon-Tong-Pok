@@ -15,25 +15,19 @@ export function Footer() {
   return (
     <div className="mt-3 bg-[#0F0F0F] px-[clamp(20px,4vw,48px)] pt-[clamp(40px,6vw,64px)] pb-7 text-white">
       <div className="mx-auto flex max-w-[1240px] flex-wrap justify-between gap-10 pb-9">
-        {/* This image is the full logo lockup — mascot + "คนตรงปก"
-            wordmark baked into one graphic — so it replaces the separate
-            text heading entirely instead of sitting beside a duplicate
-            of the same brand name. */}
-        <div className="flex min-w-[260px] flex-[1_1_340px] flex-col items-start">
+        <div className="flex min-w-[260px] flex-[1_1_340px] items-center gap-4">
           <Image
             src="/mascot/mascot-footer.png"
             alt="คนตรงปก (KhonTongPok)"
             width={1224}
             height={1285}
-            className="h-auto w-[120px] object-contain sm:w-[140px]"
+            className="h-auto w-[90px] flex-shrink-0 object-contain sm:w-[110px]"
           />
-          {/* Visually hidden — the brand name is already legible inside
-              the image above for sighted users, but screen readers and
-              search engines can't read text baked into a graphic, so
-              this keeps it discoverable without showing it twice. */}
-          <h3 className="sr-only">คนตรงปก (KhonTongPok)</h3>
-          <div className="mt-3 max-w-[280px] text-[13px] leading-[1.7] text-[#9A9A9A]">
-            พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ ประเมินศักยภาพก่อน ระบบช่วยสร้างเรซูเม่ได้เลย
+          <div>
+            <h3 className="text-base font-extrabold sm:text-lg">คนตรงปก (KhonTongPok)</h3>
+            <div className="mt-1.5 max-w-[280px] text-[13px] leading-[1.7] text-[#9A9A9A]">
+              พิสูจน์ศักยภาพจริง ด้วยตัวตนและทักษะ ประเมินศักยภาพก่อน ระบบช่วยสร้างเรซูเม่ได้เลย
+            </div>
           </div>
         </div>
         <div
