@@ -12,13 +12,12 @@ import {
   getCandidatesSnapshot,
   getInterviewSlotSnapshot,
   getPositionSnapshot,
-  getSessionSnapshot,
   subscribeToStore,
 } from "@/lib/companyStore";
+import { useCompanySession } from "@/lib/companySession";
 import { SOFT_SKILL_AXIS_META } from "@/lib/data";
 import type { InterviewSlotStatus, SoftSkillScores } from "@/lib/types";
 
-const getServerSessionSnapshot = () => null;
 const getServerNull = () => null;
 // getServerSnapshot must return a referentially stable value across calls —
 // a fresh `[]` literal on every call trips React's "should be cached to
@@ -47,22 +46,12 @@ export default function PositionCandidatesPage() {
   const params = useParams<{ id: string }>();
   const positionId = params.id;
 
-  const session = useSyncExternalStore(
-    subscribeToStore,
-    getSessionSnapshot,
-    getServerSessionSnapshot
-  );
+  const session = useCompanySession();
   const position = useSyncExternalStore(
     subscribeToStore,
     () => getPositionSnapshot(positionId),
     getServerNull
   );
-
-  useEffect(() => {
-    if (getSessionSnapshot() === null) {
-      router.replace("/company/login");
-    }
-  }, [router]);
 
   // Backfills any missing Match records for this position — a mutation, so
   // it runs from an effect rather than inline in a getSnapshot-wrapped read.
@@ -112,8 +101,6 @@ export default function PositionCandidatesPage() {
   }, [candidates, sortOrder, skillFilter, minScore]);
 
   const visibleCandidates = filteredCandidates.slice(0, visibleCount);
-
-  if (!session) return null;
 
   // Guard: only this position's own company may view its candidates.
   if (!position || position.companyId !== session.company.id) {

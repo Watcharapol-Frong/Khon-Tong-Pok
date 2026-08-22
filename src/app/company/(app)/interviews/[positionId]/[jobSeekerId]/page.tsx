@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock, Pencil, User, X } from "lucide-react";
@@ -8,12 +8,11 @@ import {
   cancelInterviewInvite,
   confirmInterviewTime,
   getInterviewSlotsForCompanySnapshot,
-  getSessionSnapshot,
   subscribeToStore,
 } from "@/lib/companyStore";
+import { useCompanySession } from "@/lib/companySession";
 import type { InterviewSlotStatus } from "@/lib/types";
 
-const getServerSessionSnapshot = () => null;
 const EMPTY_SLOTS: never[] = [];
 
 const STATUS_META: Record<
@@ -30,24 +29,14 @@ export default function InterviewDetailPage() {
   const params = useParams<{ positionId: string; jobSeekerId: string }>();
   const { positionId, jobSeekerId } = params;
 
-  const session = useSyncExternalStore(
-    subscribeToStore,
-    getSessionSnapshot,
-    getServerSessionSnapshot
-  );
-
-  useEffect(() => {
-    if (getSessionSnapshot() === null) {
-      router.replace("/company/login");
-    }
-  }, [router]);
+  const session = useCompanySession();
 
   // getInterviewSlotsForCompany already scopes to this HR's own company, so
   // reusing it here (same as the list page) doubles as the authorization
   // check — a matchId for another company's interview just won't be in it.
   const slots = useSyncExternalStore(
     subscribeToStore,
-    () => (session ? getInterviewSlotsForCompanySnapshot(session.company.id) : EMPTY_SLOTS),
+    () => getInterviewSlotsForCompanySnapshot(session.company.id),
     () => EMPTY_SLOTS
   );
 

@@ -45,22 +45,6 @@ export type GameStage = {
   color: string;
 };
 
-export type Company = {
-  id: string;
-  name: string;
-  industry?: string;
-  createdAt: string;
-  /** Email domain (e.g. "techcorpglobal.com") used to auto-match new HR signups to an existing company at /company/register. */
-  domain: string;
-};
-
-export type HRUser = {
-  id: string;
-  companyId: string;
-  name: string;
-  email: string;
-};
-
 /** Same 0-100 scale as RadarAxisDatum/AxisChip.value — the same 6-axis Smart Profile system shown on /profile (RADAR_DATA/AXIS_CHIPS in data.ts), reused here as the single soft-skill taxonomy for both candidates and position requirements. */
 export type PositionSoftSkillRequirements = {
   learningAgility?: number;

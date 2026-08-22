@@ -27,6 +27,10 @@ model HRUser {
   id        String  @id @default(cuid())
   name      String
   email     String  @unique
+  /// Prototype only — plaintext, no hashing. Never returned from a Server
+  /// Action to the client (see SafeHRUser in src/lib/companySession.tsx).
+  /// Needs real hashing (bcrypt/argon2) before this touches production.
+  password  String
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
 }

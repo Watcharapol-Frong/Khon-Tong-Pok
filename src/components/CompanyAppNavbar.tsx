@@ -7,8 +7,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Briefcase, CalendarClock, LayoutDashboard, LogOut } from "lucide-react";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
-import { clearHRSession } from "@/lib/companyStore";
-import type { Company, HRUser } from "@/lib/types";
+import type { Company } from "@prisma/client";
+import type { SafeHRUser } from "@/lib/companySession";
+import { clearHRSessionIds } from "@/lib/hrSession";
 
 const NAV_ITEMS = [
   { label: "แดชบอร์ด", href: "/company/dashboard", icon: LayoutDashboard },
@@ -17,7 +18,7 @@ const NAV_ITEMS = [
 ];
 
 type CompanyAppNavbarProps = {
-  hrUser: HRUser;
+  hrUser: SafeHRUser;
   company: Company;
 };
 
@@ -38,7 +39,7 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
   const closeMenu = () => setMenuOpen(false);
 
   const handleLogout = () => {
-    clearHRSession();
+    clearHRSessionIds();
     closeMenu();
     router.push("/company/login");
   };

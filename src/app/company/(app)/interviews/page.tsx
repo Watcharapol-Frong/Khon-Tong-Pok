@@ -1,17 +1,12 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock, X } from "lucide-react";
-import {
-  getInterviewSlotsForCompanySnapshot,
-  getSessionSnapshot,
-  subscribeToStore,
-} from "@/lib/companyStore";
+import { getInterviewSlotsForCompanySnapshot, subscribeToStore } from "@/lib/companyStore";
+import { useCompanySession } from "@/lib/companySession";
 import type { InterviewSlotStatus } from "@/lib/types";
 
-const getServerSessionSnapshot = () => null;
 // Stable reference — a fresh `[]` literal returned from getSnapshot/
 // getServerSnapshot on every call trips React's "should be cached to avoid
 // an infinite loop" warning, since arrays are compared by reference.
@@ -30,26 +25,13 @@ const STATUS_META: Record<
 };
 
 export default function CompanyInterviewsPage() {
-  const router = useRouter();
-  const session = useSyncExternalStore(
-    subscribeToStore,
-    getSessionSnapshot,
-    getServerSessionSnapshot
-  );
-
-  useEffect(() => {
-    if (getSessionSnapshot() === null) {
-      router.replace("/company/login");
-    }
-  }, [router]);
+  const session = useCompanySession();
 
   const slots = useSyncExternalStore(
     subscribeToStore,
-    () => (session ? getInterviewSlotsForCompanySnapshot(session.company.id) : EMPTY_SLOTS),
+    () => getInterviewSlotsForCompanySnapshot(session.company.id),
     () => EMPTY_SLOTS
   );
-
-  if (!session) return null;
 
   return (
     <div className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-6 md:px-10">

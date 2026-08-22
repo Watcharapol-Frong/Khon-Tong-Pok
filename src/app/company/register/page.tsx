@@ -7,8 +7,9 @@ import { AlertCircle, Check, Eye, EyeOff, Mail } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
 import { Footer } from "@/components/Footer";
 import { CompanyNavbar } from "@/components/CompanyNavbar";
-import { checkEmailDomain, registerOrJoinCompany, setHRSession } from "@/lib/companyStore";
-import type { Company } from "@/lib/types";
+import { checkCompanyByDomain, createCompany, joinExistingCompany } from "@/lib/actions/company";
+import { setHRSessionIds } from "@/lib/hrSession";
+import type { Company } from "@prisma/client";
 
 // "create" used to be one step with 5 fields (company name, industry, HR
 // name, password, confirm password) — long enough that HR reported heavy
@@ -16,6 +17,10 @@ import type { Company } from "@/lib/types";
 // only asks 2-3 questions at a time, with a dot progress indicator marking
 // which of the two is active.
 type Step = "email" | "join" | "createCompany" | "createAdmin";
+
+function emailDomain(email: string): string {
+  return email.trim().toLowerCase().split("@")[1] ?? "";
+}
 
 const CREATE_STEPS: { key: Step; label: string }[] = [
   { key: "createCompany", label: "ข้อมูลบริษัท" },
@@ -28,18 +33,20 @@ export default function CompanyRegisterPage() {
   const [email, setEmail] = useState("");
   const [matchedCompany, setMatchedCompany] = useState<Company | null>(null);
   const [companyName, setCompanyName] = useState("");
-  const [industry, setIndustry] = useState("");
   const [hrName, setHrName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
-    const company = checkEmailDomain(email);
+    setIsCheckingEmail(true);
+    const company = await checkCompanyByDomain(email);
+    setIsCheckingEmail(false);
     setMatchedCompany(company);
     setStep(company ? "join" : "createCompany");
   };
@@ -60,7 +67,7 @@ export default function CompanyRegisterPage() {
     setStep("createAdmin");
   };
 
-  const handleFinalSubmit = (e: React.FormEvent) => {
+  const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!hrName.trim()) {
@@ -78,22 +85,30 @@ export default function CompanyRegisterPage() {
 
     setErrorMsg("");
     setIsSubmitting(true);
-    setTimeout(() => {
-      const result = registerOrJoinCompany({
-        email: email.trim(),
-        password,
-        hrName: hrName.trim(),
-        companyName: step === "createAdmin" ? companyName.trim() : undefined,
-        industry: step === "createAdmin" ? industry.trim() : undefined,
-      });
-      setIsSubmitting(false);
-      if ("error" in result) {
-        setErrorMsg(result.error);
-        return;
-      }
-      setHRSession(result.hrUser.id);
-      router.push("/company/dashboard");
-    }, 600);
+
+    const result =
+      step === "join" && matchedCompany
+        ? await joinExistingCompany({
+            companyId: matchedCompany.id,
+            hrName: hrName.trim(),
+            hrEmail: email,
+            password,
+          })
+        : await createCompany({
+            name: companyName.trim(),
+            domain: emailDomain(email),
+            hrName: hrName.trim(),
+            hrEmail: email,
+            password,
+          });
+
+    setIsSubmitting(false);
+    if ("error" in result) {
+      setErrorMsg(result.error);
+      return;
+    }
+    setHRSessionIds({ hrUserId: result.hrUser.id, companyId: result.company.id });
+    router.push("/company/dashboard");
   };
 
   const stepIndicator = (step === "createCompany" || step === "createAdmin") && (
@@ -183,9 +198,10 @@ export default function CompanyRegisterPage() {
 
             <button
               type="submit"
-              className="mt-2 flex w-full cursor-pointer items-center justify-center rounded-full bg-[#0F0F0F] py-3.5 text-xs font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.99]"
+              disabled={isCheckingEmail}
+              className="mt-2 flex w-full cursor-pointer items-center justify-center rounded-full bg-[#0F0F0F] py-3.5 text-xs font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
             >
-              เริ่มต้นใช้งาน →
+              {isCheckingEmail ? "กำลังตรวจสอบ..." : "เริ่มต้นใช้งาน →"}
             </button>
 
             <div className="text-center text-xs text-[#5C5C5C]">
@@ -225,19 +241,6 @@ export default function CompanyRegisterPage() {
                 className="w-full rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-4 py-3 text-xs font-semibold text-[#0F0F0F] outline-none transition-border focus:border-[#0F0F0F]"
               />
             </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-bold text-[#0F0F0F]">
-                อุตสาหกรรม (ถ้ามี)
-              </label>
-              <input
-                type="text"
-                value={industry}
-                onChange={(e) => setIndustry(e.target.value)}
-                placeholder="เช่น Software, Fintech, Design Agency"
-                className="w-full rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-4 py-3 text-xs font-semibold text-[#0F0F0F] outline-none transition-border focus:border-[#0F0F0F]"
-              />
-            </div>
-
             <div className="flex gap-2">
               <button
                 type="button"

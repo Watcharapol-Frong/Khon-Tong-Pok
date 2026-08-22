@@ -1,9 +1,7 @@
 import type {
   AxisChip,
-  Company,
   FaqItem,
   GameStage,
-  HRUser,
   InterviewSlot,
   Job,
   JobSeeker,
@@ -400,23 +398,6 @@ export const CATEGORY_TABS: { key: "all" | "dev" | "marketing" | "design"; label
   { key: "dev", label: "Software & Data" },
   { key: "marketing", label: "Marketing" },
   { key: "design", label: "Design" },
-];
-
-// --- Company / HR mock data (types only for now — no real auth/backend yet) ---
-
-export const MOCK_COMPANIES: Company[] = [
-  { id: "co_techcorp", name: "TechCorp Global", industry: "Software", createdAt: "2025-01-14", domain: "techcorpglobal.com" },
-  { id: "co_datadrive", name: "DataDrive Insights", industry: "Data & Analytics", createdAt: "2025-02-03", domain: "datadrive.io" },
-  { id: "co_fintech", name: "FinTech Dynamics", industry: "Fintech", createdAt: "2025-03-19", domain: "fintechdynamics.com" },
-  { id: "co_creativelab", name: "Creative Lab Studio", industry: "Design Agency", createdAt: "2025-04-22", domain: "creativelabstudio.com" },
-];
-
-export const MOCK_HR_USERS: HRUser[] = [
-  { id: "hr_001", companyId: "co_techcorp", name: "ปวีณา ศรีสุข", email: "paveena@techcorpglobal.com" },
-  { id: "hr_002", companyId: "co_techcorp", name: "ธนกร วงศ์ไพศาล", email: "thanakorn@techcorpglobal.com" },
-  { id: "hr_003", companyId: "co_datadrive", name: "อรุณี ชัยพัฒน์", email: "arunee@datadrive.io" },
-  { id: "hr_004", companyId: "co_fintech", name: "ณัฐพล เจริญสุข", email: "nattapon@fintechdynamics.com" },
-  { id: "hr_005", companyId: "co_creativelab", name: "กมลชนก ทองดี", email: "kamonchanok@creativelabstudio.com" },
 ];
 
 // requiredHardSkills values are drawn from onetSkills.hardSkills

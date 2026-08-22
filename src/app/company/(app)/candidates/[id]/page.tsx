@@ -1,22 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { ArrowLeft, Briefcase, Check, Clock, EyeOff, Mail, MapPin, Phone, Star } from "lucide-react";
 import { InterviewInviteModal } from "@/components/InterviewInviteModal";
 import { RadarChart } from "@/components/RadarChart";
-import {
-  createInterviewInvite,
-  getCandidateReportSnapshot,
-  getSessionSnapshot,
-  subscribeToStore,
-} from "@/lib/companyStore";
+import { createInterviewInvite, getCandidateReportSnapshot, subscribeToStore } from "@/lib/companyStore";
+import { useCompanySession } from "@/lib/companySession";
 import { SOFT_SKILL_AXIS_META } from "@/lib/data";
 import type { HardSkillStatus, SoftSkillScores } from "@/lib/types";
 
-const getServerSessionSnapshot = () => null;
 const getServerNull = () => null;
 
 // partial uses blue, not amber — amber is reserved for the "ช้างเผือก"
@@ -28,7 +23,6 @@ const STATUS_META: Record<HardSkillStatus, { label: string; className: string }>
 };
 
 export default function CandidateReportPage() {
-  const router = useRouter();
   const params = useParams<{ id: string }>();
   const jobSeekerId = params.id;
   const [inviteTargetPositionId, setInviteTargetPositionId] = useState<string | null>(null);
@@ -72,25 +66,13 @@ export default function CandidateReportPage() {
     chartResizeObserverRef.current = observer;
   };
 
-  const session = useSyncExternalStore(
-    subscribeToStore,
-    getSessionSnapshot,
-    getServerSessionSnapshot
-  );
-
-  useEffect(() => {
-    if (getSessionSnapshot() === null) {
-      router.replace("/company/login");
-    }
-  }, [router]);
+  const session = useCompanySession();
 
   const report = useSyncExternalStore(
     subscribeToStore,
-    () => (session ? getCandidateReportSnapshot(jobSeekerId, session.company.id) : null),
+    () => getCandidateReportSnapshot(jobSeekerId, session.company.id),
     getServerNull
   );
-
-  if (!session) return null;
 
   // Guard: this jobSeeker must have at least one match with this HR's
   // company (enforced inside getCandidateReport) — otherwise treat as

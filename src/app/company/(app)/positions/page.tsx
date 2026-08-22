@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useSyncExternalStore } from "react";
+import { Suspense, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -11,14 +11,11 @@ import {
   createPosition,
   getCandidatesForPosition,
   getPositionsSnapshot,
-  getSessionSnapshot,
   setPositionOpen,
-  subscribeToStore,
   updatePosition,
 } from "@/lib/companyStore";
+import { useCompanySession } from "@/lib/companySession";
 import type { Position, SoftSkillScores } from "@/lib/types";
-
-const getServerSessionSnapshot = () => null;
 
 type PositionFormState = {
   title: string;
@@ -75,14 +72,7 @@ function parseSoftSkillInput(value: string): number | undefined {
 
 function CompanyPositionsContent() {
   const searchParams = useSearchParams();
-  // (app)/layout.tsx already guards against no-session and redirects to
-  // /company/login before this page ever mounts — this read is just to
-  // type-narrow and access session.company.id for this page's own data.
-  const session = useSyncExternalStore(
-    subscribeToStore,
-    getSessionSnapshot,
-    getServerSessionSnapshot
-  );
+  const session = useCompanySession();
 
   // searchParams is known at initial render on both server and client (it's
   // part of the request, unlike localStorage), so a lazy useState initializer
@@ -92,8 +82,6 @@ function CompanyPositionsContent() {
   const [form, setForm] = useState<PositionFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
   const [invalidSkillsNotice, setInvalidSkillsNotice] = useState<string[]>([]);
-
-  if (!session) return null;
 
   const positions = getPositionsSnapshot(session.company.id);
   const isFormOpen = isCreating || editingPositionId !== null;

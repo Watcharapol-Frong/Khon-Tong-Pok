@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
-import { clearHRSession, getSessionSnapshot, subscribeToStore } from "@/lib/companyStore";
-
-const getServerSessionSnapshot = () => null;
+import { clearHRSessionIds, getHRSessionIds } from "@/lib/hrSession";
 
 /**
  * Separate from Navbar on purpose — only ever rendered on /company/* pages,
@@ -23,18 +21,28 @@ export function CompanyNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const open = isMobile && menuOpen;
 
-  const session = useSyncExternalStore(
-    subscribeToStore,
-    getSessionSnapshot,
-    getServerSessionSnapshot
-  );
+  // Just a display hint for which nav links to show (dashboard/logout vs.
+  // login/register) — not a real auth check, so a plain localStorage read
+  // is enough; CompanyAppLayout does the actual server-verified session
+  // check for any page that requires login. Starts false so server and
+  // client's first render match (avoids a hydration mismatch), then
+  // updates once mounted.
+  const [session, setSession] = useState(false);
+  useEffect(() => {
+    // Reading a browser-only source (localStorage) the server can't see —
+    // the set-state-in-effect rule assumes state should be derivable from
+    // props/other state, which doesn't apply here; a lazy useState
+    // initializer would cause a real hydration mismatch instead.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSession(getHRSessionIds() !== null);
+  }, []);
 
   const logoHref = session ? "/company/dashboard" : "/company";
 
   const closeMenu = () => setMenuOpen(false);
 
   const handleLogout = () => {
-    clearHRSession();
+    clearHRSessionIds();
     closeMenu();
     router.push("/company/login");
   };

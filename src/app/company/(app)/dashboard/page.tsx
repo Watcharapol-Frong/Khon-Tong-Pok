@@ -1,6 +1,5 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Briefcase, ChevronRight, Plus, Star, Users } from "lucide-react";
@@ -8,11 +7,8 @@ import {
   getCandidatesForPosition,
   getDashboardSummarySnapshot,
   getPositionsSnapshot,
-  getSessionSnapshot,
-  subscribeToStore,
 } from "@/lib/companyStore";
-
-const getServerSessionSnapshot = () => null;
+import { useCompanySession } from "@/lib/companySession";
 
 const STATUS_META: Record<"open" | "closed", { label: string; className: string }> = {
   open: { label: "เปิดรับสมัคร", className: "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]" },
@@ -20,15 +16,7 @@ const STATUS_META: Record<"open" | "closed", { label: string; className: string 
 };
 
 export default function CompanyDashboardPage() {
-  // (app)/layout.tsx already guards against no-session and redirects to
-  // /company/login before this page ever mounts — this second read is just
-  // to type-narrow and access session.company.id for this page's own data.
-  const session = useSyncExternalStore(
-    subscribeToStore,
-    getSessionSnapshot,
-    getServerSessionSnapshot
-  );
-  if (!session) return null;
+  const session = useCompanySession();
 
   const positions = getPositionsSnapshot(session.company.id);
   const summary = getDashboardSummarySnapshot(session.company.id);

@@ -1,37 +1,20 @@
-import type {
-  Company,
-  HRUser,
-  InterviewSlot,
-  JobSeeker,
-  Match,
-  MatchStatus,
-  Position,
-  SoftSkillScores,
-} from "./types";
-import {
-  MOCK_COMPANIES,
-  MOCK_HR_USERS,
-  MOCK_INTERVIEW_SLOTS,
-  MOCK_JOB_SEEKERS,
-  MOCK_MATCHES,
-  MOCK_POSITIONS,
-} from "./data";
+import type { InterviewSlot, JobSeeker, Match, MatchStatus, Position, SoftSkillScores } from "./types";
+import { MOCK_INTERVIEW_SLOTS, MOCK_JOB_SEEKERS, MOCK_MATCHES, MOCK_POSITIONS } from "./data";
 
 /**
- * Client-side-only mock persistence for the company/HR side (no backend —
- * this app has no database). Data lives in localStorage, seeded once from
- * the MOCK_* arrays in data.ts, and mutated in place from then on.
+ * Client-side-only mock persistence for positions/matches/interviews (no
+ * backend for these yet). Data lives in localStorage, seeded once from the
+ * MOCK_* arrays in data.ts, and mutated in place from then on.
  *
- * Passwords are mock/demo-only: stored in plaintext in an internal
- * `credentials` array that's never exposed as part of the public HRUser
- * type (kept out of types.ts on purpose, since real password fields have no
- * business living in generic display/state types). All seeded HR accounts
- * use the password "demo1234".
+ * Company/HR auth moved to a real Postgres database via Prisma — see
+ * src/lib/actions/company.ts (Server Actions) and src/lib/hrSession.ts
+ * (client-side session id storage). This store no longer holds company/HR
+ * data at all; positions/matches/interviewSlots still reference companyId
+ * as a plain string, which now points at a real Company row instead of a
+ * mock one.
  */
 
 const STORE_KEY = "ktp_company_store";
-const SESSION_KEY = "ktp_hr_session";
-const SEED_PASSWORD = "demo1234";
 
 // Bump whenever CompanyStoreData's shape changes, OR whenever the *content*
 // of a nested field changes in a way isValidStoreShape() can't detect (e.g.
@@ -43,18 +26,13 @@ const SEED_PASSWORD = "demo1234";
 // readStore() reseeds from scratch on a mismatch rather than attempting a
 // partial migration — this is disposable mock/demo data (no backend), so a
 // stale shape isn't worth reconciling field-by-field.
-const SCHEMA_VERSION = 8;
-
-type Credential = { hrUserId: string; password: string };
+const SCHEMA_VERSION = 9;
 
 type CompanyStoreData = {
   version: number;
-  companies: Company[];
-  hrUsers: HRUser[];
   positions: Position[];
   matches: Match[];
   jobSeekers: JobSeeker[];
-  credentials: Credential[];
   interviewSlots: InterviewSlot[];
 };
 
@@ -63,8 +41,6 @@ function getMatchId(positionId: string, jobSeekerId: string): string {
   return `${positionId}::${jobSeekerId}`;
 }
 
-type HRSession = { hrUserId: string };
-
 function isBrowser() {
   return typeof window !== "undefined";
 }
@@ -72,12 +48,9 @@ function isBrowser() {
 function seedStore(): CompanyStoreData {
   return {
     version: SCHEMA_VERSION,
-    companies: [...MOCK_COMPANIES],
-    hrUsers: [...MOCK_HR_USERS],
     positions: [...MOCK_POSITIONS],
     matches: [...MOCK_MATCHES],
     jobSeekers: [...MOCK_JOB_SEEKERS],
-    credentials: MOCK_HR_USERS.map((u) => ({ hrUserId: u.id, password: SEED_PASSWORD })),
     interviewSlots: [...MOCK_INTERVIEW_SLOTS],
   };
 }
@@ -96,12 +69,9 @@ function isValidStoreShape(data: unknown): data is CompanyStoreData {
   const d = data as Partial<CompanyStoreData>;
   return (
     d.version === SCHEMA_VERSION &&
-    Array.isArray(d.companies) &&
-    Array.isArray(d.hrUsers) &&
     Array.isArray(d.positions) &&
     Array.isArray(d.matches) &&
     Array.isArray(d.jobSeekers) &&
-    Array.isArray(d.credentials) &&
     Array.isArray(d.interviewSlots)
   );
 }
@@ -136,10 +106,6 @@ function writeStore(store: CompanyStoreData) {
 
 function genId(prefix: string) {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-}
-
-function emailDomain(email: string): string {
-  return email.trim().toLowerCase().split("@")[1] ?? "";
 }
 
 // --- change notification, for React's useSyncExternalStore ---
@@ -183,115 +149,6 @@ function memoPerVersion<Args extends unknown[], Result>(
     return cache.get(key) as Result;
   };
 }
-
-// --- companies / domain lookup ---
-
-export function findCompanyByDomain(domain: string): Company | null {
-  const normalized = domain.trim().toLowerCase();
-  return readStore().companies.find((c) => c.domain === normalized) ?? null;
-}
-
-export function checkEmailDomain(email: string): Company | null {
-  return findCompanyByDomain(emailDomain(email));
-}
-
-/**
- * Registers a new HR account. If the email's domain matches an existing
- * company, the account joins that company (companyName is ignored). If the
- * domain is new, companyName is required and a new Company is created.
- */
-export function registerOrJoinCompany(input: {
-  email: string;
-  password: string;
-  hrName: string;
-  companyName?: string;
-  industry?: string;
-}): { hrUser: HRUser; company: Company } | { error: string } {
-  const store = readStore();
-  const domain = emailDomain(input.email);
-  if (!domain) return { error: "อีเมลไม่ถูกต้อง" };
-
-  let company = store.companies.find((c) => c.domain === domain);
-
-  if (!company) {
-    if (!input.companyName?.trim()) {
-      return { error: "กรุณากรอกชื่อบริษัท" };
-    }
-    company = {
-      id: genId("co"),
-      name: input.companyName.trim(),
-      industry: input.industry?.trim() || undefined,
-      createdAt: new Date().toISOString().slice(0, 10),
-      domain,
-    };
-    store.companies.push(company);
-  }
-
-  const hrUser: HRUser = {
-    id: genId("hr"),
-    companyId: company.id,
-    name: input.hrName,
-    email: input.email.trim(),
-  };
-  store.hrUsers.push(hrUser);
-  store.credentials.push({ hrUserId: hrUser.id, password: input.password });
-
-  writeStore(store);
-  notify();
-  return { hrUser, company };
-}
-
-export function loginHR(email: string, password: string): HRUser | { error: string } {
-  const store = readStore();
-  const normalized = email.trim().toLowerCase();
-  const hrUser = store.hrUsers.find((u) => u.email.toLowerCase() === normalized);
-  if (!hrUser) return { error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" };
-
-  const credential = store.credentials.find((c) => c.hrUserId === hrUser.id);
-  if (!credential || credential.password !== password) {
-    return { error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" };
-  }
-  return hrUser;
-}
-
-export function setHRSession(hrUserId: string) {
-  if (!isBrowser()) return;
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify({ hrUserId } satisfies HRSession));
-  notify();
-}
-
-export function clearHRSession() {
-  if (!isBrowser()) return;
-  window.localStorage.removeItem(SESSION_KEY);
-  notify();
-}
-
-function computeSession(): { hrUser: HRUser; company: Company } | null {
-  if (!isBrowser()) return null;
-  const raw = window.localStorage.getItem(SESSION_KEY);
-  if (!raw) return null;
-
-  let session: HRSession;
-  try {
-    session = JSON.parse(raw) as HRSession;
-  } catch {
-    return null;
-  }
-
-  const store = readStore();
-  const hrUser = store.hrUsers.find((u) => u.id === session.hrUserId);
-  if (!hrUser) return null;
-  const company = store.companies.find((c) => c.id === hrUser.companyId);
-  if (!company) return null;
-
-  return { hrUser, company };
-}
-
-export function getSession(): { hrUser: HRUser; company: Company } | null {
-  return computeSession();
-}
-
-export const getSessionSnapshot = memoPerVersion(computeSession);
 
 // --- positions ---
 

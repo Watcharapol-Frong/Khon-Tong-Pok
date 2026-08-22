@@ -7,7 +7,8 @@ import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
 import { Footer } from "@/components/Footer";
 import { CompanyNavbar } from "@/components/CompanyNavbar";
-import { loginHR, setHRSession } from "@/lib/companyStore";
+import { loginHR } from "@/lib/actions/company";
+import { setHRSessionIds } from "@/lib/hrSession";
 
 export default function CompanyLoginPage() {
   const router = useRouter();
@@ -17,21 +18,19 @@ export default function CompanyLoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const result = loginHR(email, password);
-      setIsSubmitting(false);
-      if ("error" in result) {
-        setErrorMsg(result.error);
-        return;
-      }
-      setHRSession(result.id);
-      router.push("/company/dashboard");
-    }, 600);
+    const result = await loginHR(email, password);
+    setIsSubmitting(false);
+    if ("error" in result) {
+      setErrorMsg(result.error);
+      return;
+    }
+    setHRSessionIds({ hrUserId: result.hrUser.id, companyId: result.company.id });
+    router.push("/company/dashboard");
   };
 
   return (
