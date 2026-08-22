@@ -1,4 +1,10 @@
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+// gemini-3.6-flash's free tier is capped at 20 requests/day per project —
+// easy to exhaust just from normal testing. flash-lite models have their
+// own separate daily quota pool and are markedly more generous, at some
+// cost to output quality/latency — a reasonable tradeoff for a chat this
+// bounded/structured. gemini-2.5-flash-lite is deprecated for new users
+// (Google's API itself points at gemini-3.5-flash-lite as the successor).
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const SYSTEM_PROMPT = `คุณคือ "น้องตรงปก" ผู้สัมภาษณ์งาน HR เพศชาย ที่คุยกับผู้สมัครงานเป็นภาษาไทย
