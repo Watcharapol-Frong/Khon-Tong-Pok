@@ -14,6 +14,7 @@ import {
   reopenPosition,
   updatePosition,
 } from "@/lib/actions/position";
+import { SkillAutocomplete } from "@/components/SkillAutocomplete";
 import { useCompanySession } from "@/lib/companySession";
 import { SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
 import { getCandidatesForPosition } from "@/lib/companyStore";
@@ -21,7 +22,7 @@ import type { SoftSkillScores } from "@/lib/types";
 
 type PositionFormState = {
   title: string;
-  hardSkillsInput: string;
+  hardSkills: string[];
   softSkills: Record<keyof SoftSkillScores, string>;
 };
 
@@ -34,31 +35,14 @@ function emptySoftSkillsForm(): Record<keyof SoftSkillScores, string> {
 
 const EMPTY_FORM: PositionFormState = {
   title: "",
-  hardSkillsInput: "",
+  hardSkills: [],
   softSkills: emptySoftSkillsForm(),
 };
-
-const HARD_SKILLS_BY_LOWER = new Map(onetSkills.hardSkills.map((s) => [s.toLowerCase(), s]));
-
-function normalizeHardSkillsInput(raw: string): { valid: string[]; invalid: string[] } {
-  const candidates = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const valid: string[] = [];
-  const invalid: string[] = [];
-  for (const c of candidates) {
-    const canonical = HARD_SKILLS_BY_LOWER.get(c.toLowerCase());
-    if (canonical) valid.push(canonical);
-    else invalid.push(c);
-  }
-  return { valid: Array.from(new Set(valid)), invalid };
-}
 
 function positionToForm(position: PositionWithSkills): PositionFormState {
   return {
     title: position.title,
-    hardSkillsInput: position.requiredHardSkills.join(", "),
+    hardSkills: position.requiredHardSkills,
     softSkills: Object.fromEntries(
       SOFT_SKILL_AXIS_ORDER.map((k) => [k, position.requiredSoftSkills[k]?.toString() ?? ""])
     ) as Record<keyof SoftSkillScores, string>,
@@ -83,7 +67,6 @@ function CompanyPositionsContent() {
   const [isCreating, setIsCreating] = useState(() => searchParams.get("new") === "1");
   const [form, setForm] = useState<PositionFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
-  const [invalidSkillsNotice, setInvalidSkillsNotice] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [positions, setPositions] = useState<PositionWithSkills[]>([]);
@@ -117,7 +100,6 @@ function CompanyPositionsContent() {
   const startCreate = () => {
     setForm(EMPTY_FORM);
     setFormError("");
-    setInvalidSkillsNotice([]);
     setEditingPositionId(null);
     setIsCreating(true);
   };
@@ -125,7 +107,6 @@ function CompanyPositionsContent() {
   const startEdit = (position: PositionWithSkills) => {
     setForm(positionToForm(position));
     setFormError("");
-    setInvalidSkillsNotice([]);
     setIsCreating(false);
     setEditingPositionId(position.id);
   };
@@ -135,7 +116,6 @@ function CompanyPositionsContent() {
     setEditingPositionId(null);
     setForm(EMPTY_FORM);
     setFormError("");
-    setInvalidSkillsNotice([]);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -146,9 +126,6 @@ function CompanyPositionsContent() {
       return;
     }
 
-    const { valid, invalid } = normalizeHardSkillsInput(form.hardSkillsInput);
-    setInvalidSkillsNotice(invalid);
-
     const requiredSoftSkills = Object.fromEntries(
       SOFT_SKILL_AXIS_ORDER.map((k) => [k, parseSoftSkillInput(form.softSkills[k])])
     ) as SoftSkillScores;
@@ -157,13 +134,13 @@ function CompanyPositionsContent() {
     const result = editingPositionId
       ? await updatePosition(editingPositionId, session.company.id, {
           title: form.title.trim(),
-          requiredHardSkills: valid,
+          requiredHardSkills: form.hardSkills,
           requiredSoftSkills,
         })
       : await createPosition({
           companyId: session.company.id,
           title: form.title.trim(),
-          requiredHardSkills: valid,
+          requiredHardSkills: form.hardSkills,
           requiredSoftSkills,
         });
     setIsSubmitting(false);
@@ -254,23 +231,17 @@ function CompanyPositionsContent() {
 
             <div className="mb-3">
               <label className="mb-1.5 block text-xs font-bold text-[#0F0F0F]">
-                Hard Skills ที่ต้องการ (คั่นด้วย , )
+                Hard Skills ที่ต้องการ
               </label>
-              <input
-                type="text"
-                value={form.hardSkillsInput}
-                onChange={(e) => setForm((f) => ({ ...f, hardSkillsInput: e.target.value }))}
-                placeholder="เช่น React, TypeScript, Docker"
-                className="w-full rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-4 py-2.5 text-xs font-semibold text-[#0F0F0F] outline-none focus:border-[#0F0F0F]"
+              <SkillAutocomplete
+                options={onetSkills.hardSkills}
+                selected={form.hardSkills}
+                onChange={(next) => setForm((f) => ({ ...f, hardSkills: next }))}
+                placeholder="พิมพ์ค้นหาแล้วเลือกจากรายการ เช่น React, TypeScript, Docker"
               />
               <p className="mt-1 text-[10px] text-[#8A8A8A]">
-                ต้องตรงกับชื่อในฐานข้อมูลทักษะ (เช่นเดียวกับที่ resume scanner ใช้) — ระบบจะตัดคำที่ไม่ตรงออกอัตโนมัติ
+                เลือกได้เฉพาะทักษะที่มีในฐานข้อมูล (เช่นเดียวกับที่ resume scanner ใช้) — พิมพ์ค้นหาแล้วคลิกเลือกจากรายการที่ขึ้นมา
               </p>
-              {invalidSkillsNotice.length > 0 && (
-                <p className="mt-1 text-[10px] font-bold text-amber-600">
-                  ไม่พบในฐานข้อมูล เลยถูกตัดออก: {invalidSkillsNotice.join(", ")}
-                </p>
-              )}
             </div>
 
             <div className="mb-4">
