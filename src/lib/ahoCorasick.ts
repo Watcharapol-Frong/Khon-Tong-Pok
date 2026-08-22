@@ -102,6 +102,29 @@ function getAutomaton(dictionary: string[]): AhoCorasick {
  * overlapping hits by preferring the longest match (e.g. "JavaScript" wins
  * over the "Java" substring inside it) rather than reporting both.
  */
+// The O*NET dictionary only has the formal "Microsoft X" form of extremely
+// common office tools — a bare "Word" or "Excel" (or a Thai phonetic
+// transliteration like "เวิร์ด"/"เอ็กเซล") doesn't match anything verbatim,
+// which is a bad first impression for exactly the tools most candidates
+// mention first. Rather than expand the dictionary itself (risking false
+// positives elsewhere), expand the searched text to also include the
+// canonical form when a common informal name is spotted.
+const COMMON_TOOL_ALIASES: { pattern: RegExp; canonical: string }[] = [
+  { pattern: /\bword\b|เวิร์ด/i, canonical: "Microsoft Word" },
+  { pattern: /\bexcel\b|เอ็กเซล/i, canonical: "Microsoft Excel" },
+  { pattern: /\b(powerpoint|ppt)\b|เพาเวอร์พอยต์/i, canonical: "Microsoft PowerPoint" },
+  { pattern: /\boutlook\b|เอาท์ลุค/i, canonical: "Microsoft Outlook" },
+  { pattern: /\bteams\b|ทีมส์/i, canonical: "Microsoft Teams" },
+];
+
+export function expandKnownAliases(text: string): string {
+  let expanded = text;
+  for (const { pattern, canonical } of COMMON_TOOL_ALIASES) {
+    if (pattern.test(text)) expanded += ` ${canonical}`;
+  }
+  return expanded;
+}
+
 export function matchSkills(text: string, dictionary: string[]): string[] {
   if (!text || dictionary.length === 0) return [];
 

@@ -9,7 +9,7 @@ import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { extractTextFromPdf, guessNameFromResumeText } from "@/lib/pdf";
-import { matchSkills } from "@/lib/ahoCorasick";
+import { expandKnownAliases, matchSkills } from "@/lib/ahoCorasick";
 import onetSkills from "@/data/onet_skills_dictionary_full.json";
 
 interface ChatMessage {
@@ -282,7 +282,7 @@ export default function DecoderPage() {
     // immediately instead of waiting on a network round-trip, and it
     // catches anything Gemini's own extraction might miss. It also drives
     // the adaptive-probe decision below, so it has to run before that.
-    const locallyMatchedSkills = matchSkills(userQuery, [
+    const locallyMatchedSkills = matchSkills(expandKnownAliases(userQuery), [
       ...onetSkills.hardSkills,
       ...onetSkills.softSkills,
     ]);
@@ -398,7 +398,7 @@ export default function DecoderPage() {
         throw new Error("PDF has no extractable text layer");
       }
 
-      const matchedSkills = matchSkills(text, onetSkills.hardSkills);
+      const matchedSkills = matchSkills(expandKnownAliases(text), onetSkills.hardSkills);
       // A new resume replaces the previous resume's skills (not a union) —
       // an old file's stale skills shouldn't linger once it's been swapped
       // out. Chat-derived skills are untouched.
