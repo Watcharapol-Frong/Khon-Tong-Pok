@@ -323,105 +323,113 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Big Dashboard — Soft Skills gets more room since the radar
-            chart and its six axis labels need real space to render
-            without crowding; Hard Skills is a plain skill list and
-            needs comparatively little. Both fully visible, nothing
-            hidden behind a tab or a narrow sidebar. */}
-        <h2 className="mb-3 text-base sm:text-xl font-extrabold text-[#0F0F0F]">
-          Dynamic Smart Profile
-        </h2>
-        <div className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
-          {/* Soft Skills */}
-          <div className="rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-7">
-            <h3 className="text-base sm:text-xl font-extrabold text-[#0F0F0F]">
-              กราฟ Soft Skills 6 ด้าน
-            </h3>
-            <p className="mt-0.5 text-[11px] sm:text-xs text-[#5C5C5C]">
-              ประมวลผลจากมินิเกม Neuroscience
-            </p>
-
-            {/* Radar sized from the wrapper's real measured width instead
-                of a fixed 230/320px — lets it actually use the extra
-                room this panel now has instead of leaving it empty
-                while axis labels still crowd each other. */}
-            <div ref={chartWrapRefCallback} className="my-4 sm:my-6 flex justify-center w-full overflow-hidden">
-              <RadarChart data={RADAR_DATA} size={chartSize} theme="mono" showLabels animate />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-3">
-              {AXIS_CHIPS.map((chip) => (
-                <div
-                  key={chip.en}
-                  className="rounded-xl bg-white p-2 sm:p-3 text-center text-xs"
-                >
-                  <div className="font-extrabold text-[#0F0F0F]">{chip.value}%</div>
-                  <div className="text-[10px] leading-snug sm:text-[11px] opacity-70">{chip.th}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Hard Skills */}
-          <div className="rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-7">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-base sm:text-xl font-extrabold text-[#0F0F0F]">Hard Skills</h3>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0F0F0F]">
-                {userSkills.length} ทักษะ
-              </span>
-            </div>
-
-            {userSkills.length === 0 && (
-              <div>
-                <p className="text-xs leading-[1.7] text-[#8A8A8A]">
-                  ยังไม่มีทักษะที่สกัดได้ — ไปที่{" "}
-                  <Link href="/decoder" className="font-bold text-[#0F0F0F] underline">
-                    ห้องสนทนากับน้องตรงปก
-                  </Link>{" "}
-                  เพื่อวิเคราะห์ทักษะจากเรซูเม่หรือประสบการณ์ของคุณ
-                </p>
-                <button
-                  type="button"
-                  onClick={handleLoadSampleData}
-                  className="mt-2 cursor-pointer text-xs font-bold text-[#4D7CFF] underline underline-offset-2"
-                >
-                  หรือลองโหลดข้อมูลตัวอย่างเพื่อดูตัวอย่างหน้านี้
-                </button>
-              </div>
-            )}
-            <div className="flex flex-wrap gap-2">
-              {userSkills.map((skill) => {
-                // Same Verified/Partial distinction HR sees: came from
-                // an uploaded resume (document) vs. only ever
-                // self-reported in chat. Read-only — hard skills only
-                // ever come from actual extraction, never typed in
-                // directly, so this list can't be padded.
-                const isVerified = resumeSkills.includes(skill);
-                return (
-                  <div
-                    key={skill}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#0F0F0F]"
-                  >
-                    <span>{skill}</span>
-                    <span
-                      className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                        isVerified
-                          ? "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]"
-                          : "bg-[rgba(77,124,255,0.12)] text-[#4D7CFF]"
-                      }`}
-                    >
-                      {isVerified ? "Verified" : "Partial"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            {userSkills.length > 0 && (
-              <p className="mt-2 text-[10px] text-[#8A8A8A]">
-                <span className="font-bold text-[#0f5c22]">Verified</span> = มาจากเรซูเม่ที่อัปโหลด ·{" "}
-                <span className="font-bold text-[#4D7CFF]">Partial</span> = เล่าในแชทกับน้องตรงปก
+        {/* Big Dashboard — one merged card under a single "Dynamic Smart
+            Profile" heading, with Soft Skills and Hard Skills as two
+            clearly-separated sub-sections (divider, own sub-heading each)
+            rather than two headings both claiming to be the topic. Soft
+            Skills gets more room since the radar chart and its six axis
+            labels need real space to render without crowding; Hard Skills
+            is a plain skill list and needs comparatively little. Both
+            fully visible, nothing hidden behind a tab or a narrow sidebar. */}
+        <div className="mb-10 rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-7">
+          <h2 className="mb-5 text-lg sm:text-2xl font-extrabold text-[#0F0F0F] sm:mb-7">
+            Dynamic Smart Profile
+          </h2>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr] lg:gap-0">
+            {/* Soft Skills */}
+            <div className="lg:pr-8">
+              <h3 className="text-sm sm:text-base font-extrabold text-[#0F0F0F]">
+                กราฟ Soft Skills 6 ด้าน
+              </h3>
+              <p className="mt-0.5 text-[11px] sm:text-xs text-[#5C5C5C]">
+                ประมวลผลจากมินิเกม Neuroscience
               </p>
-            )}
+
+              {/* Radar sized from the wrapper's real measured width instead
+                  of a fixed 230/320px — lets it actually use the extra
+                  room this panel now has instead of leaving it empty
+                  while axis labels still crowd each other. */}
+              <div ref={chartWrapRefCallback} className="my-4 sm:my-6 flex justify-center w-full overflow-hidden">
+                <RadarChart data={RADAR_DATA} size={chartSize} theme="mono" showLabels animate />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-3">
+                {AXIS_CHIPS.map((chip) => (
+                  <div
+                    key={chip.en}
+                    className="rounded-xl bg-white p-2 sm:p-3 text-center text-xs"
+                  >
+                    <div className="font-extrabold text-[#0F0F0F]">{chip.value}%</div>
+                    <div className="text-[10px] leading-snug sm:text-[11px] opacity-70">{chip.th}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Divider — horizontal rule when stacked on mobile, vertical
+                rule when side-by-side on desktop — makes clear these are
+                two distinct sub-sections, not one continuous topic. */}
+            <div className="border-t border-[rgba(15,15,15,0.08)] pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
+              {/* Hard Skills */}
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm sm:text-base font-extrabold text-[#0F0F0F]">Hard Skills</h3>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0F0F0F]">
+                  {userSkills.length} ทักษะ
+                </span>
+              </div>
+
+              {userSkills.length === 0 && (
+                <div>
+                  <p className="text-xs leading-[1.7] text-[#8A8A8A]">
+                    ยังไม่มีทักษะที่สกัดได้ — ไปที่{" "}
+                    <Link href="/decoder" className="font-bold text-[#0F0F0F] underline">
+                      ห้องสนทนากับน้องตรงปก
+                    </Link>{" "}
+                    เพื่อวิเคราะห์ทักษะจากเรซูเม่หรือประสบการณ์ของคุณ
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleLoadSampleData}
+                    className="mt-2 cursor-pointer text-xs font-bold text-[#4D7CFF] underline underline-offset-2"
+                  >
+                    หรือลองโหลดข้อมูลตัวอย่างเพื่อดูตัวอย่างหน้านี้
+                  </button>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {userSkills.map((skill) => {
+                  // Same Verified/Partial distinction HR sees: came from
+                  // an uploaded resume (document) vs. only ever
+                  // self-reported in chat. Read-only — hard skills only
+                  // ever come from actual extraction, never typed in
+                  // directly, so this list can't be padded.
+                  const isVerified = resumeSkills.includes(skill);
+                  return (
+                    <div
+                      key={skill}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#0F0F0F]"
+                    >
+                      <span>{skill}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                          isVerified
+                            ? "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]"
+                            : "bg-[rgba(77,124,255,0.12)] text-[#4D7CFF]"
+                        }`}
+                      >
+                        {isVerified ? "Verified" : "Partial"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {userSkills.length > 0 && (
+                <p className="mt-2 text-[10px] text-[#8A8A8A]">
+                  <span className="font-bold text-[#0f5c22]">Verified</span> = มาจากเรซูเม่ที่อัปโหลด ·{" "}
+                  <span className="font-bold text-[#4D7CFF]">Partial</span> = เล่าในแชทกับน้องตรงปก
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
