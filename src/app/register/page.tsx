@@ -6,11 +6,14 @@ import { useRouter } from "next/navigation";
 import { AlertCircle, Globe, Mail, RefreshCw } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { registerJobSeeker } from "@/lib/actions/jobSeeker";
+import { setJobSeekerSessionIds } from "@/lib/jobSeekerSession";
 
 export default function RegisterCandidatePage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<1 | 2>(1);
   const [formData, setFormData] = useState({
+    name: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -36,7 +39,7 @@ export default function RegisterCandidatePage() {
     }
   }, [currentStep, resendTimer]);
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setErrorMsg("");
   };
@@ -78,6 +81,10 @@ export default function RegisterCandidatePage() {
   // Step 1: Submit Form -> Go to Step 2 (OTP Verification)
   const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) {
+      setErrorMsg("กรุณากรอกชื่อ-นามสกุล");
+      return;
+    }
     if (formData.password !== formData.confirmPassword) {
       setErrorMsg("รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน");
       return;
@@ -100,8 +107,10 @@ export default function RegisterCandidatePage() {
     }, 600);
   };
 
-  // Step 2: Verify OTP -> Immediately navigate to /onboarding
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  // Step 2: Verify OTP (mock — always accepts once 6 digits are entered,
+  // no real email dispatch behind it) -> create the real JobSeeker account
+  // and start its session.
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const fullCode = otp.join("");
     if (fullCode.length < 6) {
@@ -109,11 +118,18 @@ export default function RegisterCandidatePage() {
       return;
     }
 
+    setErrorMsg("");
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      router.push("/onboarding");
-    }, 600);
+    const result = await registerJobSeeker(formData.name, formData.email, formData.password);
+    setIsSubmitting(false);
+
+    if ("error" in result) {
+      setErrorMsg(result.error);
+      return;
+    }
+
+    setJobSeekerSessionIds({ jobSeekerId: result.jobSeeker.id });
+    router.push("/onboarding");
   };
 
   const handleResendOtp = () => {
@@ -178,18 +194,23 @@ export default function RegisterCandidatePage() {
             {currentStep === 1 ? (
               /* STEP 1 FORM: Email + Password + PDPA */
               <form onSubmit={handleStep1Submit} className="flex flex-col gap-4">
-                {/* Google Quick Signup */}
+                {/* Google Quick Signup — no real OAuth wired up, so this
+                    just prefills demo values rather than skipping straight
+                    to /onboarding; the candidate still needs to go through
+                    OTP so a real, logged-in JobSeeker account actually
+                    gets created (skipping it used to dead-end at /decoder's
+                    login guard with no session). */}
                 <div>
                   <button
                     type="button"
                     onClick={() => {
                       setFormData({
+                        name: "Somchai Devtest",
                         email: "somchai.dev@gmail.com",
                         password: "password123",
                         confirmPassword: "password123",
                         consentPDPA: true,
                       });
-                      router.push("/onboarding");
                     }}
                     className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white py-3 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]"
                   >
@@ -210,6 +231,21 @@ export default function RegisterCandidatePage() {
                     <span>{errorMsg}</span>
                   </div>
                 )}
+
+                {/* Name Field */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-[#0F0F0F]">
+                    ชื่อ-นามสกุล <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => handleChange("name", e.target.value)}
+                    placeholder="ชื่อ-นามสกุล"
+                    className="w-full rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-4 py-3 text-xs font-semibold text-[#0F0F0F] outline-none transition-border focus:border-[#0F0F0F]"
+                  />
+                </div>
 
                 {/* Email Field */}
                 <div>

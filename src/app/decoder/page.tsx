@@ -7,9 +7,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FileText, Loader2, MessageCircle, Send, Sparkle } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
+import { JobSeekerAuthGuard } from "@/components/JobSeekerAuthGuard";
 import { Navbar } from "@/components/Navbar";
+import { getResumeExtraction, syncResumeExtraction } from "@/lib/actions/jobSeeker";
 import { extractTextFromPdf, guessNameFromResumeText } from "@/lib/pdf";
 import { expandKnownAliases, matchSkills } from "@/lib/ahoCorasick";
+import { useJobSeekerSession } from "@/lib/jobSeekerSessionContext";
 import onetSkills from "@/data/onet_skills_dictionary_full.json";
 
 interface ChatMessage {
@@ -20,14 +23,20 @@ interface ChatMessage {
   extractedSkills?: string[];
 }
 
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: "1",
-    sender: "ai",
-    text: "สวัสดีครับ! ผมคือน้องตรงปก ผู้ช่วย AI สำหรับวิเคราะห์ทักษะจากประสบการณ์ของคุณ ก่อนอื่นขอทราบชื่อผู้สมัครหน่อยได้ไหมครับ? (หรือถ้าแนบเรซูเม่ PDF ด้านบน ผมจะลองอ่านชื่อจากในไฟล์ให้อัตโนมัติเลยครับ) หลังจากนั้นจะมีคำถามสั้นๆ อีก 4 ข้อ ครอบคลุมทั้งทักษะที่ถนัดและสถานการณ์การทำงานจริงครับ",
-    time: "10:30 น.",
-  },
-];
+// The candidate's name now always comes from their logged-in session (see
+// DecoderContent below), so the greeting welcomes them by name up front
+// instead of asking for it — hence this needs the session and is built
+// inside the component rather than as a module-level constant.
+function buildInitialMessages(name: string): ChatMessage[] {
+  return [
+    {
+      id: "1",
+      sender: "ai",
+      text: `สวัสดีครับคุณ${name}! ผมคือน้องตรงปก ผู้ช่วย AI สำหรับวิเคราะห์ทักษะจากประสบการณ์ของคุณ ลองแนบเรซูเม่ PDF ด้านบน หรือพิมพ์เล่าเลยก็ได้ครับ — มีเครื่องมือ ซอฟต์แวร์ หรือทักษะอะไรที่คุณถนัดบ้างครับ? หลังจากนั้นจะมีคำถามสั้นๆ อีก 3 ข้อ ครอบคลุมทั้งทักษะที่ถนัดและสถานการณ์การทำงานจริงครับ`,
+      time: "10:30 น.",
+    },
+  ];
+}
 
 // A bounded, scripted flow rather than open-ended chat: 2 free-text turns
 // for hard-skill extraction (stage 0, stage 3) bookend 2 STAR-format
@@ -76,7 +85,16 @@ function nowLabel() {
 }
 
 export default function DecoderPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
+  return (
+    <JobSeekerAuthGuard>
+      <DecoderContent />
+    </JobSeekerAuthGuard>
+  );
+}
+
+function DecoderContent() {
+  const { jobSeeker } = useJobSeekerSession();
+  const [messages, setMessages] = useState<ChatMessage[]>(() => buildInitialMessages(jobSeeker.name));
   const [inputText, setInputText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   // Sentinel div at the end of the feed — scrolled into view whenever the
@@ -84,14 +102,13 @@ export default function DecoderPage() {
   // app keeping the latest message in view instead of leaving the reader
   // to notice and scroll down manually.
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [userName, setUserName] = useState<string>("");
-  // True until the candidate's name is resolved — either guessed from an
-  // uploaded resume (see handleResumeUpload) or given in reply to the
-  // initial greeting's name question (see handleSendMessage). While true,
-  // the next chat message the candidate sends is captured as their name
-  // instead of being run through skill extraction / STAR-stage logic, so
-  // "what's your name" always comes before anything else, exactly once.
-  const [awaitingNameReply, setAwaitingNameReply] = useState(true);
+  const [userName, setUserName] = useState<string>(jobSeeker.name);
+  // The candidate's name now always comes from the login session (see
+  // jobSeeker.name above), so this never actually flips true anymore —
+  // kept (rather than deleted) because the name-confirmation branches
+  // below it in handleSendMessage/handleResumeUpload are otherwise still
+  // correct dormant logic, not because it's expected to trigger.
+  const [awaitingNameReply, setAwaitingNameReply] = useState(false);
   // Set when a name reply looks like it might not actually be a name (see
   // looksLikeChatName) — holds the questionable text while we ask the
   // candidate to confirm it, instead of silently accepting something like
@@ -140,18 +157,55 @@ export default function DecoderPage() {
   // more specific instead of the flow just moving on, but only once per
   // stage so a candidate who genuinely has nothing more to add isn't stuck.
   const [probedThisStage, setProbedThisStage] = useState(false);
+  // Raw text of the most recently uploaded resume — only set by
+  // handleResumeUpload. Re-sent on every DB sync below (not just right
+  // after upload) so a chat-only skill update doesn't need to special-case
+  // "was there ever a resume"; the upsert in syncResumeExtraction leaves
+  // rawText untouched when this is empty.
+  const [resumeRawText, setResumeRawText] = useState("");
+  // True once this candidate's existing ResumeExtraction (if any) has been
+  // fetched — the DB-sync effect below must not fire before this, or it
+  // would overwrite real prior data with the empty initial state.
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getResumeExtraction(jobSeeker.id).then((existing) => {
+      if (cancelled) return;
+      if (existing) {
+        // Seeded into chatSkills (which only ever accumulates) rather than
+        // resumeSkills (which a new upload replaces wholesale) — this way
+        // a fresh resume upload this session can't clobber skills the
+        // candidate already had on record from a previous visit.
+        setChatSkills(existing.hardSkills);
+        setResumeRawText(existing.rawText);
+      }
+      setIsHydrated(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- jobSeeker.id is stable for the lifetime of this page (set once by the guard)
+  }, []);
 
   // /profile reads both of these — the union for the skills list itself,
   // and resumeSkills separately so it can show "Verified" (came from an
   // actual document) vs "Partial" (self-reported in chat only) the same
   // way HR's own candidate report distinguishes hard-skill confidence.
   // Without this the whole point of this chat (building a Smart Profile)
-  // dead-ends once the candidate navigates away.
+  // dead-ends once the candidate navigates away. Also mirrored into
+  // ResumeExtraction in the real database, keyed off the logged-in
+  // jobSeeker's id, once initial hydration has completed.
   useEffect(() => {
     const union = Array.from(new Set([...resumeSkills, ...chatSkills]));
     localStorage.setItem("ktp_hard_skills", JSON.stringify(union));
     localStorage.setItem("ktp_resume_skills", JSON.stringify(resumeSkills));
-  }, [resumeSkills, chatSkills]);
+    if (!isHydrated) return;
+    syncResumeExtraction(jobSeeker.id, {
+      hardSkills: union,
+      ...(resumeRawText ? { rawText: resumeRawText } : {}),
+    });
+  }, [resumeSkills, chatSkills, resumeRawText, isHydrated, jobSeeker.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -403,6 +457,9 @@ export default function DecoderPage() {
       // an old file's stale skills shouldn't linger once it's been swapped
       // out. Chat-derived skills are untouched.
       setResumeSkills(matchedSkills);
+      // Triggers the DB-sync effect above to persist this resume's raw
+      // text into ResumeExtraction along with the current skill union.
+      setResumeRawText(text);
 
       // Try to resolve the name from the resume text (simple heuristic —
       // see guessNameFromResumeText, no Gemini call here). Only guess once;

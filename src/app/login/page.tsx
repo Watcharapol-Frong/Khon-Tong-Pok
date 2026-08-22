@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Globe } from "lucide-react";
+import { AlertCircle, Globe } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+import { loginJobSeeker } from "@/lib/actions/jobSeeker";
+import { setJobSeekerSessionIds } from "@/lib/jobSeekerSession";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -14,14 +16,22 @@ export default function LoginPage() {
   const [remember, setRemember] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg("");
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setLoginSuccess(true);
-    }, 800);
+    const result = await loginJobSeeker(email, password);
+    setIsSubmitting(false);
+
+    if ("error" in result) {
+      setErrorMsg(result.error);
+      return;
+    }
+
+    setJobSeekerSessionIds({ jobSeekerId: result.jobSeeker.id });
+    setLoginSuccess(true);
   };
 
   return (
@@ -57,16 +67,23 @@ export default function LoginPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {errorMsg && (
+              <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-600">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" strokeWidth={2} />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
             <div>
               <label className="mb-1.5 block text-xs font-bold text-[#0F0F0F]">
-                อีเมล หรือ เบอร์โทรศัพท์
+                อีเมล
               </label>
               <input
-                type="text"
+                type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com หรือ 0812345678"
+                placeholder="name@example.com"
                 className="w-full rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-4 py-3 text-xs font-semibold text-[#0F0F0F] outline-none transition-border focus:border-[#0F0F0F]"
               />
             </div>

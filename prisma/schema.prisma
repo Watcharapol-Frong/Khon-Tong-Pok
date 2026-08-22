@@ -71,6 +71,10 @@ model JobSeeker {
   id                String            @id @default(cuid())
   name              String
   email             String            @unique
+  /// Prototype only — plaintext, no hashing. Never returned from a Server
+  /// Action to the client (see SafeJobSeeker in src/lib/jobSeekerSessionContext.tsx).
+  /// Needs real hashing (bcrypt/argon2) before this touches production.
+  password          String
   resumeExtraction  ResumeExtraction?
   chatVerifications ChatVerification[]
   gameResult        GameResult?
