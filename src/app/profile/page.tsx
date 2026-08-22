@@ -705,48 +705,53 @@ export default function ProfilePage() {
                   </div>
                 )}
 
+                {/* Same list-item language as the HR candidate list (see
+                    /company/positions/[id]/candidates): icon left, info
+                    middle, match score as a plain bold number + small
+                    gray label on the right — not a colored badge, so
+                    "Match" reads the same way on both sides of the app. */}
                 {recommendedJobs.map((job) => {
                   const isApplied = appliedJobs.includes(job.title);
                   return (
                     <div
                       key={job.title}
-                      className="flex flex-col justify-between gap-3 rounded-2xl bg-[#FAFAFA] p-5 transition-colors hover:bg-[#F5F5F5]"
+                      className="flex flex-wrap items-center gap-3 sm:gap-4 rounded-2xl bg-[#FAFAFA] p-4 transition-colors hover:bg-[#F0F0F0]"
                     >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <div className="mb-1 flex items-center gap-2">
-                            <span className="rounded-md bg-[#3BF55C] px-2 py-0.5 text-[10px] font-extrabold text-[#0F0F0F]">
-                              Match {job.matchRate}%
-                            </span>
-                            <h3 className="text-base font-extrabold text-[#0F0F0F]">
-                              {job.title}
-                            </h3>
-                          </div>
-                          <div className="text-xs text-[#8A8A8A]">
-                            {job.company} · {job.salaryNote || `฿${job.salaryMin.toLocaleString()} - ฿${job.salaryMax.toLocaleString()}`}
-                          </div>
-                        </div>
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#F0F0F0]">
+                        <Briefcase className="h-4 w-4 text-[#8A8A8A]" strokeWidth={2} />
+                      </div>
 
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm font-extrabold text-[#0F0F0F]">{job.title}</span>
+                        <div className="mt-0.5 text-xs text-[#8A8A8A]">
+                          {job.company} · {job.salaryNote || `฿${job.salaryMin.toLocaleString()} - ฿${job.salaryMax.toLocaleString()}`}
+                        </div>
+                        {/* Real reasoning — the actual skills this job shares
+                            with the candidate's extracted hard skills, not a
+                            generic templated sentence. */}
+                        <div className="mt-1 flex items-start gap-1 text-[10px] leading-[1.5] text-[#4D7CFF]">
+                          <Lightbulb className="mt-0.5 h-3 w-3 flex-shrink-0" strokeWidth={2} />
+                          <span>แมตช์เพราะคุณมีทักษะ {job.matchedSkills.join(", ")}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
+                        <div className="text-right">
+                          <div className="text-lg font-extrabold text-[#0F0F0F]">{job.matchRate}%</div>
+                          <div className="text-[9px] text-[#8A8A8A]">Match</div>
+                        </div>
                         <button
                           type="button"
                           onClick={() => handleApply(job.title)}
                           disabled={isApplied}
-                          className={`rounded-full px-5 py-2 text-xs font-bold transition-all ${
+                          className={`whitespace-nowrap rounded-full px-4 py-1.5 text-[11px] font-bold transition-all ${
                             isApplied
                               ? "bg-white text-[#8A8A8A] cursor-default"
                               : "bg-[#0F0F0F] text-white hover:opacity-90 active:scale-[0.98]"
                           }`}
                         >
-                          {isApplied ? "✓ ยื่นสมัครแล้ว (กำลังคัดกรอง)" : "สมัครตำแหน่งนี้"}
+                          {isApplied ? "ยื่นสมัครแล้ว" : "สมัครตำแหน่งนี้"}
                         </button>
-                      </div>
-
-                      {/* Real reasoning — the actual skills this job shares
-                          with the candidate's extracted hard skills, not a
-                          generic templated sentence. */}
-                      <div className="flex items-start gap-1.5 rounded-xl border border-dashed border-[rgba(77,124,255,0.3)] bg-[rgba(77,124,255,0.06)] p-3 text-[11px] leading-[1.5] text-[#0F0F0F]">
-                        <Lightbulb className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#4D7CFF]" strokeWidth={2} />
-                        <span>แมตช์เพราะคุณมีทักษะ {job.matchedSkills.join(", ")} ตรงกับที่ตำแหน่งนี้ต้องการ</span>
                       </div>
                     </div>
                   );
