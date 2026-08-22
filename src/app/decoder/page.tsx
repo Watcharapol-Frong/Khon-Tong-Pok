@@ -426,8 +426,7 @@ export default function DecoderPage() {
 
             {/* Header */}
             <div className="mb-4 sm:mb-6 pb-3 sm:pb-4">
-              <div className="mb-1 inline-flex items-center gap-2 rounded-full bg-white px-2.5 py-0.5 text-[11px] sm:text-xs font-bold text-[#5C5C5C]">
-                <span className="h-2 w-2 rounded-full bg-[#4D7CFF]" />
+              <div className="mb-1 inline-flex items-center rounded-full bg-white px-2.5 py-0.5 text-[11px] sm:text-xs font-bold text-[#5C5C5C]">
                 วิเคราะห์และดึงประสิทธิภาพโดยน้องตรงปก
               </div>
               <h1 className="text-[clamp(18px,4vw,28px)] font-extrabold tracking-[-0.02em]">
@@ -692,11 +691,10 @@ export default function DecoderPage() {
                       return (
                         <div
                           key={sk}
-                          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold text-[#0F0F0F] transition-colors duration-[1400ms] ${
+                          className={`rounded-full px-3 py-1.5 text-[11px] font-semibold text-[#0F0F0F] transition-colors duration-[1400ms] ${
                             isNew ? "bg-[rgba(77,124,255,0.18)] ring-1 ring-[#4D7CFF]" : "bg-white"
                           }`}
                         >
-                          <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#3BF55C]" />
                           <span className="truncate">{sk}</span>
                         </div>
                       );
