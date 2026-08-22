@@ -9,7 +9,7 @@ import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { JobSeekerAuthGuard } from "@/components/JobSeekerAuthGuard";
 import { Navbar } from "@/components/Navbar";
-import { getResumeExtraction, markChatFlowComplete, syncResumeExtraction } from "@/lib/actions/jobSeeker";
+import { getJobSeekerProfile, markChatFlowComplete, syncComputerSkills } from "@/lib/actions/jobSeeker";
 import { extractTextFromPdf } from "@/lib/pdf";
 import { expandKnownAliases, matchSkills } from "@/lib/ahoCorasick";
 import { useJobSeekerSession } from "@/lib/jobSeekerSessionContext";
@@ -52,17 +52,33 @@ const SKILL_PROBE_FOLLOWUP =
 // the time this chat is reachable at all (see the gate in DecoderContent)
 // at least one hard skill is already on record — so the greeting welcomes
 // them by name and jumps straight into the first STAR question, instead of
-// asking what they're good at or who they are. Needs the session, hence
-// built inside the component rather than as a module-level constant.
-function buildInitialMessages(name: string): ChatMessage[] {
+// asking what they're good at or who they are. Takes the profile's most
+// recent work experience (if the candidate filled out the manual form) so
+// the greeting can reference it directly, making the STAR question feel
+// specific to them rather than generic. Needs both, hence built inside the
+// component rather than as a module-level constant.
+function buildInitialMessages(name: string, recentJob?: { jobTitle: string; companyName: string }): ChatMessage[] {
+  const jobIntro = recentJob
+    ? `เห็นว่าคุณเคยทำงานตำแหน่ง ${recentJob.jobTitle} ที่ ${recentJob.companyName} มาก่อนครับ `
+    : "";
   return [
     {
       id: "1",
       sender: "ai",
-      text: `สวัสดีครับคุณ${name}! ผมคือน้องตรงปก ผู้ช่วย AI สำหรับวิเคราะห์ทักษะจากประสบการณ์ของคุณ ผมเห็นข้อมูลทักษะเบื้องต้นที่คุณให้ไว้แล้วครับ ทีนี้ขอถามเพิ่มอีก ${SCRIPTED_PROMPTS.length} ข้อสั้นๆ เพื่อให้เข้าใจประสบการณ์การทำงานจริงของคุณมากขึ้นครับ\n\n${SCRIPTED_PROMPTS[0]}`,
+      text: `สวัสดีครับคุณ${name}! ผมคือน้องตรงปก ผู้ช่วย AI สำหรับวิเคราะห์ทักษะจากประสบการณ์ของคุณ ผมเห็นข้อมูลทักษะเบื้องต้นที่คุณให้ไว้แล้วครับ ${jobIntro}ทีนี้ขอถามเพิ่มอีก ${SCRIPTED_PROMPTS.length} ข้อสั้นๆ เพื่อให้เข้าใจประสบการณ์การทำงานจริงของคุณมากขึ้นครับ\n\n${SCRIPTED_PROMPTS[0]}`,
       time: "10:30 น.",
     },
   ];
+}
+
+/** isCurrent wins outright; otherwise the entry with the latest startDate. Entries are ordered by form-entry order (sortOrder), not necessarily chronologically, so this can't just take workExperience[0]. */
+function pickMostRecentJob(
+  workExperience: { jobTitle: string; companyName: string; isCurrent: boolean; startDate: Date | null }[]
+): { jobTitle: string; companyName: string } | undefined {
+  if (workExperience.length === 0) return undefined;
+  const current = workExperience.find((w) => w.isCurrent);
+  if (current) return current;
+  return [...workExperience].sort((a, b) => (b.startDate?.getTime() ?? 0) - (a.startDate?.getTime() ?? 0))[0];
 }
 
 function nowLabel() {
@@ -79,6 +95,10 @@ export default function DecoderPage() {
 
 function DecoderContent() {
   const { jobSeeker } = useJobSeekerSession();
+  // Seeded with a generic placeholder greeting at mount, then replaced with
+  // the real (possibly job-personalized) one once the hydration effect
+  // below resolves — the chat panel itself never renders before that
+  // finishes anyway (see the gate), so this is never visibly shown.
   const [messages, setMessages] = useState<ChatMessage[]>(() => buildInitialMessages(jobSeeker.name));
   const [inputText, setInputText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -153,10 +173,10 @@ function DecoderContent() {
   // Raw text of the most recently uploaded resume — only set by
   // handleResumeUpload. Re-sent on every DB sync below (not just right
   // after upload) so a chat-only skill update doesn't need to special-case
-  // "was there ever a resume"; the upsert in syncResumeExtraction leaves
-  // rawText untouched when this is empty.
+  // "was there ever a resume"; the upsert in syncComputerSkills leaves
+  // resumeRawText untouched when this is empty.
   const [resumeRawText, setResumeRawText] = useState("");
-  // True once this candidate's existing ResumeExtraction (if any) has been
+  // True once this candidate's existing JobSeekerProfile (if any) has been
   // fetched — the DB-sync effect below must not fire before this, or it
   // would overwrite real prior data with the empty initial state.
   const [isHydrated, setIsHydrated] = useState(false);
@@ -171,22 +191,24 @@ function DecoderContent() {
 
   useEffect(() => {
     let cancelled = false;
-    getResumeExtraction(jobSeeker.id).then((existing) => {
+    getJobSeekerProfile(jobSeeker.id).then((profile) => {
       if (cancelled) return;
-      if (existing) {
+      if (profile) {
         // Seeded into chatSkills (which only ever accumulates) rather than
         // resumeSkills (which a new upload replaces wholesale) — this way
         // a fresh resume upload this session can't clobber skills the
         // candidate already had on record from a previous visit.
-        setChatSkills(existing.hardSkills);
-        setResumeRawText(existing.rawText);
+        setChatSkills(profile.computerSkills);
+        setResumeRawText(profile.resumeRawText);
       }
+      const recentJob = pickMostRecentJob(profile?.workExperience ?? []);
+      setMessages(buildInitialMessages(jobSeeker.name, recentJob));
       setIsHydrated(true);
     });
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- jobSeeker.id is stable for the lifetime of this page (set once by the guard)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- jobSeeker.id/name are stable for the lifetime of this page (set once by the guard)
   }, []);
 
   // /profile reads both of these — the union for the skills list itself,
@@ -194,17 +216,17 @@ function DecoderContent() {
   // actual document) vs "Partial" (self-reported in chat only) the same
   // way HR's own candidate report distinguishes hard-skill confidence.
   // Without this the whole point of this chat (building a Smart Profile)
-  // dead-ends once the candidate navigates away. Also mirrored into
-  // ResumeExtraction in the real database, keyed off the logged-in
+  // dead-ends once the candidate navigates away. Also mirrored into the
+  // real database (JobSeekerProfile.computerSkills), keyed off the logged-in
   // jobSeeker's id, once initial hydration has completed.
   useEffect(() => {
     const union = Array.from(new Set([...resumeSkills, ...chatSkills]));
     localStorage.setItem("ktp_hard_skills", JSON.stringify(union));
     localStorage.setItem("ktp_resume_skills", JSON.stringify(resumeSkills));
     if (!isHydrated) return;
-    syncResumeExtraction(jobSeeker.id, {
-      hardSkills: union,
-      ...(resumeRawText ? { rawText: resumeRawText } : {}),
+    syncComputerSkills(jobSeeker.id, {
+      computerSkills: union,
+      ...(resumeRawText ? { resumeRawText } : {}),
     });
   }, [resumeSkills, chatSkills, resumeRawText, isHydrated, jobSeeker.id]);
 
@@ -389,7 +411,7 @@ function DecoderContent() {
       // out. Chat-derived skills are untouched.
       setResumeSkills(matchedSkills);
       // Triggers the DB-sync effect above to persist this resume's raw
-      // text into ResumeExtraction along with the current skill union.
+      // text into the profile along with the current skill union.
       setResumeRawText(text);
 
       setMessages((prev) => [
@@ -512,9 +534,9 @@ function DecoderContent() {
                   </label>
 
                   {/* Option 2: manual entry form (/decoder/manual) — writes
-                      straight to the same ResumeExtraction row via
-                      syncResumeExtraction, so returning here immediately
-                      satisfies hasAnySkill and unlocks chat. */}
+                      straight to the same JobSeekerProfile row, so
+                      returning here immediately satisfies hasAnySkill and
+                      unlocks chat. */}
                   <Link
                     href="/decoder/manual"
                     className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-[rgba(15,15,15,0.12)] p-5 text-center transition-colors hover:border-[#0F0F0F] hover:bg-[#FAFAFA]"

@@ -24,7 +24,7 @@ import { Navbar } from "@/components/Navbar";
 import { RadarChart } from "@/components/RadarChart";
 import { SkillIcon } from "@/components/SkillIcon";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
-import { getJobSeekerSessionData, getResumeExtraction } from "@/lib/actions/jobSeeker";
+import { getJobSeekerProfile, getJobSeekerSessionData } from "@/lib/actions/jobSeeker";
 import { AXIS_CHIPS, JOBS, RADAR_DATA } from "@/lib/data";
 import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
 
@@ -126,27 +126,27 @@ export default function ProfilePage() {
   // /decoder in this session — localStorage above would then be empty or
   // stale even though the database has their real profile. Best-effort:
   // if a job seeker session exists, the database wins over whatever
-  // localStorage had. ResumeExtraction only stores one merged hardSkills
-  // list (resume-derived and chat-derived aren't tracked separately in
-  // the database the way decoder's own local state does it) — as a
-  // reasonable approximation, a non-empty rawText means an actual resume
-  // was uploaded at some point, so the whole current list is treated as
+  // localStorage had. JobSeekerProfile.computerSkills is one merged list
+  // (resume-derived and chat-derived aren't tracked separately in the
+  // database the way decoder's own local state does it) — as a reasonable
+  // approximation, a non-empty resumeRawText means an actual resume was
+  // uploaded at some point, so the whole current list is treated as
   // Verified rather than showing everything as Partial by default.
   useEffect(() => {
     const ids = getJobSeekerSessionIds();
     if (!ids) return;
     let cancelled = false;
-    Promise.all([getJobSeekerSessionData(ids.jobSeekerId), getResumeExtraction(ids.jobSeekerId)]).then(
-      ([session, resume]) => {
+    Promise.all([getJobSeekerSessionData(ids.jobSeekerId), getJobSeekerProfile(ids.jobSeekerId)]).then(
+      ([session, profile]) => {
         if (cancelled) return;
         if (session) {
           setCandidateName(session.jobSeeker.name);
           localStorage.setItem("ktp_username", session.jobSeeker.name);
         }
-        if (resume) {
-          setUserSkills(resume.hardSkills);
-          localStorage.setItem("ktp_hard_skills", JSON.stringify(resume.hardSkills));
-          const verified = resume.rawText.trim().length > 0 ? resume.hardSkills : [];
+        if (profile) {
+          setUserSkills(profile.computerSkills);
+          localStorage.setItem("ktp_hard_skills", JSON.stringify(profile.computerSkills));
+          const verified = profile.resumeRawText.trim().length > 0 ? profile.computerSkills : [];
           setResumeSkills(verified);
           localStorage.setItem("ktp_resume_skills", JSON.stringify(verified));
         }

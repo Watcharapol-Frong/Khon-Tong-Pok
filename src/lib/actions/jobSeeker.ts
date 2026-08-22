@@ -81,35 +81,224 @@ export async function getJobSeekerSessionData(jobSeekerId: string): Promise<JobS
 }
 
 /**
- * Upserts the logged-in job seeker's ResumeExtraction row. Called by
- * /decoder both after a resume PDF is parsed (rawText provided) and
- * whenever the chat-derived hard-skill union changes (rawText omitted, so
- * the previously-stored resume text — if any — is left untouched). A job
- * seeker who never uploads a resume still gets a row once they surface
- * skills through chat alone, with rawText defaulting to "".
+ * Upserts just the computer-skills + resume-text portion of the job
+ * seeker's profile. Called by /decoder both after a resume PDF is parsed
+ * (resumeRawText provided) and whenever the chat-derived hard-skill union
+ * changes (resumeRawText omitted, so whatever resume text is already on
+ * record is left untouched). A candidate who never uploads a resume still
+ * gets a profile row once they surface skills through chat alone, with
+ * resumeRawText defaulting to "". Distinct from saveProfileSkills below,
+ * which is the manual 4-step form's own step 4 save (also touches
+ * languageSkills, never touches resumeRawText).
  */
-export async function syncResumeExtraction(
+export async function syncComputerSkills(
   jobSeekerId: string,
-  data: { hardSkills: string[]; rawText?: string }
+  data: { computerSkills: string[]; resumeRawText?: string }
 ): Promise<{ ok: true } | { error: string }> {
   try {
-    await prisma.resumeExtraction.upsert({
+    await prisma.jobSeekerProfile.upsert({
       where: { jobSeekerId },
-      create: { jobSeekerId, hardSkills: data.hardSkills, rawText: data.rawText ?? "" },
+      create: { jobSeekerId, computerSkills: data.computerSkills, resumeRawText: data.resumeRawText ?? "" },
       update: {
-        hardSkills: data.hardSkills,
-        ...(data.rawText !== undefined ? { rawText: data.rawText } : {}),
+        computerSkills: data.computerSkills,
+        ...(data.resumeRawText !== undefined ? { resumeRawText: data.resumeRawText } : {}),
       },
     });
     return { ok: true };
   } catch (err) {
-    console.error("syncResumeExtraction failed:", err);
-    return { error: "บันทึกข้อมูลเรซูเม่ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+    console.error("syncComputerSkills failed:", err);
+    return { error: "บันทึกข้อมูลทักษะไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
   }
 }
 
-export async function getResumeExtraction(jobSeekerId: string) {
-  return prisma.resumeExtraction.findUnique({ where: { jobSeekerId } });
+/** Full profile with all repeatable sections, ordered for display — null if the candidate hasn't started the manual form or uploaded a resume yet. */
+export async function getJobSeekerProfile(jobSeekerId: string) {
+  return prisma.jobSeekerProfile.findUnique({
+    where: { jobSeekerId },
+    include: {
+      education: { orderBy: { sortOrder: "asc" } },
+      workExperience: { orderBy: { sortOrder: "asc" } },
+      languageSkills: true,
+      certificates: true,
+    },
+  });
+}
+
+export type ProfileStep1Input = {
+  firstNameTh?: string;
+  lastNameTh?: string;
+  firstNameEn?: string;
+  lastNameEn?: string;
+  birthDate?: string; // ISO date string ("YYYY-MM-DD") from a date input
+  gender?: string;
+  nationality?: string;
+  religion?: string;
+  maritalStatus?: string;
+  address?: string;
+  province?: string;
+  postalCode?: string;
+  phone?: string;
+  militaryStatus?: string;
+  desiredPosition?: string;
+  desiredSalaryMin?: number;
+  desiredSalaryMax?: number;
+  desiredJobType?: string;
+  desiredProvince?: string;
+  availableDate?: string;
+};
+
+function toDateOrUndefined(value: string | undefined): Date | undefined {
+  if (!value) return undefined;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+/** Step 1 of the manual form (ข้อมูลส่วนตัว + ลักษณะงานที่ต้องการ) — always the first step, so it's the one that creates the JobSeekerProfile row that steps 2-4 then attach child rows to. */
+export async function saveProfileStep1(
+  jobSeekerId: string,
+  data: ProfileStep1Input
+): Promise<{ ok: true } | { error: string }> {
+  try {
+    const fields = {
+      firstNameTh: data.firstNameTh,
+      lastNameTh: data.lastNameTh,
+      firstNameEn: data.firstNameEn,
+      lastNameEn: data.lastNameEn,
+      birthDate: toDateOrUndefined(data.birthDate),
+      gender: data.gender,
+      nationality: data.nationality,
+      religion: data.religion,
+      maritalStatus: data.maritalStatus,
+      address: data.address,
+      province: data.province,
+      postalCode: data.postalCode,
+      phone: data.phone,
+      militaryStatus: data.militaryStatus,
+      desiredPosition: data.desiredPosition,
+      desiredSalaryMin: data.desiredSalaryMin,
+      desiredSalaryMax: data.desiredSalaryMax,
+      desiredJobType: data.desiredJobType,
+      desiredProvince: data.desiredProvince,
+      availableDate: toDateOrUndefined(data.availableDate),
+    };
+    await prisma.jobSeekerProfile.upsert({
+      where: { jobSeekerId },
+      create: { jobSeekerId, ...fields },
+      update: fields,
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("saveProfileStep1 failed:", err);
+    return { error: "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+  }
+}
+
+async function requireProfileId(jobSeekerId: string): Promise<string | { error: string }> {
+  const profile = await prisma.jobSeekerProfile.findUnique({ where: { jobSeekerId } });
+  if (!profile) return { error: "กรุณากรอกข้อมูลส่วนตัว (ขั้นตอนที่ 1) ก่อน" };
+  return profile.id;
+}
+
+export type EducationInput = {
+  level: string;
+  institution: string;
+  fieldOfStudy?: string;
+  gpa?: number;
+  startYear?: number;
+  endYear?: number;
+};
+
+/** Step 2 — replace-all: the client always resubmits the whole list (add/remove/reorder happen in local state), so deleting and recreating is simpler and just as correct as diffing row-by-row. */
+export async function saveProfileEducation(
+  jobSeekerId: string,
+  entries: EducationInput[]
+): Promise<{ ok: true } | { error: string }> {
+  const profileId = await requireProfileId(jobSeekerId);
+  if (typeof profileId !== "string") return profileId;
+  try {
+    await prisma.$transaction([
+      prisma.educationEntry.deleteMany({ where: { profileId } }),
+      prisma.educationEntry.createMany({
+        data: entries.map((e, i) => ({ ...e, profileId, sortOrder: i })),
+      }),
+    ]);
+    return { ok: true };
+  } catch (err) {
+    console.error("saveProfileEducation failed:", err);
+    return { error: "บันทึกประวัติการศึกษาไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+  }
+}
+
+export type WorkExperienceInput = {
+  companyName: string;
+  jobTitle: string;
+  responsibilities?: string;
+  salary?: number;
+  startDate?: string;
+  endDate?: string;
+  isCurrent?: boolean;
+};
+
+/** Step 3 — same replace-all reasoning as saveProfileEducation. */
+export async function saveProfileWorkExperience(
+  jobSeekerId: string,
+  entries: WorkExperienceInput[]
+): Promise<{ ok: true } | { error: string }> {
+  const profileId = await requireProfileId(jobSeekerId);
+  if (typeof profileId !== "string") return profileId;
+  try {
+    await prisma.$transaction([
+      prisma.workExperienceEntry.deleteMany({ where: { profileId } }),
+      prisma.workExperienceEntry.createMany({
+        data: entries.map((e, i) => ({
+          companyName: e.companyName,
+          jobTitle: e.jobTitle,
+          responsibilities: e.responsibilities,
+          salary: e.salary,
+          startDate: toDateOrUndefined(e.startDate),
+          endDate: toDateOrUndefined(e.endDate),
+          isCurrent: e.isCurrent ?? false,
+          profileId,
+          sortOrder: i,
+        })),
+      }),
+    ]);
+    return { ok: true };
+  } catch (err) {
+    console.error("saveProfileWorkExperience failed:", err);
+    return { error: "บันทึกประสบการณ์ทำงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+  }
+}
+
+export type LanguageSkillInput = {
+  language: string;
+  speaking?: string;
+  reading?: string;
+  writing?: string;
+};
+
+/** Step 4 — computer skills (dictionary-only, via SkillAutocomplete) + language skills (replace-all, same reasoning as education/work experience). */
+export async function saveProfileSkills(
+  jobSeekerId: string,
+  data: { computerSkills: string[]; languageSkills: LanguageSkillInput[] }
+): Promise<{ ok: true } | { error: string }> {
+  try {
+    const profile = await prisma.jobSeekerProfile.upsert({
+      where: { jobSeekerId },
+      create: { jobSeekerId, computerSkills: data.computerSkills },
+      update: { computerSkills: data.computerSkills },
+    });
+    await prisma.$transaction([
+      prisma.languageSkillEntry.deleteMany({ where: { profileId: profile.id } }),
+      prisma.languageSkillEntry.createMany({
+        data: data.languageSkills.map((l) => ({ ...l, profileId: profile.id })),
+      }),
+    ]);
+    return { ok: true };
+  } catch (err) {
+    console.error("saveProfileSkills failed:", err);
+    return { error: "บันทึกทักษะไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+  }
 }
 
 /**
@@ -122,12 +311,12 @@ export async function getResumeExtraction(jobSeekerId: string) {
 export async function getJobSeekerReturnState(
   jobSeekerId: string
 ): Promise<{ hasHardSkills: boolean; isComplete: boolean }> {
-  const [resumeExtraction, aiSummary] = await Promise.all([
-    prisma.resumeExtraction.findUnique({ where: { jobSeekerId } }),
+  const [profile, aiSummary] = await Promise.all([
+    prisma.jobSeekerProfile.findUnique({ where: { jobSeekerId } }),
     prisma.aISummary.findUnique({ where: { jobSeekerId } }),
   ]);
   return {
-    hasHardSkills: (resumeExtraction?.hardSkills.length ?? 0) > 0,
+    hasHardSkills: (profile?.computerSkills.length ?? 0) > 0,
     isComplete: aiSummary !== null,
   };
 }

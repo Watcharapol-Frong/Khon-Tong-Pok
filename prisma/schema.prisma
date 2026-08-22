@@ -75,7 +75,7 @@ model JobSeeker {
   /// Action to the client (see SafeJobSeeker in src/lib/jobSeekerSessionContext.tsx).
   /// Needs real hashing (bcrypt/argon2) before this touches production.
   password          String
-  resumeExtraction  ResumeExtraction?
+  profile           JobSeekerProfile?
   chatVerifications ChatVerification[]
   gameResult        GameResult?
   aiSummary         AISummary?
@@ -83,13 +83,104 @@ model JobSeeker {
   createdAt         DateTime          @default(now())
 }
 
-model ResumeExtraction {
-  id          String    @id @default(cuid())
-  jobSeekerId String    @unique
-  jobSeeker   JobSeeker @relation(fields: [jobSeekerId], references: [id])
-  hardSkills  String[]
-  rawText     String
-  updatedAt   DateTime  @updatedAt
+/// The candidate's structured profile, modeled on JobThai's own resume-form
+/// sections — normalized (not one JSON blob) so a future resume-template
+/// renderer can query/iterate each section directly instead of parsing an
+/// opaque structure. Replaces the old ResumeExtraction model: computerSkills
+/// and resumeRawText below are that model's hardSkills/rawText fields, now
+/// living alongside the rest of the profile instead of split out on their
+/// own — one source of truth for "does this candidate have any skills yet"
+/// (the /decoder gate) regardless of whether they came from a parsed PDF or
+/// the manual multi-step form.
+model JobSeekerProfile {
+  id               String    @id @default(cuid())
+  jobSeekerId      String    @unique
+  jobSeeker        JobSeeker @relation(fields: [jobSeekerId], references: [id])
+
+  // ข้อมูลส่วนบุคคล (personal information)
+  firstNameTh      String?
+  lastNameTh       String?
+  firstNameEn      String?
+  lastNameEn       String?
+  birthDate        DateTime?
+  gender           String?
+  nationality      String?
+  religion         String?
+  maritalStatus    String?
+  address          String?
+  province         String?
+  postalCode       String?
+  phone            String?
+  militaryStatus   String?
+
+  // ลักษณะงานที่ต้องการ (desired job)
+  desiredPosition  String?
+  desiredSalaryMin Int?
+  desiredSalaryMax Int?
+  desiredJobType   String?
+  desiredProvince  String?
+  availableDate    DateTime?
+
+  education        EducationEntry[]
+  workExperience   WorkExperienceEntry[]
+  languageSkills   LanguageSkillEntry[]
+  certificates     CertificateEntry[]
+
+  /// Validated against the O*NET dictionary via the same SkillAutocomplete
+  /// component Position's own hard-skills field uses.
+  computerSkills   String[]
+  /// Parsed text of the most recently uploaded resume PDF, if any —
+  /// defaults to "" for a candidate who only ever used the manual form.
+  resumeRawText    String    @default("")
+
+  updatedAt        DateTime  @updatedAt
+}
+
+model EducationEntry {
+  id           String           @id @default(cuid())
+  profileId    String
+  profile      JobSeekerProfile @relation(fields: [profileId], references: [id])
+  level        String
+  institution  String
+  fieldOfStudy String?
+  gpa          Float?
+  startYear    Int?
+  endYear      Int?
+  sortOrder    Int              @default(0)
+}
+
+model WorkExperienceEntry {
+  id               String           @id @default(cuid())
+  profileId        String
+  profile          JobSeekerProfile @relation(fields: [profileId], references: [id])
+  companyName      String
+  jobTitle         String
+  responsibilities String?
+  salary           Int?
+  startDate        DateTime?
+  endDate          DateTime?
+  isCurrent        Boolean          @default(false)
+  sortOrder        Int              @default(0)
+}
+
+model LanguageSkillEntry {
+  id        String           @id @default(cuid())
+  profileId String
+  profile   JobSeekerProfile @relation(fields: [profileId], references: [id])
+  language  String
+  speaking  String?
+  reading   String?
+  writing   String?
+}
+
+model CertificateEntry {
+  id        String           @id @default(cuid())
+  profileId String
+  profile   JobSeekerProfile @relation(fields: [profileId], references: [id])
+  title     String
+  issuer    String?
+  issueDate DateTime?
+  fileUrl   String?
 }
 
 model ChatVerification {
