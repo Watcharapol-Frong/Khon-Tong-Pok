@@ -25,7 +25,7 @@ export function Footer() {
             alt="คนตรงปก (KhonTongPok)"
             width={1224}
             height={1285}
-            className="h-auto w-[190px] object-contain sm:w-[230px]"
+            className="h-auto w-[120px] object-contain sm:w-[140px]"
           />
           {/* Visually hidden — the brand name is already legible inside
               the image above for sighted users, but screen readers and
