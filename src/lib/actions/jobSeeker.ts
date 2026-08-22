@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { JobSeekerSession, SafeJobSeeker } from "@/lib/jobSeekerSessionContext";
@@ -109,4 +110,51 @@ export async function syncResumeExtraction(
 
 export async function getResumeExtraction(jobSeekerId: string) {
   return prisma.resumeExtraction.findUnique({ where: { jobSeekerId } });
+}
+
+/**
+ * What a returning candidate should see on login — used by /login right
+ * after a successful loginJobSeeker to decide the welcome message and
+ * where to send them next (never re-run the game/onboarding flow, which
+ * has no completion gate of its own; see markChatFlowComplete below for
+ * what "complete" means).
+ */
+export async function getJobSeekerReturnState(
+  jobSeekerId: string
+): Promise<{ hasHardSkills: boolean; isComplete: boolean }> {
+  const [resumeExtraction, aiSummary] = await Promise.all([
+    prisma.resumeExtraction.findUnique({ where: { jobSeekerId } }),
+    prisma.aISummary.findUnique({ where: { jobSeekerId } }),
+  ]);
+  return {
+    hasHardSkills: (resumeExtraction?.hardSkills.length ?? 0) > 0,
+    isComplete: aiSummary !== null,
+  };
+}
+
+/**
+ * Marks the candidate's Smart Profile as complete — called once by
+ * /decoder when the 3-turn STAR flow finishes. Not a real Gemini-generated
+ * synthesis (that's a separate feature); summaryText here is a simple
+ * template just so this row can exist as a genuine, persisted "done"
+ * signal for getJobSeekerReturnState above, rather than routing decisions
+ * depending on client-only state that resets on every page load.
+ */
+export async function markChatFlowComplete(
+  jobSeekerId: string,
+  hardSkills: string[]
+): Promise<{ ok: true } | { error: string }> {
+  try {
+    const summaryText = `สรุปโปรไฟล์เบื้องต้น: มีทักษะที่ยืนยันแล้ว ${hardSkills.length} รายการ (${hardSkills.join(", ")})`;
+    const sourceHash = createHash("sha256").update(JSON.stringify(hardSkills)).digest("hex");
+    await prisma.aISummary.upsert({
+      where: { jobSeekerId },
+      create: { jobSeekerId, summaryText, sourceHash },
+      update: { summaryText, sourceHash, generatedAt: new Date() },
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("markChatFlowComplete failed:", err);
+    return { error: "บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+  }
 }

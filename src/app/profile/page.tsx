@@ -24,7 +24,9 @@ import { Navbar } from "@/components/Navbar";
 import { RadarChart } from "@/components/RadarChart";
 import { SkillIcon } from "@/components/SkillIcon";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
+import { getJobSeekerSessionData, getResumeExtraction } from "@/lib/actions/jobSeeker";
 import { AXIS_CHIPS, JOBS, RADAR_DATA } from "@/lib/data";
+import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -117,6 +119,42 @@ export default function ProfilePage() {
     if (storedPhoto) {
       setProfilePhoto(storedPhoto);
     }
+  }, []);
+
+  // A returning candidate routed here straight from /login (see the
+  // "complete" stage there) may be on a browser that's never touched
+  // /decoder in this session — localStorage above would then be empty or
+  // stale even though the database has their real profile. Best-effort:
+  // if a job seeker session exists, the database wins over whatever
+  // localStorage had. ResumeExtraction only stores one merged hardSkills
+  // list (resume-derived and chat-derived aren't tracked separately in
+  // the database the way decoder's own local state does it) — as a
+  // reasonable approximation, a non-empty rawText means an actual resume
+  // was uploaded at some point, so the whole current list is treated as
+  // Verified rather than showing everything as Partial by default.
+  useEffect(() => {
+    const ids = getJobSeekerSessionIds();
+    if (!ids) return;
+    let cancelled = false;
+    Promise.all([getJobSeekerSessionData(ids.jobSeekerId), getResumeExtraction(ids.jobSeekerId)]).then(
+      ([session, resume]) => {
+        if (cancelled) return;
+        if (session) {
+          setCandidateName(session.jobSeeker.name);
+          localStorage.setItem("ktp_username", session.jobSeeker.name);
+        }
+        if (resume) {
+          setUserSkills(resume.hardSkills);
+          localStorage.setItem("ktp_hard_skills", JSON.stringify(resume.hardSkills));
+          const verified = resume.rawText.trim().length > 0 ? resume.hardSkills : [];
+          setResumeSkills(verified);
+          localStorage.setItem("ktp_resume_skills", JSON.stringify(verified));
+        }
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -518,6 +556,15 @@ export default function ProfilePage() {
                   {userSkills.length} ทักษะ
                 </span>
               </div>
+              {/* Always visible, not just when the skills list is empty —
+                  a completed Smart Profile isn't locked; the candidate can
+                  still re-upload a resume or chat more to add to it. */}
+              <Link
+                href="/decoder"
+                className="mt-2 inline-block text-[11px] font-bold text-[#4D7CFF] underline underline-offset-2 hover:text-[#0F0F0F]"
+              >
+                แก้ไข / อัปเดตทักษะ
+              </Link>
               <div className="mt-4">
               {userSkills.length === 0 && (
                 <div>

@@ -6,8 +6,32 @@ import { AlertCircle, Globe } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
-import { loginJobSeeker } from "@/lib/actions/jobSeeker";
+import { getJobSeekerReturnState, loginJobSeeker } from "@/lib/actions/jobSeeker";
 import { setJobSeekerSessionIds } from "@/lib/jobSeekerSession";
+
+// What a returning candidate sees after login — never re-runs the
+// game/onboarding step (it's optional and self-directed, not a gate), so
+// this only ever distinguishes "hasn't started resume/skills yet",
+// "started but hasn't finished the chatbot flow", and "fully done".
+type ReturnStage = "new" | "inProgress" | "complete";
+
+const STAGE_COPY: Record<ReturnStage, { subtitle: (name: string) => string; ctaLabel: string; ctaHref: string }> = {
+  new: {
+    subtitle: (name) => `ยินดีต้อนรับกลับมาครับคุณ${name}! มาเริ่มอัปโหลดเรซูเม่หรือกรอกข้อมูลทักษะกันต่อเลยครับ`,
+    ctaLabel: "ไปอัปโหลดเรซูเม่ / กรอกข้อมูล →",
+    ctaHref: "/decoder",
+  },
+  inProgress: {
+    subtitle: (name) => `ยินดีต้อนรับกลับมาครับคุณ${name}! คุณทำไปถึงขั้นตอนคุยกับน้องตรงปกแล้ว มาทำต่อกันเลย`,
+    ctaLabel: "ไปคุยกับน้องตรงปกต่อ →",
+    ctaHref: "/decoder",
+  },
+  complete: {
+    subtitle: (name) => `ยินดีต้อนรับกลับมาครับคุณ${name}! Smart Profile ของคุณพร้อมแล้ว`,
+    ctaLabel: "ไปที่ Smart Profile →",
+    ctaHref: "/profile",
+  },
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -17,20 +41,27 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [returnStage, setReturnStage] = useState<ReturnStage>("new");
+  const [candidateName, setCandidateName] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
     setIsSubmitting(true);
     const result = await loginJobSeeker(email, password);
-    setIsSubmitting(false);
 
     if ("error" in result) {
+      setIsSubmitting(false);
       setErrorMsg(result.error);
       return;
     }
 
+    const { hasHardSkills, isComplete } = await getJobSeekerReturnState(result.jobSeeker.id);
+    setIsSubmitting(false);
+
     setJobSeekerSessionIds({ jobSeekerId: result.jobSeeker.id });
+    setCandidateName(result.jobSeeker.name);
+    setReturnStage(isComplete ? "complete" : hasHardSkills ? "inProgress" : "new");
     setLoginSuccess(true);
   };
 
@@ -43,27 +74,40 @@ export default function LoginPage() {
         title={loginSuccess ? "เข้าสู่ระบบสำเร็จ!" : "เข้าสู่ระบบคนตรงปก"}
         subtitle={
           loginSuccess
-            ? "กำลังนำคุณไปยังหน้าประเมินมินิเกม..."
+            ? STAGE_COPY[returnStage].subtitle(candidateName)
             : "พิสูจน์ศักยภาพจริงด้วยตัวตนและทักษะของคุณ"
         }
         accentColor="#3BF55C"
         trustMessage="ตัวตนของคุณถูกปกป้องด้วยระบบ Blind Review จนกว่าจะถึงรอบสัมภาษณ์"
       >
         {loginSuccess ? (
-          <div className="flex justify-center gap-2">
-            <Link
-              href="/game"
-              className="rounded-full bg-[#0F0F0F] px-6 py-2.5 text-xs font-bold text-white"
-            >
-              ไปหน้าต่อไป →
-            </Link>
-            <button
-              type="button"
-              onClick={() => setLoginSuccess(false)}
-              className="cursor-pointer rounded-full bg-[#F0F0F0] px-4 py-2.5 text-xs font-bold text-[#5C5C5C] transition-colors hover:bg-[#E5E5E5]"
-            >
-              ลองอีกครั้ง
-            </button>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link
+                href={STAGE_COPY[returnStage].ctaHref}
+                className="rounded-full bg-[#0F0F0F] px-6 py-2.5 text-xs font-bold text-white"
+              >
+                {STAGE_COPY[returnStage].ctaLabel}
+              </Link>
+              <button
+                type="button"
+                onClick={() => setLoginSuccess(false)}
+                className="cursor-pointer rounded-full bg-[#F0F0F0] px-4 py-2.5 text-xs font-bold text-[#5C5C5C] transition-colors hover:bg-[#E5E5E5]"
+              >
+                ลองอีกครั้ง
+              </button>
+            </div>
+            {/* Smart Profile is done, but never locked — the candidate can
+                still re-upload a resume or keep chatting with the
+                chatbot to add more, so this isn't a dead end. */}
+            {returnStage === "complete" && (
+              <Link
+                href="/decoder"
+                className="text-[11px] font-bold text-[#5C5C5C] underline hover:text-[#0F0F0F]"
+              >
+                แก้ไขข้อมูล / คุยกับน้องตรงปกเพิ่มเติม
+              </Link>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

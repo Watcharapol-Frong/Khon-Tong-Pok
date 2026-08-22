@@ -9,7 +9,7 @@ import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { JobSeekerAuthGuard } from "@/components/JobSeekerAuthGuard";
 import { Navbar } from "@/components/Navbar";
-import { getResumeExtraction, syncResumeExtraction } from "@/lib/actions/jobSeeker";
+import { getResumeExtraction, markChatFlowComplete, syncResumeExtraction } from "@/lib/actions/jobSeeker";
 import { extractTextFromPdf } from "@/lib/pdf";
 import { expandKnownAliases, matchSkills } from "@/lib/ahoCorasick";
 import { useJobSeekerSession } from "@/lib/jobSeekerSessionContext";
@@ -132,6 +132,19 @@ function DecoderContent() {
   // TOTAL_QUESTION_STAGES marks the guided conversation as complete.
   const [questionStage, setQuestionStage] = useState(0);
   const isConversationComplete = questionStage >= TOTAL_QUESTION_STAGES;
+  // Marks the Smart Profile "complete" in the database (see
+  // markChatFlowComplete) the moment the STAR flow finishes — this is the
+  // persisted signal /login uses to route a returning candidate straight
+  // to /profile instead of back through the chat. Guarded with a ref (not
+  // state) so it fires exactly once per visit even though
+  // isConversationComplete stays true on every subsequent render.
+  const hasMarkedCompleteRef = useRef(false);
+  useEffect(() => {
+    if (!isConversationComplete || hasMarkedCompleteRef.current) return;
+    hasMarkedCompleteRef.current = true;
+    markChatFlowComplete(jobSeeker.id, confirmedSkills);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only re-checking when isConversationComplete flips; confirmedSkills is read at that moment via closure, not tracked as a re-trigger
+  }, [isConversationComplete]);
   // True once the current stage has already been probed for skills once
   // (see handleSendMessage) — a vague, skill-free answer gets asked to be
   // more specific instead of the flow just moving on, but only once per
