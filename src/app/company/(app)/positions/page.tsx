@@ -1,21 +1,23 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, Plus } from "lucide-react";
 import onetSkills from "@/data/onet_skills_dictionary_full.json";
-import { SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
 import {
+  closePosition,
   createPosition,
-  getCandidatesForPosition,
-  getPositionsSnapshot,
-  setPositionOpen,
+  getPositionsByCompany,
+  type PositionWithSkills,
+  reopenPosition,
   updatePosition,
-} from "@/lib/companyStore";
+} from "@/lib/actions/position";
 import { useCompanySession } from "@/lib/companySession";
-import type { Position, SoftSkillScores } from "@/lib/types";
+import { SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
+import { getCandidatesForPosition } from "@/lib/companyStore";
+import type { SoftSkillScores } from "@/lib/types";
 
 type PositionFormState = {
   title: string;
@@ -53,7 +55,7 @@ function normalizeHardSkillsInput(raw: string): { valid: string[]; invalid: stri
   return { valid: Array.from(new Set(valid)), invalid };
 }
 
-function positionToForm(position: Position): PositionFormState {
+function positionToForm(position: PositionWithSkills): PositionFormState {
   return {
     title: position.title,
     hardSkillsInput: position.requiredHardSkills.join(", "),
@@ -82,8 +84,34 @@ function CompanyPositionsContent() {
   const [form, setForm] = useState<PositionFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState("");
   const [invalidSkillsNotice, setInvalidSkillsNotice] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const positions = getPositionsSnapshot(session.company.id);
+  const [positions, setPositions] = useState<PositionWithSkills[]>([]);
+  const [isLoadingPositions, setIsLoadingPositions] = useState(true);
+  // Which position's "ปิดรับสมัคร" button is armed for confirmation — only
+  // one at a time. Second click on the same position actually closes it;
+  // clicking elsewhere or re-fetching disarms it. A real database write
+  // now, not a mock toggle, so a single accidental click shouldn't do it.
+  const [closeArmedId, setCloseArmedId] = useState<string | null>(null);
+
+  const refreshPositions = async () => {
+    const fresh = await getPositionsByCompany(session.company.id);
+    setPositions(fresh);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    getPositionsByCompany(session.company.id).then((fresh) => {
+      if (cancelled) return;
+      setPositions(fresh);
+      setIsLoadingPositions(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- session.company.id is stable for the lifetime of this page (set once by the layout)
+  }, []);
+
   const isFormOpen = isCreating || editingPositionId !== null;
 
   const startCreate = () => {
@@ -94,7 +122,7 @@ function CompanyPositionsContent() {
     setIsCreating(true);
   };
 
-  const startEdit = (position: Position) => {
+  const startEdit = (position: PositionWithSkills) => {
     setForm(positionToForm(position));
     setFormError("");
     setInvalidSkillsNotice([]);
@@ -110,7 +138,7 @@ function CompanyPositionsContent() {
     setInvalidSkillsNotice([]);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!form.title.trim()) {
@@ -123,28 +151,48 @@ function CompanyPositionsContent() {
 
     const requiredSoftSkills = Object.fromEntries(
       SOFT_SKILL_AXIS_ORDER.map((k) => [k, parseSoftSkillInput(form.softSkills[k])])
-    ) as Position["requiredSoftSkills"];
+    ) as SoftSkillScores;
 
-    if (editingPositionId) {
-      updatePosition(editingPositionId, {
-        title: form.title.trim(),
-        requiredHardSkills: valid,
-        requiredSoftSkills,
-      });
-    } else {
-      createPosition({
-        companyId: session.company.id,
-        title: form.title.trim(),
-        requiredHardSkills: valid,
-        requiredSoftSkills,
-        open: true,
-      });
+    setIsSubmitting(true);
+    const result = editingPositionId
+      ? await updatePosition(editingPositionId, session.company.id, {
+          title: form.title.trim(),
+          requiredHardSkills: valid,
+          requiredSoftSkills,
+        })
+      : await createPosition({
+          companyId: session.company.id,
+          title: form.title.trim(),
+          requiredHardSkills: valid,
+          requiredSoftSkills,
+        });
+    setIsSubmitting(false);
+
+    if ("error" in result) {
+      setFormError(result.error);
+      return;
     }
 
+    await refreshPositions();
     setIsCreating(false);
     setEditingPositionId(null);
     setForm(EMPTY_FORM);
     setFormError("");
+  };
+
+  const handleCloseClick = async (position: PositionWithSkills) => {
+    if (closeArmedId !== position.id) {
+      setCloseArmedId(position.id);
+      return;
+    }
+    setCloseArmedId(null);
+    await closePosition(position.id, session.company.id);
+    await refreshPositions();
+  };
+
+  const handleReopen = async (position: PositionWithSkills) => {
+    await reopenPosition(position.id, session.company.id);
+    await refreshPositions();
   };
 
   return (
@@ -257,9 +305,14 @@ function CompanyPositionsContent() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="rounded-full bg-[#0F0F0F] px-5 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.99]"
+                disabled={isSubmitting}
+                className="rounded-full bg-[#0F0F0F] px-5 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
               >
-                {editingPositionId ? "บันทึกการแก้ไข" : "สร้างตำแหน่งงาน"}
+                {isSubmitting
+                  ? "กำลังบันทึก..."
+                  : editingPositionId
+                    ? "บันทึกการแก้ไข"
+                    : "สร้างตำแหน่งงาน"}
               </button>
               <button
                 type="button"
@@ -276,7 +329,11 @@ function CompanyPositionsContent() {
           ตำแหน่งงานทั้งหมด ({positions.length})
         </h2>
 
-        {positions.length === 0 ? (
+        {isLoadingPositions ? (
+          <div className="rounded-2xl border border-dashed border-[rgba(15,15,15,0.15)] p-8 text-center text-xs text-[#8A8A8A]">
+            กำลังโหลดตำแหน่งงาน...
+          </div>
+        ) : positions.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[rgba(15,15,15,0.15)] p-8 text-center text-xs text-[#8A8A8A]">
             <Image
               src="/mascot/mascot-start.png"
@@ -290,10 +347,12 @@ function CompanyPositionsContent() {
         ) : (
           <div className="flex flex-col gap-3">
             {positions.map((position) => {
+              const isOpen = position.status === "open";
               const candidateCount = getCandidatesForPosition(position.id).length;
               const softSkillEntries = SOFT_SKILL_AXIS_ORDER.filter(
                 (key) => position.requiredSoftSkills[key] !== undefined
               );
+              const isCloseArmed = closeArmedId === position.id;
 
               return (
                 <div
@@ -308,12 +367,12 @@ function CompanyPositionsContent() {
                         </span>
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            position.open
+                            isOpen
                               ? "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]"
                               : "bg-[#F0F0F0] text-[#8A8A8A]"
                           }`}
                         >
-                          {position.open ? "เปิดรับสมัคร" : "ปิดรับสมัครแล้ว"}
+                          {isOpen ? "เปิดรับสมัคร" : "ปิดรับสมัครแล้ว"}
                         </span>
                       </div>
 
@@ -362,13 +421,27 @@ function CompanyPositionsContent() {
                       >
                         แก้ไข
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setPositionOpen(position.id, !position.open)}
-                        className="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-[#0F0F0F] transition-colors hover:bg-[#F0F0F0]"
-                      >
-                        {position.open ? "ปิดรับสมัคร" : "เปิดรับสมัครอีกครั้ง"}
-                      </button>
+                      {isOpen ? (
+                        <button
+                          type="button"
+                          onClick={() => handleCloseClick(position)}
+                          className={`cursor-pointer rounded-full px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                            isCloseArmed
+                              ? "bg-[#C0392B] text-white hover:opacity-90"
+                              : "bg-white text-[#0F0F0F] hover:bg-[#F0F0F0]"
+                          }`}
+                        >
+                          {isCloseArmed ? "ยืนยันปิดรับสมัคร?" : "ปิดรับสมัคร"}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleReopen(position)}
+                          className="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-[#0F0F0F] transition-colors hover:bg-[#F0F0F0]"
+                        >
+                          เปิดรับสมัครอีกครั้ง
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

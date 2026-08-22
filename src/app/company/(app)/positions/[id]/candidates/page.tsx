@@ -6,19 +6,18 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock, Star, X } from "lucide-react";
 import { InterviewInviteModal } from "@/components/InterviewInviteModal";
+import { getPosition, type PositionWithSkills } from "@/lib/actions/position";
 import {
   createInterviewInvite,
   ensureMatchesForPosition,
   getCandidatesSnapshot,
   getInterviewSlotSnapshot,
-  getPositionSnapshot,
   subscribeToStore,
 } from "@/lib/companyStore";
 import { useCompanySession } from "@/lib/companySession";
 import { SOFT_SKILL_AXIS_META } from "@/lib/data";
 import type { InterviewSlotStatus, SoftSkillScores } from "@/lib/types";
 
-const getServerNull = () => null;
 // getServerSnapshot must return a referentially stable value across calls —
 // a fresh `[]` literal on every call trips React's "should be cached to
 // avoid an infinite loop" warning, unlike primitives like `null` above.
@@ -47,14 +46,34 @@ export default function PositionCandidatesPage() {
   const positionId = params.id;
 
   const session = useCompanySession();
-  const position = useSyncExternalStore(
-    subscribeToStore,
-    () => getPositionSnapshot(positionId),
-    getServerNull
-  );
+  const [position, setPosition] = useState<PositionWithSkills | null>(null);
+  const [isLoadingPosition, setIsLoadingPosition] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Resets loading back to true on a genuine positionId change (not just
+    // mount) — the set-state-in-effect rule assumes this should be
+    // derivable from props/state instead, but there's no such derivation
+    // for "a new async fetch just started."
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsLoadingPosition(true);
+    getPosition(positionId).then((fetched) => {
+      if (cancelled) return;
+      setPosition(fetched);
+      setIsLoadingPosition(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [positionId]);
 
   // Backfills any missing Match records for this position — a mutation, so
   // it runs from an effect rather than inline in a getSnapshot-wrapped read.
+  // Position now lives in Postgres while Match is still the mock store, so
+  // this is currently a no-op for any real position (it looks the id up in
+  // the mock store's own positions array, which no longer has anything in
+  // it) — matches the same "Match hasn't been migrated yet" gap already
+  // accepted on the dashboard/company-migration side.
   useEffect(() => {
     ensureMatchesForPosition(positionId);
   }, [positionId]);
@@ -101,6 +120,14 @@ export default function PositionCandidatesPage() {
   }, [candidates, sortOrder, skillFilter, minScore]);
 
   const visibleCandidates = filteredCandidates.slice(0, visibleCount);
+
+  if (isLoadingPosition) {
+    return (
+      <div className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-6 md:px-10">
+        <div className="py-16 text-center text-sm text-[#8A8A8A]">กำลังโหลด...</div>
+      </div>
+    );
+  }
 
   // Guard: only this position's own company may view its candidates.
   if (!position || position.companyId !== session.company.id) {

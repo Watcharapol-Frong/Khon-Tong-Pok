@@ -6,7 +6,6 @@ import type {
   Job,
   JobSeeker,
   Match,
-  Position,
   RadarAxisDatum,
   SoftSkillScores,
   Step,
@@ -400,53 +399,10 @@ export const CATEGORY_TABS: { key: "all" | "dev" | "marketing" | "design"; label
   { key: "design", label: "Design" },
 ];
 
-// requiredHardSkills values are drawn from onetSkills.hardSkills
-// (src/data/onet_skills_dictionary_full.json) — verified present in that
-// dictionary, same source the resume scanner (src/lib/pdf.ts +
-// src/lib/ahoCorasick.ts) matches against.
-export const MOCK_POSITIONS: Position[] = [
-  {
-    id: "pos_001",
-    companyId: "co_techcorp",
-    title: "Senior Frontend Developer",
-    requiredHardSkills: ["React", "TypeScript", "Git"],
-    // Thresholds mirror this same title's skillTags in the JOBS array above.
-    requiredSoftSkills: { criticalThinking: 80, learningAgility: 75, collaborationMindset: 85 },
-    open: true,
-  },
-  {
-    id: "pos_002",
-    companyId: "co_techcorp",
-    title: "QA Automation Engineer",
-    requiredHardSkills: ["Docker", "Linux", "Git"],
-    requiredSoftSkills: { criticalThinking: 80, resilienceAdaptability: 70, decisionMakingUnderPressure: 65 },
-    open: true,
-  },
-  {
-    id: "pos_003",
-    companyId: "co_datadrive",
-    title: "AI Data Scientist & Analyst",
-    requiredHardSkills: ["Python", "PostgreSQL", "Tableau"],
-    requiredSoftSkills: { criticalThinking: 80, decisionMakingUnderPressure: 65, learningAgility: 75 },
-    open: true,
-  },
-  {
-    id: "pos_004",
-    companyId: "co_fintech",
-    title: "Growth Marketing Specialist",
-    requiredHardSkills: ["Google Ads", "Google Analytics", "TikTok"],
-    requiredSoftSkills: { riskTolerance: 60, collaborationMindset: 85, resilienceAdaptability: 70 },
-    open: true,
-  },
-  {
-    id: "pos_005",
-    companyId: "co_creativelab",
-    title: "UI/UX Product Designer",
-    requiredHardSkills: ["Figma", "Adobe Illustrator"],
-    requiredSoftSkills: { resilienceAdaptability: 70, learningAgility: 75, collaborationMindset: 85 },
-    open: true,
-  },
-];
+// Position moved to a real Postgres table — see src/lib/actions/position.ts.
+// MOCK_POSITIONS used to live here; MOCK_MATCHES below still references its
+// old ids (pos_001 etc.) for match-history demo data, which is harmless —
+// they just no longer resolve to an actual position anywhere.
 
 // Every match below that has a corresponding entry in MOCK_INTERVIEW_SLOTS
 // is marked "contacted" — sending an interview invite is what lifts Blind

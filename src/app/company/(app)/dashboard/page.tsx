@@ -1,13 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Briefcase, ChevronRight, Plus, Star, Users } from "lucide-react";
-import {
-  getCandidatesForPosition,
-  getDashboardSummarySnapshot,
-  getPositionsSnapshot,
-} from "@/lib/companyStore";
+import { getPositionsByCompany, type PositionWithSkills } from "@/lib/actions/position";
+import { getCandidatesForPosition, getDashboardSummarySnapshot } from "@/lib/companyStore";
 import { useCompanySession } from "@/lib/companySession";
 
 const STATUS_META: Record<"open" | "closed", { label: string; className: string }> = {
@@ -18,12 +16,32 @@ const STATUS_META: Record<"open" | "closed", { label: string; className: string 
 export default function CompanyDashboardPage() {
   const session = useCompanySession();
 
-  const positions = getPositionsSnapshot(session.company.id);
+  const [positions, setPositions] = useState<PositionWithSkills[]>([]);
+  const [isLoadingPositions, setIsLoadingPositions] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    getPositionsByCompany(session.company.id).then((fresh) => {
+      if (cancelled) return;
+      setPositions(fresh);
+      setIsLoadingPositions(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- session.company.id is stable for the lifetime of this page (set once by the layout)
+  }, []);
+
+  // Matches/standout-candidates are still mock data (Match hasn't been
+  // migrated off localStorage yet) — a real company legitimately has zero
+  // of these until that migration happens, same as it already did before
+  // Position moved to the database.
   const summary = getDashboardSummarySnapshot(session.company.id);
+  const openPositionsCount = positions.filter((p) => p.status === "open").length;
   // Preview only — full management (create/edit/close, and the complete
   // list) lives on /company/positions via the navbar, so duplicating that
-  // whole table here would just be the same data shown twice. Positions are
-  // appended on creation (see createPosition), so the last N are the newest.
+  // whole table here would just be the same data shown twice. Positions
+  // come back creation-ordered (oldest first), so the last N are the newest.
   const recentPositions = [...positions].slice(-4).reverse();
 
   return (
@@ -41,7 +59,9 @@ export default function CompanyDashboardPage() {
           <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-white">
             <Briefcase className="h-4 w-4 text-[#0F0F0F]" strokeWidth={1.75} />
           </div>
-          <div className="text-2xl font-extrabold text-[#0F0F0F]">{summary.openPositionsCount}</div>
+          <div className="text-2xl font-extrabold text-[#0F0F0F]">
+            {isLoadingPositions ? "…" : openPositionsCount}
+          </div>
           <div className="text-xs text-[#8A8A8A]">ตำแหน่งที่เปิดอยู่</div>
         </div>
         <div className="rounded-2xl bg-[#FAFAFA] p-4">
@@ -106,7 +126,11 @@ export default function CompanyDashboardPage() {
         </Link>
       </div>
 
-      {positions.length === 0 ? (
+      {isLoadingPositions ? (
+        <div className="rounded-2xl border border-dashed border-[rgba(15,15,15,0.15)] p-8 text-center text-xs text-[#8A8A8A]">
+          กำลังโหลดตำแหน่งงาน...
+        </div>
+      ) : positions.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[rgba(15,15,15,0.15)] p-8 text-center text-xs text-[#8A8A8A]">
           <Image
             src="/mascot/mascot-start.png"
@@ -122,7 +146,7 @@ export default function CompanyDashboardPage() {
           <div className="flex flex-col gap-2">
             {recentPositions.map((position) => {
               const candidateCount = getCandidatesForPosition(position.id).length;
-              const statusKey = position.open ? "open" : "closed";
+              const statusKey = position.status === "open" ? "open" : "closed";
               return (
                 <Link
                   key={position.id}

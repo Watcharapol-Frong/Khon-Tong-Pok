@@ -1,17 +1,20 @@
 import type { InterviewSlot, JobSeeker, Match, MatchStatus, Position, SoftSkillScores } from "./types";
-import { MOCK_INTERVIEW_SLOTS, MOCK_JOB_SEEKERS, MOCK_MATCHES, MOCK_POSITIONS } from "./data";
+import { MOCK_INTERVIEW_SLOTS, MOCK_JOB_SEEKERS, MOCK_MATCHES } from "./data";
 
 /**
- * Client-side-only mock persistence for positions/matches/interviews (no
- * backend for these yet). Data lives in localStorage, seeded once from the
- * MOCK_* arrays in data.ts, and mutated in place from then on.
+ * Client-side-only mock persistence for matches/interviews (no backend for
+ * these yet). Data lives in localStorage, seeded once from the MOCK_*
+ * arrays in data.ts, and mutated in place from then on.
  *
- * Company/HR auth moved to a real Postgres database via Prisma — see
- * src/lib/actions/company.ts (Server Actions) and src/lib/hrSession.ts
- * (client-side session id storage). This store no longer holds company/HR
- * data at all; positions/matches/interviewSlots still reference companyId
- * as a plain string, which now points at a real Company row instead of a
- * mock one.
+ * Company/HR and Position both moved to a real Postgres database via
+ * Prisma — see src/lib/actions/company.ts and src/lib/actions/position.ts
+ * (Server Actions), plus src/lib/hrSession.ts (client-side session id
+ * storage). `positions` stays as a field here (always empty now — nothing
+ * seeds it) purely because ensureMatchesForPosition/getCandidatesForPosition/
+ * getDashboardSummary/getInterviewSlotsForCompany/getCandidateReport below
+ * still look positions up internally for Match-side bookkeeping; a real
+ * companyId will legitimately match zero of these until Match itself is
+ * migrated off this mock store too.
  */
 
 const STORE_KEY = "ktp_company_store";
@@ -26,7 +29,7 @@ const STORE_KEY = "ktp_company_store";
 // readStore() reseeds from scratch on a mismatch rather than attempting a
 // partial migration — this is disposable mock/demo data (no backend), so a
 // stale shape isn't worth reconciling field-by-field.
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 
 type CompanyStoreData = {
   version: number;
@@ -48,7 +51,8 @@ function isBrowser() {
 function seedStore(): CompanyStoreData {
   return {
     version: SCHEMA_VERSION,
-    positions: [...MOCK_POSITIONS],
+    // No longer seeded from MOCK_POSITIONS — Position lives in Postgres now.
+    positions: [],
     matches: [...MOCK_MATCHES],
     jobSeekers: [...MOCK_JOB_SEEKERS],
     interviewSlots: [...MOCK_INTERVIEW_SLOTS],
@@ -104,10 +108,6 @@ function writeStore(store: CompanyStoreData) {
   window.localStorage.setItem(STORE_KEY, JSON.stringify(store));
 }
 
-function genId(prefix: string) {
-  return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-}
-
 // --- change notification, for React's useSyncExternalStore ---
 // (localStorage only fires a native "storage" event for *other* tabs, so
 // same-tab mutations need to notify subscribers manually.)
@@ -148,46 +148,6 @@ function memoPerVersion<Args extends unknown[], Result>(
     }
     return cache.get(key) as Result;
   };
-}
-
-// --- positions ---
-
-export function getPositionsByCompany(companyId: string): Position[] {
-  return readStore().positions.filter((p) => p.companyId === companyId);
-}
-
-export const getPositionsSnapshot = memoPerVersion(getPositionsByCompany);
-
-export function getPosition(positionId: string): Position | null {
-  return readStore().positions.find((p) => p.id === positionId) ?? null;
-}
-
-export const getPositionSnapshot = memoPerVersion(getPosition);
-
-export function createPosition(input: Omit<Position, "id">): Position {
-  const store = readStore();
-  const position: Position = { ...input, id: genId("pos") };
-  store.positions.push(position);
-  writeStore(store);
-  notify();
-  return position;
-}
-
-export function updatePosition(
-  id: string,
-  patch: Partial<Omit<Position, "id" | "companyId">>
-): Position | null {
-  const store = readStore();
-  const idx = store.positions.findIndex((p) => p.id === id);
-  if (idx === -1) return null;
-  store.positions[idx] = { ...store.positions[idx], ...patch };
-  writeStore(store);
-  notify();
-  return store.positions[idx];
-}
-
-export function setPositionOpen(id: string, open: boolean): Position | null {
-  return updatePosition(id, { open });
 }
 
 // --- matching ---
@@ -409,11 +369,14 @@ export const getInterviewSlotsForCompanySnapshot = memoPerVersion(getInterviewSl
 // --- dashboard summary ---
 
 export type DashboardSummary = {
-  openPositionsCount: number;
   totalMatchesCount: number;
   standoutCandidates: { jobSeeker: JobSeeker; positionTitle: string; matchScore: number }[];
 };
 
+// openPositionsCount used to live here too, computed off this same mock
+// store's positions array — now sourced for real from
+// getPositionsByCompany in src/lib/actions/position.ts instead (see the
+// dashboard page), since Position moved to Postgres.
 export function getDashboardSummary(companyId: string): DashboardSummary {
   const store = readStore();
   const positions = store.positions.filter((p) => p.companyId === companyId);
@@ -433,7 +396,6 @@ export function getDashboardSummary(companyId: string): DashboardSummary {
     .sort((a, b) => b.matchScore - a.matchScore);
 
   return {
-    openPositionsCount: positions.filter((p) => p.open).length,
     totalMatchesCount: companyMatches.length,
     standoutCandidates,
   };
