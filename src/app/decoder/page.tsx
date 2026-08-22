@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
 import { FileText, Loader2, MessageCircle, Send, Sparkle } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
@@ -58,6 +59,12 @@ function nowLabel() {
 export default function DecoderPage() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Sentinel div at the end of the feed — scrolled into view whenever the
+  // message list or the typing indicator changes, same as any real chat
+  // app keeping the latest message in view instead of leaving the reader
+  // to notice and scroll down manually.
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [userName, setUserName] = useState<string>("");
   // True until the candidate's name is resolved — either guessed from an
   // uploaded resume (see handleResumeUpload) or given in reply to the
@@ -122,6 +129,16 @@ export default function DecoderPage() {
     localStorage.setItem("ktp_resume_skills", JSON.stringify(resumeSkills));
   }, [resumeSkills, chatSkills]);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, isChatLoading]);
+
+  // Re-focus the input once a reply lands and it's enabled again, so the
+  // candidate can keep typing the next answer without clicking back in.
+  useEffect(() => {
+    if (!isChatLoading) inputRef.current?.focus();
+  }, [isChatLoading]);
+
   const handleSendMessage = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isChatLoading || isConversationComplete) return;
@@ -137,6 +154,10 @@ export default function DecoderPage() {
 
     setMessages((prev) => [...prev, userMsg]);
     setInputText("");
+    // Clicking the send button (vs. pressing Enter) moves focus to the
+    // button — real chat apps keep focus in the input so you can keep
+    // typing right away instead of having to click back in every time.
+    inputRef.current?.focus();
 
     // Name isn't skill/STAR content, so it's captured here before any of
     // the length/stage checks below apply to it — a short reply like "Bo"
@@ -516,10 +537,13 @@ export default function DecoderPage() {
                 </div>
 
                 {/* Message History Feed */}
-                <div className="flex min-h-[300px] max-h-[380px] sm:min-h-[340px] sm:max-h-[420px] flex-col gap-3 overflow-y-auto pr-1">
+                <div className="flex min-h-[300px] max-h-[380px] sm:min-h-[340px] sm:max-h-[420px] scroll-smooth flex-col gap-3 overflow-y-auto pr-1">
                   {messages.map((msg) => (
-                    <div
+                    <motion.div
                       key={msg.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.22, ease: "easeOut" }}
                       className={`flex items-end gap-2 ${msg.sender === "user" ? "flex-row-reverse" : ""}`}
                     >
                       {msg.sender === "ai" && (
@@ -560,26 +584,35 @@ export default function DecoderPage() {
                         </div>
                         <span className="mt-1 text-[9px] text-[#8A8A8A]">{msg.time}</span>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
-                  {isChatLoading && (
-                    <div className="flex items-end gap-2">
-                      <div className="h-6 w-6 flex-shrink-0 overflow-hidden rounded-full bg-[#F5F5F5]">
-                        <Image
-                          src="/mascot/chatbot-avatar.png"
-                          alt=""
-                          width={48}
-                          height={48}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1 rounded-2xl rounded-bl-none bg-[#F5F5F5] px-3.5 py-2.5">
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A] [animation-delay:-0.3s]" />
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A] [animation-delay:-0.15s]" />
-                        <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A]" />
-                      </div>
-                    </div>
-                  )}
+                  <AnimatePresence>
+                    {isChatLoading && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="flex items-end gap-2"
+                      >
+                        <div className="h-6 w-6 flex-shrink-0 overflow-hidden rounded-full bg-[#F5F5F5]">
+                          <Image
+                            src="/mascot/chatbot-avatar.png"
+                            alt=""
+                            width={48}
+                            height={48}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1 rounded-2xl rounded-bl-none bg-[#F5F5F5] px-3.5 py-2.5">
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A] [animation-delay:-0.3s]" />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A] [animation-delay:-0.15s]" />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#8A8A8A]" />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <div ref={messagesEndRef} />
                 </div>
 
                 {/* Chat Input Form — resume attachment lives solely in the
@@ -604,6 +637,7 @@ export default function DecoderPage() {
                     </div>
                     <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2">
                       <input
+                        ref={inputRef}
                         type="text"
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
