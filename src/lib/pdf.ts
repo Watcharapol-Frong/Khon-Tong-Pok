@@ -87,7 +87,7 @@ export async function extractTextFromPdf(file: File): Promise<string> {
 }
 
 const NON_NAME_LINE_PATTERN =
-  /@|https?:\/\/|www\.|\d{3}|resume|curriculum vitae|^cv$|profile|objective|summary|address|ที่อยู่|เบอร์โทร|อีเมล|ประวัติ|resumé/i;
+  /@|https?:\/\/|www\.|\d{3}|resume|curriculum vitae|^cv$|profile|objective|summary|address|experience|education|employment|work history|skills?|qualifications?|certifications?|projects?|references?|languages?|publications?|awards?|interests?|hobbies|ที่อยู่|เบอร์โทร|อีเมล|ประวัติ|ประสบการณ์|การศึกษา|ทักษะ|resumé/i;
 
 /**
  * Best-effort guess at the candidate's name from raw resume text — a
