@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Clock, Sparkle, Users } from "lucide-react";
+import { Clock, Sparkle } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
@@ -75,7 +75,7 @@ export default function OnboardingPage() {
           }}
         />
 
-        <div className="relative mt-[100px] w-full max-w-[780px] sm:mt-[130px]">
+        <div className="relative w-full max-w-[780px]">
           {CARD_SPARKLES.map((s, i) => (
             <Sparkle
               key={i}
@@ -96,21 +96,6 @@ export default function OnboardingPage() {
             />
           ))}
 
-          {/* Mascot peeking over the card's top edge — same treatment as
-              AuthCard's isEntryStep mascot on login/register. This mascot's
-              art is closer to square (unlike AuthCard's own wide/short one),
-              so it needs a taller offset for the same "just the feet dip
-              in" effect instead of colliding with the badge below it. */}
-          <div className="pointer-events-none absolute -top-[100px] left-1/2 z-10 w-[110px] -translate-x-1/2 sm:-top-[130px] sm:w-[140px]">
-            <Image
-              src="/mascot/mascot-start.png"
-              alt=""
-              width={140}
-              height={148}
-              className="h-auto w-full object-contain"
-            />
-          </div>
-
           {/* Card Container */}
           <div className="relative rounded-2xl bg-[#F5F5F5] p-[clamp(24px,5vw,40px)]">
             <div
@@ -120,14 +105,7 @@ export default function OnboardingPage() {
 
             {/* Header */}
             <div className="mb-8 text-center">
-              <div className="mb-2.5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
-                <Users className="h-3.5 w-3.5" strokeWidth={2} />
-                <span>Role Selection</span>
-              </div>
-              <h1 className="text-[clamp(24px,4vw,32px)] font-extrabold tracking-[-0.03em]">
-                เลือกสถานะผู้สมัครของคุณ
-              </h1>
-              <p className="mx-auto mt-2 max-w-[700px] text-xs leading-[1.6] text-[#8A8A8A]">
+              <p className="mx-auto max-w-[700px] text-xs leading-[1.6] text-[#8A8A8A]">
                 เลือกระดับกลุ่มเป้าหมายเพื่อปรับโทนคำถามและบริบทในด่านมินิเกมให้เหมาะสมกับตัวตนของคุณมากที่สุด
               </p>
             </div>
