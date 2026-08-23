@@ -23,6 +23,7 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import onetSkillsData from "../src/data/onet_skills_dictionary_full.json" with { type: "json" };
+import { computeHardSkillScore, computeMatchScore, computeSoftSkillScore } from "../src/lib/matching";
 
 const prisma = new PrismaClient();
 
@@ -144,7 +145,7 @@ async function ensureTestCompanyAndPositions() {
     {
       title: `${TEST_NAME_PREFIX}UI/UX Designer`,
       requiredHardSkills: DESIGN_SKILLS.slice(0, 5),
-      requiredSoftSkills: { learningAgility: 60, resilienceAdaptability: 55 },
+      requiredSoftSkills: { learningAgility: 60, resilienceAndAdaptability: 55 },
     },
   ];
 
@@ -166,7 +167,13 @@ async function ensureTestCompanyAndPositions() {
   return prisma.position.findMany({ where: { companyId: company.id } });
 }
 
-async function seedCandidates(positions: { id: string; requiredHardSkills: string[] }[]) {
+async function seedCandidates(
+  // requiredSoftSkills comes back from Prisma as untyped Json — every write
+  // to it (here and in src/lib/actions/position.ts) always stores the
+  // PositionSoftSkillRequirements shape, so casting at the point of use
+  // below is safe (same justification position.ts already uses).
+  positions: { id: string; requiredHardSkills: string[]; requiredSoftSkills: unknown }[]
+) {
   const CHAT_STATUSES = ["verified", "partial", "unclear"] as const;
 
   for (let i = 0; i < CANDIDATE_COUNT; i++) {
@@ -194,26 +201,38 @@ async function seedCandidates(positions: { id: string; requiredHardSkills: strin
     });
 
     // Realistic spread: most candidates land anywhere in a wide band;
-    // designated standouts get near-maxed scores on all 4 dimensions so
-    // the "ช้างเผือก" badge (driven by Match.isStandout below, not
-    // directly by these) has genuinely strong candidates behind it.
-    const gameScores = isStandout
+    // designated standouts get near-maxed scores on all 6 axes so the
+    // "ช้างเผือก" badge (driven by Match.isStandout below, not directly
+    // by these) has genuinely strong candidates behind it.
+    const axisScores = isStandout
       ? {
           riskTolerance: randomInt(88, 100),
-          cognitiveFlexibility: randomInt(88, 100),
-          selectiveAttention: randomInt(88, 100),
-          prosociality: randomInt(88, 100),
+          learningAgility: randomInt(88, 100),
+          criticalThinking: randomInt(88, 100),
+          decisionMakingUnderPressure: randomInt(88, 100),
+          collaborationMindset: randomInt(88, 100),
+          resilienceAndAdaptability: randomInt(88, 100),
         }
       : {
           riskTolerance: randomInt(15, 95),
-          cognitiveFlexibility: randomInt(15, 95),
-          selectiveAttention: randomInt(15, 95),
-          prosociality: randomInt(15, 95),
+          learningAgility: randomInt(15, 95),
+          criticalThinking: randomInt(15, 95),
+          decisionMakingUnderPressure: randomInt(15, 95),
+          collaborationMindset: randomInt(15, 95),
+          resilienceAndAdaptability: randomInt(15, 95),
         };
-    await prisma.gameResult.create({ data: { jobSeekerId: jobSeeker.id, ...gameScores } });
+    const overallIndex = Math.round(
+      Object.values(axisScores).reduce((sum, v) => sum + v, 0) / Object.values(axisScores).length
+    );
+    await prisma.gameResult.create({ data: { jobSeekerId: jobSeeker.id, ...axisScores, overallIndex } });
 
+    // Captured (not discarded like before) so the real matching formula
+    // below can score hard skills the same way HR's Blind Review does —
+    // by verification status, not just raw overlap.
+    const skillVerifications: { skill: string; status: string }[] = [];
     for (const skill of hardSkills) {
       const status = CHAT_STATUSES[randomInt(0, CHAT_STATUSES.length - 1)];
+      skillVerifications.push({ skill, status });
       await prisma.chatVerification.create({
         data: {
           jobSeekerId: jobSeeker.id,
@@ -227,11 +246,9 @@ async function seedCandidates(positions: { id: string; requiredHardSkills: strin
     }
 
     for (const position of positions) {
-      const required = position.requiredHardSkills;
-      const overlap = required.filter((s) => hardSkills.includes(s));
-      let matchScore = required.length > 0 ? Math.round((overlap.length / required.length) * 100) : randomInt(30, 60);
-      // A little noise so scores aren't suspiciously round, then clamp.
-      matchScore = Math.min(100, Math.max(0, matchScore + randomInt(-5, 5)));
+      const hardScore = computeHardSkillScore(position.requiredHardSkills, skillVerifications);
+      const softScore = computeSoftSkillScore(position.requiredSoftSkills as Record<string, number>, axisScores);
+      let matchScore = computeMatchScore(hardScore, softScore);
       if (isStandout) matchScore = Math.max(matchScore, randomInt(92, 100));
 
       await prisma.match.create({

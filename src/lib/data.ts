@@ -17,7 +17,7 @@ import type {
 // there's exactly one soft-skill system across the whole app.
 export const SOFT_SKILL_AXIS_ORDER: (keyof SoftSkillScores)[] = [
   "learningAgility",
-  "resilienceAdaptability",
+  "resilienceAndAdaptability",
   "criticalThinking",
   "decisionMakingUnderPressure",
   "riskTolerance",
@@ -29,7 +29,7 @@ export const SOFT_SKILL_AXIS_META: Record<
   { en: string; th: string; color: string }
 > = {
   learningAgility: { en: "Learning Agility", th: "ความคล่องตัวในการเรียนรู้", color: "#FF6E5C" },
-  resilienceAdaptability: { en: "Resilience & Adaptability", th: "ความยืดหยุ่นและปรับตัว", color: "#3BF55C" },
+  resilienceAndAdaptability: { en: "Resilience & Adaptability", th: "ความยืดหยุ่นและปรับตัว", color: "#3BF55C" },
   criticalThinking: { en: "Critical Thinking", th: "การคิดวิเคราะห์", color: "#4D7CFF" },
   decisionMakingUnderPressure: { en: "Decision Making under Pressure", th: "ตัดสินใจภายใต้แรงกดดัน", color: "#F5D949" },
   riskTolerance: { en: "Risk Tolerance", th: "การยอมรับความเสี่ยง", color: "#B14DFF" },
@@ -438,7 +438,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
       { skill: "TypeScript", status: "verified" },
       { skill: "Git", status: "verified" },
     ],
-    softSkills: { learningAgility: 82, resilienceAdaptability: 75, criticalThinking: 88, decisionMakingUnderPressure: 70, riskTolerance: 60, collaborationMindset: 85 },
+    softSkills: { learningAgility: 82, resilienceAndAdaptability: 75, criticalThinking: 88, decisionMakingUnderPressure: 70, riskTolerance: 60, collaborationMindset: 85 },
     aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพของน้องตรงปก ผู้สมัครมีทักษะด้านเทคนิคที่ยืนยันแล้วครบทั้ง React, TypeScript และ Git ซึ่งสอดคล้องกับประสบการณ์การทำงานที่ระบุไว้ในเรซูเม่ ประกอบกับผลประเมิน 6 มิติที่โดดเด่นเป็นพิเศษด้าน Critical Thinking (88%) และ Collaboration Mindset (85%) ที่สูงกว่าเกณฑ์ของตำแหน่งนี้อย่างชัดเจน รวมถึง Learning Agility (82%) ที่สะท้อนความสามารถในการเรียนรู้เทคโนโลยีใหม่ได้อย่างรวดเร็ว แม้ Risk Tolerance (60%) จะอยู่ในระดับปานกลางซึ่งเป็นเรื่องปกติสำหรับสายงานที่เน้นความแม่นยำมากกว่าความเสี่ยง ภาพรวมจึงเป็นผู้สมัครที่มีทั้งฝีมือเชิงเทคนิคและศักยภาพเชิงพฤติกรรมที่เหมาะสมอย่างยิ่งกับตำแหน่ง Senior Frontend Developer ที่ต้องตัดสินใจเชิงเทคนิคด้วยตนเองและทำงานร่วมกับทีมได้อย่างราบรื่น",
   },
   {
@@ -453,7 +453,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
       { skill: "TypeScript", status: "partial" },
       { skill: "Git", status: "verified" },
     ],
-    softSkills: { learningAgility: 68, resilienceAdaptability: 62, criticalThinking: 72, decisionMakingUnderPressure: 58, riskTolerance: 55, collaborationMindset: 66 },
+    softSkills: { learningAgility: 68, resilienceAndAdaptability: 62, criticalThinking: 72, decisionMakingUnderPressure: 58, riskTolerance: 55, collaborationMindset: 66 },
     aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพ ผู้สมัครมีทักษะ React และ Git ที่ยืนยันแล้วจากทั้งเรซูเม่และบทสนทนา แต่ TypeScript ยังพบหลักฐานเพียงบางส่วนเท่านั้น ยังไม่สามารถยืนยันความเชี่ยวชาญได้เต็มที่ ด้านผลประเมิน 6 มิติอยู่ในระดับปานกลางทุกด้าน โดย Critical Thinking (72%) และ Collaboration Mindset (66%) เป็นจุดที่ค่อนข้างดีที่สุด ขณะที่ Decision Making under Pressure (58%) และ Risk Tolerance (55%) ยังต่ำกว่าเกณฑ์ของตำแหน่งนี้อยู่พอสมควร ภาพรวมจึงเป็นผู้สมัครที่มีพื้นฐานดีแต่ยังไม่ครบทุกด้าน ควรสอบถามเชิงลึกเรื่อง TypeScript และทดสอบการตัดสินใจภายใต้ความกดดันเพิ่มเติมในรอบสัมภาษณ์ก่อนตัดสินใจ",
   },
   {
@@ -468,7 +468,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
       { skill: "TypeScript", status: "unclear" },
       { skill: "Git", status: "verified" },
     ],
-    softSkills: { learningAgility: 58, resilienceAdaptability: 55, criticalThinking: 56, decisionMakingUnderPressure: 50, riskTolerance: 52, collaborationMindset: 60 },
+    softSkills: { learningAgility: 58, resilienceAndAdaptability: 55, criticalThinking: 56, decisionMakingUnderPressure: 50, riskTolerance: 52, collaborationMindset: 60 },
     aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพ มีเพียง Git ที่ยืนยันได้ชัดเจน ส่วน React พบหลักฐานเพียงบางส่วนและ TypeScript ยังไม่สามารถยืนยันได้จากทั้งเรซูเม่และบทสนทนา ด้านผลประเมิน 6 มิติอยู่ในระดับกลางค่อนไปทางต่ำแทบทุกด้าน (50-60%) โดยไม่มีจุดใดโดดเด่นเป็นพิเศษ ทั้ง Critical Thinking (56%) และ Decision Making under Pressure (50%) ยังห่างจากเกณฑ์ของตำแหน่งระดับ Senior อยู่พอสมควร ภาพรวมจึงเหมาะกับตำแหน่งระดับ Junior ที่มีพี่เลี้ยงคอยซัพพอร์ตและมีเวลาพัฒนาทักษะเพิ่มเติม มากกว่าบทบาทที่ต้องตัดสินใจเชิงเทคนิคด้วยตนเอง",
   },
   {
@@ -483,7 +483,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
       { skill: "PostgreSQL", status: "verified" },
       { skill: "Tableau", status: "partial" },
     ],
-    softSkills: { learningAgility: 80, resilienceAdaptability: 68, criticalThinking: 85, decisionMakingUnderPressure: 72, riskTolerance: 58, collaborationMindset: 65 },
+    softSkills: { learningAgility: 80, resilienceAndAdaptability: 68, criticalThinking: 85, decisionMakingUnderPressure: 72, riskTolerance: 58, collaborationMindset: 65 },
     aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพ ผู้สมัครมีทักษะ Python และ PostgreSQL ที่ยืนยันแล้วอย่างแข็งแรงจากทั้งเรซูเม่และบทสนทนา ส่วน Tableau ยังพบหลักฐานไม่ครบถ้วนนัก ด้านผลประเมิน 6 มิติโดดเด่นชัดเจนที่ Critical Thinking (85%) และ Learning Agility (80%) ซึ่งสูงกว่าเกณฑ์ของตำแหน่งนี้ รวมถึง Decision Making under Pressure (72%) ที่อยู่ในระดับดี สอดคล้องกับงานวิเคราะห์ข้อมูลที่ต้องปรับมุมมอง ประมวลผลข้อมูลจำนวนมาก และตัดสินใจภายใต้ deadline ที่กดดันอยู่เสมอ ภาพรวมจึงเป็นผู้สมัครที่มีทั้งทักษะเทคนิคเชิงลึกและศักยภาพเชิงพฤติกรรมที่เหมาะสมอย่างยิ่งกับตำแหน่ง AI Data Scientist & Analyst",
   },
   {
@@ -498,7 +498,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
       { skill: "Google Analytics", status: "partial" },
       { skill: "TikTok", status: "verified" },
     ],
-    softSkills: { learningAgility: 65, resilienceAdaptability: 74, criticalThinking: 62, decisionMakingUnderPressure: 60, riskTolerance: 68, collaborationMindset: 72 },
+    softSkills: { learningAgility: 65, resilienceAndAdaptability: 74, criticalThinking: 62, decisionMakingUnderPressure: 60, riskTolerance: 68, collaborationMindset: 72 },
     aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพ ผู้สมัครมีทักษะ Google Ads และ TikTok ที่ยืนยันแล้วจากประสบการณ์ยิงแอดจริงตามที่ระบุในเรซูเม่ ส่วน Google Analytics พบหลักฐานเพียงบางส่วน ด้านผลประเมิน 6 มิติค่อนข้างสมดุล โดย Resilience & Adaptability (74%) และ Collaboration Mindset (72%) อยู่ในระดับดี ประกอบกับ Risk Tolerance (68%) ที่สูงกว่าค่าเฉลี่ย สะท้อนว่ากล้าทดลองแคมเปญใหม่และปรับตัวเมื่อผลลัพธ์ไม่เป็นไปตามแผน ขณะที่ Critical Thinking (62%) ยังเป็นจุดที่พัฒนาต่อได้ ภาพรวมเหมาะกับตำแหน่งการตลาดที่ต้องทดลองและปรับกลยุทธ์อย่างต่อเนื่อง",
   },
   {
@@ -512,7 +512,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
       { skill: "Figma", status: "verified" },
       { skill: "Adobe Illustrator", status: "verified" },
     ],
-    softSkills: { learningAgility: 78, resilienceAdaptability: 80, criticalThinking: 70, decisionMakingUnderPressure: 62, riskTolerance: 58, collaborationMindset: 90 },
+    softSkills: { learningAgility: 78, resilienceAndAdaptability: 80, criticalThinking: 70, decisionMakingUnderPressure: 62, riskTolerance: 58, collaborationMindset: 90 },
     aiSummary: "จากเรซูเม่และผลการประเมินศักยภาพ ผู้สมัครมีทักษะ Figma และ Adobe Illustrator ที่ยืนยันแล้วครบทั้งสองรายการจากทั้งเรซูเม่และบทสนทนา ด้านผลประเมิน 6 มิติโดดเด่นเป็นพิเศษที่ Collaboration Mindset สูงถึง 90% รวมถึง Resilience & Adaptability (80%) และ Learning Agility (78%) ที่สูงกว่าเกณฑ์ของตำแหน่งนี้อย่างชัดเจน สะท้อนว่าเป็นนักออกแบบที่ทั้งมีฝีมือและทำงานร่วมกับทีม/ผู้มีส่วนได้ส่วนเสียได้อย่างราบรื่นเป็นพิเศษ พร้อมปรับตัวไวเมื่อโจทย์งานหรือ feedback เปลี่ยนแปลงกะทันหัน ภาพรวมจึงเหมาะสมอย่างยิ่งกับตำแหน่ง UI/UX Product Designer ที่ต้องทำงานร่วมกับหลายฝ่ายอย่างต่อเนื่อง",
   },
   // --- Below: bulk-added for interview-list volume testing (see
@@ -531,7 +531,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
       { skill: "TypeScript", status: "verified" },
       { skill: "Git", status: "verified" },
     ],
-    softSkills: { learningAgility: 76, resilienceAdaptability: 71, criticalThinking: 80, decisionMakingUnderPressure: 68, riskTolerance: 60, collaborationMindset: 82 },
+    softSkills: { learningAgility: 76, resilienceAndAdaptability: 71, criticalThinking: 80, decisionMakingUnderPressure: 68, riskTolerance: 60, collaborationMindset: 82 },
     aiSummary: "ทักษะ React, TypeScript และ Git ยืนยันแล้วครบจากเรซูเม่และบทสนทนา ผลประเมิน 6 มิติโดดเด่นด้าน Critical Thinking (80%) และ Collaboration Mindset (82%) เหมาะกับตำแหน่ง Senior Frontend Developer ที่ต้องทำงานร่วมกับทีมอย่างต่อเนื่อง",
   },
   {
@@ -546,7 +546,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
       { skill: "TypeScript", status: "verified" },
       { skill: "Git", status: "verified" },
     ],
-    softSkills: { learningAgility: 88, resilienceAdaptability: 84, criticalThinking: 90, decisionMakingUnderPressure: 82, riskTolerance: 65, collaborationMindset: 87 },
+    softSkills: { learningAgility: 88, resilienceAndAdaptability: 84, criticalThinking: 90, decisionMakingUnderPressure: 82, riskTolerance: 65, collaborationMindset: 87 },
     aiSummary: "ทักษะเทคนิคยืนยันแล้วครบทุกด้าน ผลประเมิน 6 มิติสูงเกินเกณฑ์เกือบทุกแกน โดยเฉพาะ Critical Thinking (90%) และ Learning Agility (88%) — ผู้สมัครระดับ Senior ที่ตัดสินใจเชิงเทคนิคได้ด้วยตนเองและปรับตัวไวภายใต้ deadline",
   },
   {
@@ -561,7 +561,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
       { skill: "Linux", status: "partial" },
       { skill: "Git", status: "verified" },
     ],
-    softSkills: { learningAgility: 70, resilienceAdaptability: 66, criticalThinking: 75, decisionMakingUnderPressure: 63, riskTolerance: 55, collaborationMindset: 68 },
+    softSkills: { learningAgility: 70, resilienceAndAdaptability: 66, criticalThinking: 75, decisionMakingUnderPressure: 63, riskTolerance: 55, collaborationMindset: 68 },
     aiSummary: "ทักษะ Docker และ Git ยืนยันแล้ว ส่วน Linux พบหลักฐานบางส่วน ผลประเมินอยู่ในระดับดีด้าน Critical Thinking (75%) เหมาะกับตำแหน่ง QA Automation Engineer ระดับกลาง",
   },
   {
@@ -576,7 +576,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
       { skill: "Linux", status: "unclear" },
       { skill: "Docker", status: "partial" },
     ],
-    softSkills: { learningAgility: 62, resilienceAdaptability: 58, criticalThinking: 55, decisionMakingUnderPressure: 52, riskTolerance: 50, collaborationMindset: 64 },
+    softSkills: { learningAgility: 62, resilienceAndAdaptability: 58, criticalThinking: 55, decisionMakingUnderPressure: 52, riskTolerance: 50, collaborationMindset: 64 },
     aiSummary: "มีเพียง Git ที่ยืนยันได้ชัดเจน Linux และ Docker ยังพบหลักฐานไม่ครบ ผลประเมิน 6 มิติอยู่ระดับกลางค่อนต่ำ เหมาะกับตำแหน่งระดับ Junior ที่มีพี่เลี้ยงคอยซัพพอร์ต",
   },
   {
@@ -591,7 +591,7 @@ export const MOCK_JOB_SEEKERS: JobSeeker[] = [
       { skill: "Linux", status: "verified" },
       { skill: "Git", status: "verified" },
     ],
-    softSkills: { learningAgility: 74, resilienceAdaptability: 72, criticalThinking: 78, decisionMakingUnderPressure: 70, riskTolerance: 58, collaborationMindset: 75 },
+    softSkills: { learningAgility: 74, resilienceAndAdaptability: 72, criticalThinking: 78, decisionMakingUnderPressure: 70, riskTolerance: 58, collaborationMindset: 75 },
     aiSummary: "ทักษะ Docker, Linux และ Git ยืนยันแล้วครบทั้งสามด้าน ผลประเมิน 6 มิติสม่ำเสมออยู่ในเกณฑ์ดีทุกแกน โดยเฉพาะ Critical Thinking (78%) เหมาะกับตำแหน่ง QA Automation Engineer ระดับกลางถึงอาวุโส",
   },
 ];

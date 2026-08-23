@@ -124,6 +124,11 @@ export async function getJobSeekerProfile(jobSeekerId: string) {
   });
 }
 
+/** null if the candidate hasn't played the psychometric games yet — real gameplay isn't wired up yet, so this is only non-null for seeded test candidates until that lands. */
+export async function getGameResult(jobSeekerId: string) {
+  return prisma.gameResult.findUnique({ where: { jobSeekerId } });
+}
+
 export type ProfileStep1Input = {
   firstNameTh?: string;
   lastNameTh?: string;

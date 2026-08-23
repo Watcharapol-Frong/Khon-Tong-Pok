@@ -213,15 +213,22 @@ model ChatVerification {
   updatedAt        DateTime  @updatedAt
 }
 
+/// 6-axis taxonomy matches the psychometric games' radarProfile.axes output
+/// 1:1 (see src/lib/data.ts SOFT_SKILL_AXIS_ORDER, the same taxonomy used for
+/// Position.requiredSoftSkills) — overallIndex is a display-only average of
+/// the 6 axes, not consumed by matching (src/lib/matching.ts).
 model GameResult {
-  id                   String    @id @default(cuid())
-  jobSeekerId          String    @unique
-  jobSeeker            JobSeeker @relation(fields: [jobSeekerId], references: [id])
-  riskTolerance        Int
-  cognitiveFlexibility Int
-  selectiveAttention   Int
-  prosociality         Int
-  updatedAt            DateTime  @updatedAt
+  id                           String    @id @default(cuid())
+  jobSeekerId                  String    @unique
+  jobSeeker                    JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  riskTolerance                Int
+  learningAgility              Int
+  criticalThinking             Int
+  decisionMakingUnderPressure  Int
+  collaborationMindset         Int
+  resilienceAndAdaptability    Int
+  overallIndex                 Int
+  updatedAt                    DateTime  @updatedAt
 }
 
 model AISummary {

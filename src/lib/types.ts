@@ -48,7 +48,7 @@ export type GameStage = {
 /** Same 0-100 scale as RadarAxisDatum/AxisChip.value — the same 6-axis Smart Profile system shown on /profile (RADAR_DATA/AXIS_CHIPS in data.ts), reused here as the single soft-skill taxonomy for both candidates and position requirements. */
 export type PositionSoftSkillRequirements = {
   learningAgility?: number;
-  resilienceAdaptability?: number;
+  resilienceAndAdaptability?: number;
   criticalThinking?: number;
   decisionMakingUnderPressure?: number;
   riskTolerance?: number;

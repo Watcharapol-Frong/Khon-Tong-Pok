@@ -25,11 +25,13 @@ import { Navbar } from "@/components/Navbar";
 import { RadarChart } from "@/components/RadarChart";
 import { SkillIcon } from "@/components/SkillIcon";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
-import { generateAIResume, getJobSeekerProfile, getJobSeekerSessionData } from "@/lib/actions/jobSeeker";
-import { AXIS_CHIPS, JOBS, RADAR_DATA } from "@/lib/data";
+import { generateAIResume, getGameResult, getJobSeekerProfile, getJobSeekerSessionData } from "@/lib/actions/jobSeeker";
+import { JOBS, SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
 import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
+import type { RadarAxisDatum } from "@/lib/types";
 
 type JobSeekerProfileData = Awaited<ReturnType<typeof getJobSeekerProfile>>;
+type GameResultData = Awaited<ReturnType<typeof getGameResult>>;
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -68,6 +70,10 @@ export default function ProfilePage() {
   // the DB-hydration effect below); there's no localStorage-only version
   // of this since it never existed before this round.
   const [profile, setProfile] = useState<JobSeekerProfileData>(null);
+  // null means "hasn't played the psychometric games yet" (a real, honest
+  // state right now — real gameplay isn't wired up, only seeded test
+  // candidates have a row) — not fabricated to 0% on every axis.
+  const [gameResult, setGameResult] = useState<GameResultData>(null);
   // Blind-candidate mascot until the candidate uploads a real photo —
   // same placeholder convention HR sees for un-revealed candidates.
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -146,27 +152,50 @@ export default function ProfilePage() {
     const ids = getJobSeekerSessionIds();
     if (!ids) return;
     let cancelled = false;
-    Promise.all([getJobSeekerSessionData(ids.jobSeekerId), getJobSeekerProfile(ids.jobSeekerId)]).then(
-      ([session, profile]) => {
-        if (cancelled) return;
-        if (session) {
-          setCandidateName(session.jobSeeker.name);
-          localStorage.setItem("ktp_username", session.jobSeeker.name);
-        }
-        if (profile) {
-          setProfile(profile);
-          setUserSkills(profile.computerSkills);
-          localStorage.setItem("ktp_hard_skills", JSON.stringify(profile.computerSkills));
-          const verified = profile.resumeRawText.trim().length > 0 ? profile.computerSkills : [];
-          setResumeSkills(verified);
-          localStorage.setItem("ktp_resume_skills", JSON.stringify(verified));
-        }
+    Promise.all([
+      getJobSeekerSessionData(ids.jobSeekerId),
+      getJobSeekerProfile(ids.jobSeekerId),
+      getGameResult(ids.jobSeekerId),
+    ]).then(([session, profile, gameResult]) => {
+      if (cancelled) return;
+      if (session) {
+        setCandidateName(session.jobSeeker.name);
+        localStorage.setItem("ktp_username", session.jobSeeker.name);
       }
-    );
+      if (profile) {
+        setProfile(profile);
+        setUserSkills(profile.computerSkills);
+        localStorage.setItem("ktp_hard_skills", JSON.stringify(profile.computerSkills));
+        const verified = profile.resumeRawText.trim().length > 0 ? profile.computerSkills : [];
+        setResumeSkills(verified);
+        localStorage.setItem("ktp_resume_skills", JSON.stringify(verified));
+      }
+      setGameResult(gameResult);
+    });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // Derived straight from the real GameResult row (or empty if there isn't
+  // one yet) — same 6-axis taxonomy/labels/colors as Position.requiredSoftSkills
+  // (see SOFT_SKILL_AXIS_ORDER's docstring), no more static mock numbers.
+  const radarData: RadarAxisDatum[] = useMemo(() => {
+    if (!gameResult) return [];
+    return SOFT_SKILL_AXIS_ORDER.map((axis) => ({
+      axis: SOFT_SKILL_AXIS_META[axis].en,
+      value: gameResult[axis],
+    }));
+  }, [gameResult]);
+
+  const axisChips = useMemo(() => {
+    if (!gameResult) return [];
+    return SOFT_SKILL_AXIS_ORDER.map((axis) => ({
+      key: axis,
+      th: SOFT_SKILL_AXIS_META[axis].th,
+      value: gameResult[axis],
+    }));
+  }, [gameResult]);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -617,25 +646,46 @@ export default function ProfilePage() {
                 ประมวลผลจากมินิเกม Neuroscience
               </p>
 
-              {/* Radar sized from the wrapper's real measured width instead
-                  of a fixed 230/320px — lets it actually use the extra
-                  room this panel now has instead of leaving it empty
-                  while axis labels still crowd each other. */}
-              <div ref={chartWrapRefCallback} className="my-4 sm:my-6 flex justify-center w-full overflow-hidden">
-                <RadarChart data={RADAR_DATA} size={chartSize} theme="mono" showLabels animate />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-3">
-                {AXIS_CHIPS.map((chip) => (
-                  <div
-                    key={chip.en}
-                    className="rounded-xl bg-white p-2 sm:p-3 text-center text-xs"
-                  >
-                    <div className="font-extrabold text-[#0F0F0F]">{chip.value}%</div>
-                    <div className="text-[10px] leading-snug sm:text-[11px] opacity-70">{chip.th}</div>
+              {gameResult ? (
+                <>
+                  {/* Radar sized from the wrapper's real measured width instead
+                      of a fixed 230/320px — lets it actually use the extra
+                      room this panel now has instead of leaving it empty
+                      while axis labels still crowd each other. */}
+                  <div ref={chartWrapRefCallback} className="my-4 sm:my-6 flex justify-center w-full overflow-hidden">
+                    <RadarChart data={radarData} size={chartSize} theme="mono" showLabels animate />
                   </div>
-                ))}
-              </div>
+
+                  <div className="grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-3">
+                    {axisChips.map((chip) => (
+                      <div
+                        key={chip.key}
+                        className="rounded-xl bg-white p-2 sm:p-3 text-center text-xs"
+                      >
+                        <div className="font-extrabold text-[#0F0F0F]">{chip.value}%</div>
+                        <div className="text-[10px] leading-snug sm:text-[11px] opacity-70">{chip.th}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                // Honest empty state — no GameResult row yet means the
+                // candidate hasn't played the psychometric games, not that
+                // every axis genuinely scored 0.
+                <div className="my-4 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[rgba(15,15,15,0.15)] bg-white px-4 py-10 text-center sm:my-6">
+                  <Target className="h-6 w-6 text-[#8A8A8A]" strokeWidth={1.75} />
+                  <p className="text-xs font-bold text-[#0F0F0F]">ยังไม่มีผลประเมิน Soft Skills</p>
+                  <p className="max-w-[260px] text-[11px] text-[#8A8A8A]">
+                    เล่นมินิเกมประเมินศักยภาพให้ครบเพื่อดูกราฟ 6 ด้านของคุณ
+                  </p>
+                  <Link
+                    href="/game"
+                    className="mt-1 rounded-full bg-[#0F0F0F] px-4 py-2 text-[11px] font-bold text-white transition-opacity hover:opacity-90"
+                  >
+                    ไปเล่นเกมประเมิน →
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Divider — horizontal rule when stacked on mobile, vertical
