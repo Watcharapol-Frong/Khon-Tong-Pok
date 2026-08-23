@@ -228,7 +228,7 @@ export async function getCandidateReport(jobSeekerId: string, companyId: string)
   const jobSeeker = await prisma.jobSeeker.findUnique({
     where: { id: jobSeekerId },
     include: {
-      profile: { include: { workExperience: true } },
+      profile: { include: { workExperience: true, education: true } },
       chatVerifications: true,
       gameResult: true,
       aiSummary: true,

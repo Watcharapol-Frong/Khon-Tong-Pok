@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { AlertCircle, ArrowLeft, Briefcase, Check, Clock, EyeOff, Mail, MapPin, Phone, Star, X } from "lucide-react";
+import { AlertCircle, ArrowLeft, Briefcase, Check, Clock, EyeOff, FileText, Mail, MapPin, Phone, Star, X } from "lucide-react";
 import { InterviewInviteModal } from "@/components/InterviewInviteModal";
 import { RadarChart } from "@/components/RadarChart";
 import { getCandidateReport, sendInterviewInvite } from "@/lib/actions/interview";
@@ -242,6 +242,72 @@ export default function CandidateReportPage() {
               </p>
             )}
           </div>
+
+          {/* Resume — same Blind Review gate as contact info above, since
+              work history/education can identify a candidate almost as
+              directly as a name (company names, dates). Only the PDF's
+              extracted TEXT is stored, never the original file (see
+              /decoder's extractTextFromPdf) — there's no file storage wired
+              up, so this shows the parsed text rather than an embedded PDF,
+              same "resolves to exactly one of three states" logic already
+              used on the candidate's own /profile page. */}
+          {nameRevealed && (
+            <div className="mb-6 rounded-2xl bg-[#FAFAFA] p-4">
+              <h2 className="mb-3 text-xs font-extrabold text-[#0F0F0F]">เรซูเม่</h2>
+              {jobSeeker.profile && jobSeeker.profile.resumeRawText.trim().length > 0 ? (
+                <div className="rounded-xl bg-white p-3.5">
+                  <div className="mb-2 flex items-center gap-2 text-xs font-bold text-[#0F0F0F]">
+                    <FileText className="h-4 w-4 flex-shrink-0 text-[#4D7CFF]" strokeWidth={2} />
+                    ข้อความที่สกัดจากเรซูเม่ PDF ที่ผู้สมัครอัปโหลด
+                  </div>
+                  <p className="max-h-[240px] overflow-y-auto rounded-xl bg-[#FAFAFA] p-3 text-xs leading-relaxed whitespace-pre-wrap text-[#5C5C5C]">
+                    {jobSeeker.profile.resumeRawText}
+                  </p>
+                </div>
+              ) : jobSeeker.profile &&
+                (jobSeeker.profile.desiredPosition ||
+                  jobSeeker.profile.education.length > 0 ||
+                  jobSeeker.profile.workExperience.length > 0) ? (
+                <div className="flex flex-col gap-2.5">
+                  <p className="text-[11px] text-[#8A8A8A]">ข้อมูลจากฟอร์มที่ผู้สมัครกรอกไว้ (ยังไม่ได้อัปโหลดเรซูเม่ PDF)</p>
+                  {jobSeeker.profile.desiredPosition && (
+                    <div className="rounded-xl bg-white p-3">
+                      <div className="text-[10px] font-bold text-[#8A8A8A]">ตำแหน่งงานที่สนใจ</div>
+                      <div className="text-xs font-extrabold text-[#0F0F0F]">{jobSeeker.profile.desiredPosition}</div>
+                    </div>
+                  )}
+                  {jobSeeker.profile.education.length > 0 && (
+                    <div className="rounded-xl bg-white p-3">
+                      <div className="mb-1.5 text-[10px] font-bold text-[#8A8A8A]">ประวัติการศึกษา</div>
+                      <div className="flex flex-col gap-1">
+                        {jobSeeker.profile.education.map((e) => (
+                          <div key={e.id} className="text-xs text-[#0F0F0F]">
+                            {e.level} · {e.institution}
+                            {e.fieldOfStudy ? ` · สาขา${e.fieldOfStudy}` : ""}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {jobSeeker.profile.workExperience.length > 0 && (
+                    <div className="rounded-xl bg-white p-3">
+                      <div className="mb-1.5 text-[10px] font-bold text-[#8A8A8A]">ประสบการณ์ทำงาน</div>
+                      <div className="flex flex-col gap-1">
+                        {jobSeeker.profile.workExperience.map((w) => (
+                          <div key={w.id} className="text-xs text-[#0F0F0F]">
+                            {w.jobTitle} · {w.companyName}
+                            {w.isCurrent ? " (ปัจจุบัน)" : ""}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-[#8A8A8A]">ผู้สมัครยังไม่มีเรซูเม่ในระบบ</p>
+              )}
+            </div>
+          )}
 
           {/* Matches / interview actions */}
           <div className="mb-6 rounded-2xl bg-[#FAFAFA] p-4">
