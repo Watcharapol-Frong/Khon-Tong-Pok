@@ -128,13 +128,15 @@ export default function OnboardingPage() {
                           : "border-[rgba(15,15,15,0.1)] bg-white opacity-75 hover:border-[rgba(15,15,15,0.3)] hover:opacity-100"
                       }`}
                     >
-                      <Image
-                        src={group.mascotSrc}
-                        alt=""
-                        width={96}
-                        height={96}
-                        className="mb-1.5 h-14 w-auto object-contain"
-                      />
+                      <div className="mb-2 flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-[#FAFAFA]">
+                        <Image
+                          src={group.mascotSrc}
+                          alt=""
+                          width={96}
+                          height={96}
+                          className="h-12 w-auto object-contain"
+                        />
+                      </div>
                       <div className="text-sm font-extrabold text-[#0F0F0F]">{group.title}</div>
                       <p className="mt-1 text-[11px] leading-[1.5] text-[#5C5C5C]">{group.desc}</p>
                     </div>
