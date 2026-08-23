@@ -8,13 +8,20 @@ import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 
-// Same handful-not-a-shower sparkle treatment as the homepage hero and the
-// company-side hero — kept consistent site-wide instead of this page's old
-// one-off flat solid-color square accent.
+// Same card shell as AuthCard (login/register) — this page sits in the
+// same candidate auth/onboarding flow (right after register), so it should
+// read as one continuous flow with those screens rather than switching to
+// the separate marketing-page visual language (Hero.tsx, HowItWorks) partway
+// through. Sparkle positions/opacity copied from AuthCard's own CARD_SPARKLES.
 const CARD_SPARKLES = [
-  { top: "-14px", left: "-12px", size: 20, color: "#3BF55C", rotate: -12 },
-  { bottom: "-10px", right: "-8px", size: 15, color: "#B14DFF", rotate: 16 },
+  { top: "2%", left: "-18px", size: 26, color: "#F5D949", rotate: -18, opacity: 0.65 },
+  { top: "10%", right: "-18px", size: 20, color: "#B14DFF", rotate: 15, opacity: 0.6 },
+  { bottom: "14%", left: "-20px", size: 18, color: "#4D7CFF", rotate: 20, opacity: 0.6 },
+  { bottom: "4%", right: "-14px", size: 22, color: "#FF5CA8", rotate: -12, opacity: 0.6 },
 ];
+// Candidate-side accent — same green AuthCard's login/register pages use
+// (accentColor="#3BF55C"), HR pages use blue instead.
+const CANDIDATE_ACCENT = "#3BF55C";
 
 const ROLE_GROUPS = [
   {
@@ -68,31 +75,51 @@ export default function OnboardingPage() {
           }}
         />
 
-        <div className="relative w-full max-w-[780px]">
+        <div className="relative mt-[100px] w-full max-w-[780px] sm:mt-[130px]">
+          {CARD_SPARKLES.map((s, i) => (
+            <Sparkle
+              key={i}
+              className="pointer-events-none absolute"
+              style={{
+                top: s.top,
+                bottom: s.bottom,
+                left: s.left,
+                right: s.right,
+                opacity: s.opacity,
+                transform: `rotate(${s.rotate}deg)`,
+              }}
+              width={s.size}
+              height={s.size}
+              fill={s.color}
+              color={s.color}
+              strokeWidth={1}
+            />
+          ))}
+
+          {/* Mascot peeking over the card's top edge — same treatment as
+              AuthCard's isEntryStep mascot on login/register. This mascot's
+              art is closer to square (unlike AuthCard's own wide/short one),
+              so it needs a taller offset for the same "just the feet dip
+              in" effect instead of colliding with the badge below it. */}
+          <div className="pointer-events-none absolute -top-[100px] left-1/2 z-10 w-[110px] -translate-x-1/2 sm:-top-[130px] sm:w-[140px]">
+            <Image
+              src="/mascot/mascot-start.png"
+              alt=""
+              width={140}
+              height={148}
+              className="h-auto w-full object-contain"
+            />
+          </div>
+
           {/* Card Container */}
-          <div className="relative rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[clamp(24px,5vw,44px)] shadow-[0_20px_50px_rgba(15,15,15,0.05)]">
-            {CARD_SPARKLES.map((s, i) => (
-              <Sparkle
-                key={i}
-                className="pointer-events-none absolute hidden sm:block"
-                style={{ top: s.top, bottom: s.bottom, left: s.left, right: s.right, transform: `rotate(${s.rotate}deg)` }}
-                width={s.size}
-                height={s.size}
-                fill={s.color}
-                color={s.color}
-                strokeWidth={1}
-              />
-            ))}
+          <div className="relative rounded-2xl bg-[#F5F5F5] p-[clamp(24px,5vw,40px)]">
+            <div
+              className="absolute -top-3 -left-3 -z-10 h-12 w-12 rounded-2xl"
+              style={{ backgroundColor: CANDIDATE_ACCENT }}
+            />
 
             {/* Header */}
             <div className="mb-8 text-center">
-              <Image
-                src="/mascot/mascot-start.png"
-                alt=""
-                width={100}
-                height={106}
-                className="mx-auto mb-3 h-[68px] w-auto object-contain"
-              />
               <div className="mb-2.5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
                 <Users className="h-3.5 w-3.5" strokeWidth={2} />
                 <span>Role Selection</span>
