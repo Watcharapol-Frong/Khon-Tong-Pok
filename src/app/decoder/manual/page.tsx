@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, Check, Plus, Sparkle, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Calendar, Check, ChevronLeft, ChevronRight, Plus, Sparkle, Trash2 } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { JobSeekerAuthGuard } from "@/components/JobSeekerAuthGuard";
 import { Navbar } from "@/components/Navbar";
@@ -134,6 +134,161 @@ function ProvinceInput({ value, onChange }: { value: string; onChange: (next: st
               </button>
             ))
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const THAI_MONTHS_SHORT = [
+  "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+  "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+];
+const THAI_DAY_LABELS = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
+
+function formatDateDisplay(iso: string): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (!y || !m || !d) return "";
+  return `${d} ${THAI_MONTHS_SHORT[m - 1]} ${y + 543}`;
+}
+
+/**
+ * Replaces native <input type="date"> — its calendar popup is unstyleable
+ * browser chrome (the exact same problem ProvinceInput above solved for
+ * <input list>/<datalist>). Trigger reuses inputClass so its box matches
+ * every sibling field; panel reuses SkillAutocomplete's dropdown styling.
+ * Value/onChange stay plain ISO "YYYY-MM-DD" strings so this drops straight
+ * into the existing ProfileStep1Input/WorkExperienceInput fields. Calendar
+ * header shows the Buddhist-era year (+543) since that's the convention
+ * Thai users expect, even though the stored/wire value stays Gregorian.
+ * openUpward is for fields sitting right above the step's submit button —
+ * opening downward there lands the panel beside the button instead of over
+ * empty space, reading as a stray fragment rather than a floating overlay.
+ */
+function DateInput({
+  value,
+  onChange,
+  openUpward,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  openUpward?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const today = new Date();
+  const [viewYear, setViewYear] = useState(() => (value ? Number(value.slice(0, 4)) : today.getFullYear()));
+  const [viewMonth, setViewMonth] = useState(() => (value ? Number(value.slice(5, 7)) - 1 : today.getMonth()));
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [isOpen]);
+
+  const openPicker = () => {
+    if (value) {
+      setViewYear(Number(value.slice(0, 4)));
+      setViewMonth(Number(value.slice(5, 7)) - 1);
+    }
+    setIsOpen(true);
+  };
+
+  const goPrevMonth = () => {
+    if (viewMonth === 0) {
+      setViewMonth(11);
+      setViewYear((y) => y - 1);
+    } else {
+      setViewMonth((m) => m - 1);
+    }
+  };
+  const goNextMonth = () => {
+    if (viewMonth === 11) {
+      setViewMonth(0);
+      setViewYear((y) => y + 1);
+    } else {
+      setViewMonth((m) => m + 1);
+    }
+  };
+
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const firstWeekday = new Date(viewYear, viewMonth, 1).getDay();
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const leadingBlanks = Array.from({ length: firstWeekday }, (_, i) => i);
+
+  const selectDay = (day: number) => {
+    const mm = String(viewMonth + 1).padStart(2, "0");
+    const dd = String(day).padStart(2, "0");
+    onChange(`${viewYear}-${mm}-${dd}`);
+    setIsOpen(false);
+  };
+
+  const isSelected = (day: number) =>
+    value === `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+  return (
+    <div className="relative" ref={rootRef}>
+      <button
+        type="button"
+        onClick={() => (isOpen ? setIsOpen(false) : openPicker())}
+        className={`${inputClass} flex items-center justify-between text-left`}
+      >
+        <span className={value ? "" : "text-[#B5B5B5] font-normal"}>
+          {value ? formatDateDisplay(value) : "เลือกวันที่"}
+        </span>
+        <Calendar className="h-3.5 w-3.5 flex-shrink-0 text-[#8A8A8A]" strokeWidth={2} />
+      </button>
+      {isOpen && (
+        <div
+          className={`absolute left-0 z-40 w-[264px] rounded-[10px] border border-[rgba(15,15,15,0.12)] bg-white p-3 shadow-[0_8px_20px_rgba(15,15,15,0.12)] ${
+            openUpward ? "bottom-[calc(100%+4px)]" : "top-[calc(100%+4px)]"
+          }`}
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={goPrevMonth}
+              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg hover:bg-[#F5F5F5]"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
+            </button>
+            <span className="text-xs font-extrabold text-[#0F0F0F]">
+              {THAI_MONTHS_SHORT[viewMonth]} {viewYear + 543}
+            </span>
+            <button
+              type="button"
+              onClick={goNextMonth}
+              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-lg hover:bg-[#F5F5F5]"
+            >
+              <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
+            </button>
+          </div>
+          <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-[#B5B5B5]">
+            {THAI_DAY_LABELS.map((d, i) => (
+              <div key={i}>{d}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {leadingBlanks.map((b) => (
+              <div key={`b${b}`} />
+            ))}
+            {days.map((day) => (
+              <button
+                type="button"
+                key={day}
+                onClick={() => selectDay(day)}
+                className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg text-[11px] font-semibold transition-colors ${
+                  isSelected(day) ? "bg-[#0F0F0F] text-white" : "text-[#0F0F0F] hover:bg-[#F5F5F5]"
+                }`}
+              >
+                {day}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -451,11 +606,9 @@ function DecoderManualContent() {
                     </div>
                     <div>
                       <label className={labelClass}>วันเกิด</label>
-                      <input
-                        type="date"
-                        className={inputClass}
+                      <DateInput
                         value={step1.birthDate ?? ""}
-                        onChange={(e) => updateStep1("birthDate", e.target.value)}
+                        onChange={(v) => updateStep1("birthDate", v)}
                       />
                     </div>
                     <div>
@@ -617,11 +770,10 @@ function DecoderManualContent() {
                     </div>
                     <div className="sm:col-span-2">
                       <label className={labelClass}>วันที่พร้อมเริ่มงาน</label>
-                      <input
-                        type="date"
-                        className={inputClass}
+                      <DateInput
                         value={step1.availableDate ?? ""}
-                        onChange={(e) => updateStep1("availableDate", e.target.value)}
+                        onChange={(v) => updateStep1("availableDate", v)}
+                        openUpward
                       />
                     </div>
                   </div>
@@ -789,21 +941,17 @@ function DecoderManualContent() {
                       </div>
                       <div>
                         <label className={labelClass}>เริ่มงาน</label>
-                        <input
-                          type="date"
-                          className={inputClass}
+                        <DateInput
                           value={row.startDate ?? ""}
-                          onChange={(e) => updateWorkRow(i, { startDate: e.target.value })}
+                          onChange={(v) => updateWorkRow(i, { startDate: v })}
                         />
                       </div>
                       {!row.isCurrent && (
                         <div>
                           <label className={labelClass}>สิ้นสุดงาน</label>
-                          <input
-                            type="date"
-                            className={inputClass}
+                          <DateInput
                             value={row.endDate ?? ""}
-                            onChange={(e) => updateWorkRow(i, { endDate: e.target.value })}
+                            onChange={(v) => updateWorkRow(i, { endDate: v })}
                           />
                         </div>
                       )}
