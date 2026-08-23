@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, Plus, Sparkle, Trash2 } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { JobSeekerAuthGuard } from "@/components/JobSeekerAuthGuard";
 import { Navbar } from "@/components/Navbar";
@@ -55,6 +56,17 @@ function toDateInputValue(date: Date | null | undefined): string {
 const inputClass =
   "w-full rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3.5 py-2.5 text-xs font-semibold text-[#0F0F0F] outline-none transition-border focus:border-[#0F0F0F]";
 const labelClass = "mb-1.5 block text-xs font-bold text-[#0F0F0F]";
+
+// Same card shell as AuthCard (login/register) — this multi-step form is
+// part of the same candidate flow. Sparkle positions/opacity and the
+// candidate-green accent square copied from AuthCard's own CARD_SPARKLES.
+const CARD_SPARKLES = [
+  { top: "2%", left: "-18px", size: 26, color: "#F5D949", rotate: -18, opacity: 0.65 },
+  { top: "10%", right: "-18px", size: 20, color: "#B14DFF", rotate: 15, opacity: 0.6 },
+  { bottom: "14%", left: "-20px", size: 18, color: "#4D7CFF", rotate: 20, opacity: 0.6 },
+  { bottom: "4%", right: "-14px", size: 22, color: "#FF5CA8", rotate: -12, opacity: 0.6 },
+];
+const CANDIDATE_ACCENT = "#3BF55C";
 
 export default function DecoderManualPage() {
   return (
@@ -240,9 +252,48 @@ function DecoderManualContent() {
           }}
         />
 
-        <div className="relative w-full max-w-[720px]">
-          <div className="relative rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[clamp(24px,5vw,40px)] shadow-[0_20px_50px_rgba(15,15,15,0.05)]">
-            <div className="absolute -top-3 -left-3 -z-10 h-12 w-12 rounded-2xl bg-[#4D7CFF]" />
+        <div className={`relative w-full max-w-[720px] ${stepIndex === 0 ? "mt-[100px] sm:mt-[130px]" : ""}`}>
+          {CARD_SPARKLES.map((s, i) => (
+            <Sparkle
+              key={i}
+              className="pointer-events-none absolute"
+              style={{
+                top: s.top,
+                bottom: s.bottom,
+                left: s.left,
+                right: s.right,
+                opacity: s.opacity,
+                transform: `rotate(${s.rotate}deg)`,
+              }}
+              width={s.size}
+              height={s.size}
+              fill={s.color}
+              color={s.color}
+              strokeWidth={1}
+            />
+          ))}
+
+          {/* Mascot only peeks over the top edge on the very first step —
+              same "isEntryStep" convention AuthCard uses for multi-step
+              flows (e.g. company/register): once mid-flow, the step
+              indicator below takes over that visual role instead. */}
+          {stepIndex === 0 && (
+            <div className="pointer-events-none absolute -top-[100px] left-1/2 z-10 w-[110px] -translate-x-1/2 sm:-top-[130px] sm:w-[140px]">
+              <Image
+                src="/mascot/mascot-welcome-auth-oncard.png"
+                alt=""
+                width={190}
+                height={132}
+                className="h-auto w-full object-contain"
+              />
+            </div>
+          )}
+
+          <div className="relative rounded-2xl bg-[#F5F5F5] p-[clamp(24px,5vw,40px)]">
+            <div
+              className="absolute -top-3 -left-3 -z-10 h-12 w-12 rounded-2xl"
+              style={{ backgroundColor: CANDIDATE_ACCENT }}
+            />
 
             <button
               type="button"
