@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Briefcase, CalendarClock, LayoutDashboard, LogOut } from "lucide-react";
+import { NotificationBell, type NotificationItem } from "@/components/NotificationBell";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import type { Company } from "@prisma/client";
+import { getHRNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/actions/interview";
 import type { SafeHRUser } from "@/lib/companySession";
 import { clearHRSessionIds } from "@/lib/hrSession";
 
@@ -35,6 +37,28 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const open = isMobile && menuOpen;
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getHRNotifications(hrUser.id).then((data) => {
+      if (!cancelled) setNotifications(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hrUser.id is stable for the lifetime of this navbar (rendered once by (app)/layout.tsx)
+  }, []);
+
+  const handleMarkRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    markNotificationRead(id);
+  };
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    markAllNotificationsRead({ hrUserId: hrUser.id });
+  };
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -88,6 +112,11 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
                   <div className="truncate text-xs font-bold text-[#0F0F0F]">{company.name}</div>
                   <div className="truncate text-[11px] text-[#8A8A8A]">{hrUser.name}</div>
                 </div>
+                <NotificationBell
+                  notifications={notifications}
+                  onMarkRead={handleMarkRead}
+                  onMarkAllRead={handleMarkAllRead}
+                />
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -101,29 +130,36 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
           )}
 
           {isMobile && (
-            <button
-              aria-label="เปิดเมนู"
-              onClick={() => setMenuOpen((v) => !v)}
-              className="relative h-[34px] w-[34px] flex-shrink-0 cursor-pointer"
-            >
-              <motion.div
-                animate={open ? { translateY: 5, rotate: 45 } : { translateY: 0, rotate: 0 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="absolute top-[11px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
-                style={{ transformOrigin: "center" }}
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <NotificationBell
+                notifications={notifications}
+                onMarkRead={handleMarkRead}
+                onMarkAllRead={handleMarkAllRead}
               />
-              <motion.div
-                animate={{ opacity: open ? 0 : 1 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="absolute top-[16px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
-              />
-              <motion.div
-                animate={open ? { translateY: -5, rotate: -45 } : { translateY: 0, rotate: 0 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="absolute top-[21px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
-                style={{ transformOrigin: "center" }}
-              />
-            </button>
+              <button
+                aria-label="เปิดเมนู"
+                onClick={() => setMenuOpen((v) => !v)}
+                className="relative h-[34px] w-[34px] flex-shrink-0 cursor-pointer"
+              >
+                <motion.div
+                  animate={open ? { translateY: 5, rotate: 45 } : { translateY: 0, rotate: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="absolute top-[11px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
+                  style={{ transformOrigin: "center" }}
+                />
+                <motion.div
+                  animate={{ opacity: open ? 0 : 1 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="absolute top-[16px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
+                />
+                <motion.div
+                  animate={open ? { translateY: -5, rotate: -45 } : { translateY: 0, rotate: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="absolute top-[21px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
+                  style={{ transformOrigin: "center" }}
+                />
+              </button>
+            </div>
           )}
         </div>
 

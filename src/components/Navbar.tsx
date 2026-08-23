@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NotificationBell, type NotificationItem } from "@/components/NotificationBell";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
+import { getJobSeekerNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/actions/interview";
+import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
 
 const NAV_LINKS = [
   { label: "หางาน", href: "/job" },
@@ -23,6 +26,40 @@ export function Navbar() {
   const navLinks = pathname === "/" ? NAV_LINKS : NAV_LINKS.filter((l) => l.label !== "วิธีใช้งาน");
 
   const closeMenu = () => setMenuOpen(false);
+
+  // This navbar renders on public pages too (login/register/home) where
+  // there's no job seeker session at all — the bell only shows up once one
+  // actually exists, checked client-side on mount (no session -> stays null
+  // forever, nothing fetched).
+  const [jobSeekerId, setJobSeekerId] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  useEffect(() => {
+    const ids = getJobSeekerSessionIds();
+    if (!ids) return;
+    // Reading a browser-only source (localStorage) the server can't see,
+    // not state derivable from props/other state — same exception already
+    // established for this pattern elsewhere (e.g. /profile).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setJobSeekerId(ids.jobSeekerId);
+    let cancelled = false;
+    getJobSeekerNotifications(ids.jobSeekerId).then((data) => {
+      if (!cancelled) setNotifications(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleMarkRead = (id: string) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    markNotificationRead(id);
+  };
+  const handleMarkAllRead = () => {
+    if (!jobSeekerId) return;
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    markAllNotificationsRead({ jobSeekerId });
+  };
 
   return (
     <div className="sticky top-0 z-40 bg-white px-4 pt-[26px] pb-3 sm:px-6 md:px-8">
@@ -70,33 +107,49 @@ export function Navbar() {
               >
                 เริ่มเล่นเกมเพื่อประเมิน
               </Link>
+              {jobSeekerId && (
+                <NotificationBell
+                  notifications={notifications}
+                  onMarkRead={handleMarkRead}
+                  onMarkAllRead={handleMarkAllRead}
+                />
+              )}
             </div>
           )}
 
           {isMobile && (
-            <button
-              aria-label="เปิดเมนู"
-              onClick={() => setMenuOpen((v) => !v)}
-              className="relative h-[34px] w-[34px] flex-shrink-0 cursor-pointer"
-            >
-              <motion.div
-                animate={open ? { translateY: 5, rotate: 45 } : { translateY: 0, rotate: 0 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="absolute top-[11px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
-                style={{ transformOrigin: "center" }}
-              />
-              <motion.div
-                animate={{ opacity: open ? 0 : 1 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="absolute top-[16px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
-              />
-              <motion.div
-                animate={open ? { translateY: -5, rotate: -45 } : { translateY: 0, rotate: 0 }}
-                transition={{ duration: 0.2, ease: "easeInOut" }}
-                className="absolute top-[21px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
-                style={{ transformOrigin: "center" }}
-              />
-            </button>
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {jobSeekerId && (
+                <NotificationBell
+                  notifications={notifications}
+                  onMarkRead={handleMarkRead}
+                  onMarkAllRead={handleMarkAllRead}
+                />
+              )}
+              <button
+                aria-label="เปิดเมนู"
+                onClick={() => setMenuOpen((v) => !v)}
+                className="relative h-[34px] w-[34px] flex-shrink-0 cursor-pointer"
+              >
+                <motion.div
+                  animate={open ? { translateY: 5, rotate: 45 } : { translateY: 0, rotate: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="absolute top-[11px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
+                  style={{ transformOrigin: "center" }}
+                />
+                <motion.div
+                  animate={{ opacity: open ? 0 : 1 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="absolute top-[16px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
+                />
+                <motion.div
+                  animate={open ? { translateY: -5, rotate: -45 } : { translateY: 0, rotate: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="absolute top-[21px] left-[6px] h-[2px] w-[22px] rounded-full bg-[#0F0F0F]"
+                  style={{ transformOrigin: "center" }}
+                />
+              </button>
+            </div>
           )}
         </div>
 
