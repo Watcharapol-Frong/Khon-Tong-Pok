@@ -71,7 +71,7 @@ export function AssessmentStepBar({ currentStep }: { currentStep: Step }) {
           elsewhere in the app) instead of a different pastel per step —
           four unrelated colors read as noisy against the rest of the
           site's restrained palette. */}
-      <div className="relative flex items-start justify-between rounded-[28px] bg-[#FAFAFA] px-4 py-5 sm:px-6">
+      <div className="relative flex items-start justify-between px-4 py-5 sm:px-6">
         {STEPS.map((item, idx) => {
           const isDone = currentStep > item.step;
           const isActive = currentStep === item.step;
