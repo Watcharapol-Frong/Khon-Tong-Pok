@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft, Check, Plus, Sparkle, Trash2 } from "lucide-react";
 import { Footer } from "@/components/Footer";
@@ -252,7 +251,7 @@ function DecoderManualContent() {
           }}
         />
 
-        <div className={`relative w-full max-w-[720px] ${stepIndex === 0 ? "mt-[100px] sm:mt-[130px]" : ""}`}>
+        <div className="relative w-full max-w-[720px]">
           {CARD_SPARKLES.map((s, i) => (
             <Sparkle
               key={i}
@@ -272,22 +271,6 @@ function DecoderManualContent() {
               strokeWidth={1}
             />
           ))}
-
-          {/* Mascot only peeks over the top edge on the very first step —
-              same "isEntryStep" convention AuthCard uses for multi-step
-              flows (e.g. company/register): once mid-flow, the step
-              indicator below takes over that visual role instead. */}
-          {stepIndex === 0 && (
-            <div className="pointer-events-none absolute -top-[100px] left-1/2 z-10 w-[110px] -translate-x-1/2 sm:-top-[130px] sm:w-[140px]">
-              <Image
-                src="/mascot/mascot-welcome-auth-oncard.png"
-                alt=""
-                width={190}
-                height={132}
-                className="h-auto w-full object-contain"
-              />
-            </div>
-          )}
 
           <div className="relative rounded-2xl bg-[#F5F5F5] p-[clamp(24px,5vw,40px)]">
             <div
