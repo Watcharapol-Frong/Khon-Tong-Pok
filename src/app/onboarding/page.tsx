@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Clock, Sparkle } from "lucide-react";
+import { Clock, Sparkle, Users } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
@@ -105,7 +105,14 @@ export default function OnboardingPage() {
 
             {/* Header */}
             <div className="mb-8 text-center">
-              <p className="mx-auto max-w-[700px] text-xs leading-[1.6] text-[#8A8A8A]">
+              <div className="mb-2.5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
+                <Users className="h-3.5 w-3.5" strokeWidth={2} />
+                <span>Role Selection</span>
+              </div>
+              <h1 className="text-[clamp(24px,4vw,32px)] font-extrabold tracking-[-0.03em]">
+                เลือกสถานะผู้สมัครของคุณ
+              </h1>
+              <p className="mx-auto mt-2 max-w-[700px] text-xs leading-[1.6] text-[#8A8A8A]">
                 เลือกระดับกลุ่มเป้าหมายเพื่อปรับโทนคำถามและบริบทในด่านมินิเกมให้เหมาะสมกับตัวตนของคุณมากที่สุด
               </p>
             </div>
