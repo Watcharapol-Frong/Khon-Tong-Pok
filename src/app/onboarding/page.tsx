@@ -29,28 +29,24 @@ const ROLE_GROUPS = [
     title: "นักศึกษา / เด็กจบใหม่",
     desc: "เพิ่งจบการศึกษา หรือกำลังศึกษาอยู่ ไม่มีประสบการณ์ทำงานประจำ เน้นวัดศักยภาพและ Soft Skills แฝง",
     mascotSrc: "/mascot/mascot-role-fresh-grad.png",
-    badgeColor: "#3BF55C",
   },
   {
     id: "early_career",
     title: "Early Career (ประสบการณ์ 1 - 3 ปี)",
     desc: "เริ่มทำงานแล้ว กำลังค้นหาตำแหน่งงานที่ตอบโจทย์ตัวตนจริงและความก้าวหน้าในสายอาชีพ",
     mascotSrc: "/mascot/mascot-role-early-career.png",
-    badgeColor: "#4D7CFF",
   },
   {
     id: "career_switcher",
     title: "Career Switcher (ย้ายสายงาน)",
     desc: "ต้องการเปลี่ยนสายงานใหม่ โดยใช้ทักษะที่ถ่ายทอดได้ (Transferable Skills) และการเรียนรู้ไวเป็นหลัก",
     mascotSrc: "/mascot/mascot-role-career-switcher.png",
-    badgeColor: "#FF6E5C",
   },
   {
     id: "upskiller",
     title: "Upskiller (พัฒนาทักษะเพิ่มเติม)",
     desc: "มีประสบการณ์สูง ต้องการประเมินศักยภาพรอบด้านและอัปเดตโปรไฟล์ทักษะยุคใหม่",
     mascotSrc: "/mascot/mascot-role-upskiller.png",
-    badgeColor: "#F5D949",
   },
 ];
 
@@ -132,19 +128,13 @@ export default function OnboardingPage() {
                           : "border-[rgba(15,15,15,0.1)] bg-white opacity-75 hover:border-[rgba(15,15,15,0.3)] hover:opacity-100"
                       }`}
                     >
-                      <div className="mb-1.5 flex items-start justify-between">
-                        <Image
-                          src={group.mascotSrc}
-                          alt=""
-                          width={96}
-                          height={96}
-                          className="h-14 w-auto object-contain"
-                        />
-                        <div
-                          className="mt-1 h-3 w-3 flex-shrink-0 rounded-full"
-                          style={{ background: group.badgeColor }}
-                        />
-                      </div>
+                      <Image
+                        src={group.mascotSrc}
+                        alt=""
+                        width={96}
+                        height={96}
+                        className="mb-1.5 h-14 w-auto object-contain"
+                      />
                       <div className="text-sm font-extrabold text-[#0F0F0F]">{group.title}</div>
                       <p className="mt-1 text-[11px] leading-[1.5] text-[#5C5C5C]">{group.desc}</p>
                     </div>
