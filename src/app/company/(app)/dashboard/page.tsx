@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Briefcase, ChevronRight, Plus, Star, Users } from "lucide-react";
+import { getDashboardSummary, getMatchCountsByPosition } from "@/lib/actions/interview";
 import { getPositionsByCompany, type PositionWithSkills } from "@/lib/actions/position";
-import { getCandidatesForPosition, getDashboardSummarySnapshot } from "@/lib/companyStore";
 import { useCompanySession } from "@/lib/companySession";
+
+type DashboardSummary = Awaited<ReturnType<typeof getDashboardSummary>>;
+const EMPTY_SUMMARY: DashboardSummary = { totalMatchesCount: 0, standoutCandidates: [] };
 
 const STATUS_META: Record<"open" | "closed", { label: string; className: string }> = {
   open: { label: "เปิดรับสมัคร", className: "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]" },
@@ -17,13 +20,21 @@ export default function CompanyDashboardPage() {
   const session = useCompanySession();
 
   const [positions, setPositions] = useState<PositionWithSkills[]>([]);
+  const [summary, setSummary] = useState<DashboardSummary>(EMPTY_SUMMARY);
+  const [matchCounts, setMatchCounts] = useState<Record<string, number>>({});
   const [isLoadingPositions, setIsLoadingPositions] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    getPositionsByCompany(session.company.id).then((fresh) => {
+    Promise.all([
+      getPositionsByCompany(session.company.id),
+      getDashboardSummary(session.company.id),
+      getMatchCountsByPosition(session.company.id),
+    ]).then(([freshPositions, freshSummary, freshMatchCounts]) => {
       if (cancelled) return;
-      setPositions(fresh);
+      setPositions(freshPositions);
+      setSummary(freshSummary);
+      setMatchCounts(freshMatchCounts);
       setIsLoadingPositions(false);
     });
     return () => {
@@ -32,11 +43,6 @@ export default function CompanyDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- session.company.id is stable for the lifetime of this page (set once by the layout)
   }, []);
 
-  // Matches/standout-candidates are still mock data (Match hasn't been
-  // migrated off localStorage yet) — a real company legitimately has zero
-  // of these until that migration happens, same as it already did before
-  // Position moved to the database.
-  const summary = getDashboardSummarySnapshot(session.company.id);
   const openPositionsCount = positions.filter((p) => p.status === "open").length;
   // Preview only — full management (create/edit/close, and the complete
   // list) lives on /company/positions via the navbar, so duplicating that
@@ -91,12 +97,12 @@ export default function CompanyDashboardPage() {
             <div className="flex flex-col gap-1.5">
               {summary.standoutCandidates.map((c) => (
                 <Link
-                  key={c.jobSeeker.id}
-                  href={`/company/candidates/${c.jobSeeker.id}`}
+                  key={c.matchId}
+                  href={`/company/positions/${c.positionId}/candidates`}
                   className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs font-semibold text-[#0F0F0F] transition-colors hover:bg-[#FAFAFA]"
                 >
                   <span>
-                    Candidate #{c.jobSeeker.id.replace(/^js_/, "").toUpperCase()} · {c.positionTitle}
+                    Candidate #{c.jobSeekerId.slice(-6).toUpperCase()} · {c.positionTitle}
                   </span>
                   <span className="font-extrabold">{c.matchScore}%</span>
                 </Link>
@@ -145,7 +151,7 @@ export default function CompanyDashboardPage() {
         <>
           <div className="flex flex-col gap-2">
             {recentPositions.map((position) => {
-              const candidateCount = getCandidatesForPosition(position.id).length;
+              const candidateCount = matchCounts[position.id] ?? 0;
               const statusKey = position.status === "open" ? "open" : "closed";
               return (
                 <Link

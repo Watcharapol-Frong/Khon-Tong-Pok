@@ -163,3 +163,51 @@ export async function getMatchesForPosition(positionId: string, companyId: strin
   });
   return { position, matches };
 }
+
+/**
+ * For the dashboard's KPI row + "ผู้สมัครช้างเผือก" widget. isStandout is
+ * the same persisted field (matchScore >= 90, set at write-time — see
+ * src/lib/matching.ts) the candidates list already reads, so this can't
+ * drift from what that page shows. jobSeekerId is included only so the
+ * caller can render the same "Candidate #XXXXXX" Blind Review label the
+ * candidates list uses — no name/email is fetched here.
+ */
+export async function getDashboardSummary(companyId: string) {
+  const matches = await prisma.match.findMany({
+    where: { position: { companyId } },
+    select: { matchScore: true },
+  });
+
+  const standoutCandidates = await prisma.match.findMany({
+    where: { position: { companyId }, isStandout: true },
+    select: {
+      id: true,
+      jobSeekerId: true,
+      positionId: true,
+      matchScore: true,
+      position: { select: { title: true } },
+    },
+    orderBy: { matchScore: "desc" },
+  });
+
+  return {
+    totalMatchesCount: matches.length,
+    standoutCandidates: standoutCandidates.map((m) => ({
+      matchId: m.id,
+      jobSeekerId: m.jobSeekerId,
+      positionId: m.positionId,
+      positionTitle: m.position.title,
+      matchScore: m.matchScore,
+    })),
+  };
+}
+
+/** positionId -> Match count, for the dashboard's "N ผู้สมัคร Match" line per recent position. */
+export async function getMatchCountsByPosition(companyId: string): Promise<Record<string, number>> {
+  const grouped = await prisma.match.groupBy({
+    by: ["positionId"],
+    where: { position: { companyId } },
+    _count: { _all: true },
+  });
+  return Object.fromEntries(grouped.map((g) => [g.positionId, g._count._all]));
+}
