@@ -1,10 +1,21 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { Clock } from "lucide-react";
+import { Clock, Sparkle, Sparkles } from "lucide-react";
 import { RadarChart } from "@/components/RadarChart";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { AXIS_CHIPS, RADAR_DATA } from "@/lib/data";
+
+// Same handful-not-a-shower sparkle treatment and pastel set as the
+// company-side hero (src/app/company/page.tsx) — kept to a few accents
+// around the mascot rather than a wash of color, per the same "pink stays
+// mascot-only" restraint already established there.
+const HERO_SPARKLES = [
+  { top: "2%", left: "6%", size: 16, color: "#F5D949", rotate: -12 },
+  { bottom: "10%", left: "-2%", size: 14, color: "#4D7CFF", rotate: 16 },
+  { top: "8%", right: "8%", size: 15, color: "#FF5CA8", rotate: -10 },
+];
 
 export function Hero() {
   const { isMobile, isTablet } = useBreakpoint();
@@ -26,8 +37,26 @@ export function Hero() {
 
       <div className="relative mx-auto flex w-full max-w-[1240px] flex-wrap items-center gap-[clamp(28px,4vw,64px)] px-[clamp(20px,4vw,48px)] pt-[clamp(48px,8vw,88px)] pb-[clamp(28px,4vw,44px)]">
         <div
-          className={`min-w-0 flex-[1_1_440px] ${centerHero ? "flex flex-col items-center text-center" : ""}`}
+          className={`relative min-w-0 flex-[1_1_440px] ${centerHero ? "flex flex-col items-center text-center" : ""}`}
         >
+          {HERO_SPARKLES.map((s, i) => (
+            <Sparkle
+              key={i}
+              className="pointer-events-none absolute hidden sm:block"
+              style={{ top: s.top, bottom: s.bottom, left: s.left, right: s.right, transform: `rotate(${s.rotate}deg)` }}
+              width={s.size}
+              height={s.size}
+              fill={s.color}
+              color={s.color}
+              strokeWidth={1}
+            />
+          ))}
+
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-[#FAFAFA] px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
+            <Sparkles className="h-3.5 w-3.5" strokeWidth={2} />
+            <span>AI-Powered Assessment</span>
+          </div>
+
           <h1 className="mb-[22px] text-[clamp(36px,6vw,60px)] leading-[1.08] font-extrabold tracking-[-0.03em]">
             พิสูจน์ศักยภาพจริง
             <br />
@@ -56,10 +85,18 @@ export function Hero() {
               หา Candidate (HR)
             </Link>
           </div>
-          <div className="flex items-center gap-1.5 text-[13px] text-[#8A8A8A]">
+          <div className="mb-4 flex items-center gap-1.5 text-[13px] text-[#8A8A8A]">
             <Clock className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={2} />
             ใช้เวลาไม่ถึง 10 นาที · ไม่ต้องมีประสบการณ์ก็เล่นได้
           </div>
+
+          <Image
+            src="/mascot/mascot-hero-candidate.png"
+            alt=""
+            width={220}
+            height={220}
+            className={`h-auto w-[160px] object-contain sm:w-[190px] ${centerHero ? "" : "-ml-2"}`}
+          />
         </div>
 
         <div className="relative flex min-w-[280px] flex-[1_1_320px] justify-center">
@@ -67,7 +104,22 @@ export function Hero() {
             className="w-full max-w-[440px] rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[clamp(24px,3vw,36px)]"
             style={{ position: "relative" }}
           >
-            <div className="absolute top-[-14px] left-[-14px] -z-10 h-14 w-14 bg-[#3BF55C]" />
+            <Sparkle
+              className="pointer-events-none absolute top-[-16px] left-[-14px] hidden sm:block"
+              width={22}
+              height={22}
+              fill="#3BF55C"
+              color="#3BF55C"
+              strokeWidth={1}
+            />
+            <Sparkle
+              className="pointer-events-none absolute right-[-10px] bottom-[-12px] hidden rotate-12 sm:block"
+              width={16}
+              height={16}
+              fill="#B14DFF"
+              color="#B14DFF"
+              strokeWidth={1}
+            />
             <div className="mb-[6px] text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
               ตัวอย่างผลประเมิน
             </div>
