@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft, Check, Plus, Sparkle, Trash2 } from "lucide-react";
 import { Footer } from "@/components/Footer";
@@ -36,9 +36,11 @@ const JOB_TYPE_OPTIONS = ["งานประจำ", "งานพาร์ท�
 const EDUCATION_LEVELS = ["มัธยมศึกษา", "ปวช.", "ปวส.", "ปริญญาตรี", "ปริญญาโท", "ปริญญาเอก"];
 const LANGUAGE_LEVELS = ["ดีมาก", "ดี", "พอใช้", "เล็กน้อย"];
 
-// All 77 provinces — a <datalist> lets these fields stay plain text inputs
-// (so someone can still type freely) while offering the full list to pick
-// from, rather than forcing either a free-text-only or select-only field.
+// All 77 provinces — ProvinceInput below lets these fields stay free-typeable
+// while offering the full list to pick from, rather than forcing either a
+// free-text-only or select-only field. A native <input list>/<datalist> did
+// this too, but its popup is unstyleable browser chrome (inconsistent
+// sizing versus sibling inputs, no way to match the page's own theme).
 const THAI_PROVINCES = [
   "กรุงเทพมหานคร", "กระบี่", "กาญจนบุรี", "กาฬสินธุ์", "กำแพงเพชร", "ขอนแก่น", "จันทบุรี", "ฉะเชิงเทรา",
   "ชลบุรี", "ชัยนาท", "ชัยภูมิ", "ชุมพร", "เชียงราย", "เชียงใหม่", "ตรัง", "ตราด", "ตาก", "นครนายก",
@@ -71,6 +73,65 @@ function toDateInputValue(date: Date | null | undefined): string {
 const inputClass =
   "w-full rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3.5 py-2.5 text-xs font-semibold text-[#0F0F0F] outline-none transition-border focus:border-[#0F0F0F]";
 const labelClass = "mb-1.5 block text-xs font-bold text-[#0F0F0F]";
+
+/**
+ * Free-type-or-pick-from-77-provinces field — same inputClass as every
+ * sibling field (so its box is identical, unlike the native <input
+ * list>/<datalist> it replaces) and the same dropdown-panel styling as
+ * SkillAutocomplete (src/components/SkillAutocomplete.tsx) so it reads as
+ * this page's own theme instead of unstyleable browser chrome.
+ */
+function ProvinceInput({ value, onChange }: { value: string; onChange: (next: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [isOpen]);
+
+  const trimmed = value.trim().toLowerCase();
+  const matches = trimmed ? THAI_PROVINCES.filter((p) => p.toLowerCase().includes(trimmed)).slice(0, 8) : [];
+
+  return (
+    <div className="relative" ref={rootRef}>
+      <input
+        className={inputClass}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+      />
+      {isOpen && trimmed && (
+        <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-40 max-h-[240px] overflow-y-auto rounded-[10px] border border-[rgba(15,15,15,0.12)] bg-white p-1.5 shadow-[0_8px_20px_rgba(15,15,15,0.12)]">
+          {matches.length === 0 ? (
+            <div className="px-2 py-2 text-[11px] text-[#8A8A8A]">ไม่พบจังหวัดที่ตรงกับคำค้นหา</div>
+          ) : (
+            matches.map((p) => (
+              <button
+                type="button"
+                key={p}
+                onClick={() => {
+                  onChange(p);
+                  setIsOpen(false);
+                }}
+                className="block w-full cursor-pointer rounded-lg px-2 py-2 text-left text-xs hover:bg-[#F5F5F5]"
+              >
+                {p}
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Same card shell as AuthCard (login/register) — this multi-step form is
 // part of the same candidate flow. Sparkle positions/opacity and the
@@ -477,11 +538,9 @@ function DecoderManualContent() {
                     </div>
                     <div className="sm:col-span-2">
                       <label className={labelClass}>จังหวัด</label>
-                      <input
-                        className={inputClass}
-                        list="thai-provinces"
+                      <ProvinceInput
                         value={step1.province ?? ""}
-                        onChange={(e) => updateStep1("province", e.target.value)}
+                        onChange={(v) => updateStep1("province", v)}
                       />
                     </div>
                   </div>
@@ -536,18 +595,11 @@ function DecoderManualContent() {
                     </div>
                     <div>
                       <label className={labelClass}>จังหวัดที่สนใจทำงาน</label>
-                      <input
-                        className={inputClass}
-                        list="thai-provinces"
+                      <ProvinceInput
                         value={step1.desiredProvince ?? ""}
-                        onChange={(e) => updateStep1("desiredProvince", e.target.value)}
+                        onChange={(v) => updateStep1("desiredProvince", v)}
                       />
                     </div>
-                    <datalist id="thai-provinces">
-                      {THAI_PROVINCES.map((p) => (
-                        <option key={p} value={p} />
-                      ))}
-                    </datalist>
                     <div className="sm:col-span-2">
                       <label className={labelClass}>วันที่พร้อมเริ่มงาน</label>
                       <input
