@@ -1,11 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Clock, GraduationCap, Rocket, Shuffle, TrendingUp } from "lucide-react";
+import { Clock, GraduationCap, Rocket, Shuffle, Sparkle, TrendingUp, Users } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+
+// Same handful-not-a-shower sparkle treatment as the homepage hero and the
+// company-side hero — kept consistent site-wide instead of this page's old
+// one-off flat solid-color square accent.
+const CARD_SPARKLES = [
+  { top: "-14px", left: "-12px", size: 20, color: "#3BF55C", rotate: -12 },
+  { bottom: "-10px", right: "-8px", size: 15, color: "#B14DFF", rotate: 16 },
+];
 
 const ROLE_GROUPS = [
   {
@@ -62,13 +71,31 @@ export default function OnboardingPage() {
         <div className="relative w-full max-w-[780px]">
           {/* Card Container */}
           <div className="relative rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[clamp(24px,5vw,44px)] shadow-[0_20px_50px_rgba(15,15,15,0.05)]">
-            <div className="absolute -top-3 -left-3 -z-10 h-12 w-12 rounded-2xl bg-[#3BF55C]" />
+            {CARD_SPARKLES.map((s, i) => (
+              <Sparkle
+                key={i}
+                className="pointer-events-none absolute hidden sm:block"
+                style={{ top: s.top, bottom: s.bottom, left: s.left, right: s.right, transform: `rotate(${s.rotate}deg)` }}
+                width={s.size}
+                height={s.size}
+                fill={s.color}
+                color={s.color}
+                strokeWidth={1}
+              />
+            ))}
 
             {/* Header */}
             <div className="mb-8 text-center">
-              <div className="mb-2.5 inline-flex items-center gap-2 rounded-full border border-[rgba(15,15,15,0.08)] bg-white px-3.5 py-1 text-xs font-bold text-[#5C5C5C]">
-                <span className="h-2 w-2 rounded-full bg-[#3BF55C]" />
-                Role Selection (สถานะปัจจุบันของคุณ)
+              <Image
+                src="/mascot/mascot-start.png"
+                alt=""
+                width={100}
+                height={106}
+                className="mx-auto mb-3 h-[68px] w-auto object-contain"
+              />
+              <div className="mb-2.5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
+                <Users className="h-3.5 w-3.5" strokeWidth={2} />
+                <span>Role Selection</span>
               </div>
               <h1 className="text-[clamp(24px,4vw,32px)] font-extrabold tracking-[-0.03em]">
                 เลือกสถานะผู้สมัครของคุณ
