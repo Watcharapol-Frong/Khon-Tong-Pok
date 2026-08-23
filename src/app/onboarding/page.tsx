@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Clock, GraduationCap, Rocket, Shuffle, Sparkle, TrendingUp, Users } from "lucide-react";
+import { Clock, Sparkle, Users } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
@@ -21,28 +21,28 @@ const ROLE_GROUPS = [
     id: "student",
     title: "นักศึกษา / เด็กจบใหม่",
     desc: "เพิ่งจบการศึกษา หรือกำลังศึกษาอยู่ ไม่มีประสบการณ์ทำงานประจำ เน้นวัดศักยภาพและ Soft Skills แฝง",
-    icon: GraduationCap,
+    mascotSrc: "/mascot/mascot-role-fresh-grad.png",
     badgeColor: "#3BF55C",
   },
   {
     id: "early_career",
     title: "Early Career (ประสบการณ์ 1 - 3 ปี)",
     desc: "เริ่มทำงานแล้ว กำลังค้นหาตำแหน่งงานที่ตอบโจทย์ตัวตนจริงและความก้าวหน้าในสายอาชีพ",
-    icon: Rocket,
+    mascotSrc: "/mascot/mascot-role-early-career.png",
     badgeColor: "#4D7CFF",
   },
   {
     id: "career_switcher",
     title: "Career Switcher (ย้ายสายงาน)",
     desc: "ต้องการเปลี่ยนสายงานใหม่ โดยใช้ทักษะที่ถ่ายทอดได้ (Transferable Skills) และการเรียนรู้ไวเป็นหลัก",
-    icon: Shuffle,
+    mascotSrc: "/mascot/mascot-role-career-switcher.png",
     badgeColor: "#FF6E5C",
   },
   {
     id: "upskiller",
     title: "Upskiller (พัฒนาทักษะเพิ่มเติม)",
     desc: "มีประสบการณ์สูง ต้องการประเมินศักยภาพรอบด้านและอัปเดตโปรไฟล์ทักษะยุคใหม่",
-    icon: TrendingUp,
+    mascotSrc: "/mascot/mascot-role-upskiller.png",
     badgeColor: "#F5D949",
   },
 ];
@@ -120,10 +120,16 @@ export default function OnboardingPage() {
                           : "border-[rgba(15,15,15,0.1)] bg-white opacity-75 hover:border-[rgba(15,15,15,0.3)] hover:opacity-100"
                       }`}
                     >
-                      <div className="mb-2.5 flex items-center justify-between">
-                        <group.icon className="h-6 w-6" style={{ color: group.badgeColor }} strokeWidth={1.75} />
+                      <div className="mb-1.5 flex items-start justify-between">
+                        <Image
+                          src={group.mascotSrc}
+                          alt=""
+                          width={96}
+                          height={96}
+                          className="h-14 w-auto object-contain"
+                        />
                         <div
-                          className="h-3 w-3 rounded-full"
+                          className="mt-1 h-3 w-3 flex-shrink-0 rounded-full"
                           style={{ background: group.badgeColor }}
                         />
                       </div>
