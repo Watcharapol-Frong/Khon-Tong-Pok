@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft, Check, Clock, Star, X } from "lucide-react";
 import { InterviewInviteModal } from "@/components/InterviewInviteModal";
 import { getMatchesForPosition, sendInterviewInvite } from "@/lib/actions/interview";
@@ -44,6 +44,7 @@ function topSoftSkill(
 }
 
 export default function PositionCandidatesPage() {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
   const positionId = params.id;
   const session = useCompanySession();
@@ -250,7 +251,15 @@ export default function PositionCandidatesPage() {
               const InterviewStatusIcon = slot ? INTERVIEW_STATUS_META[slot.status as keyof typeof INTERVIEW_STATUS_META].icon : null;
 
               return (
-                <div key={m.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#FAFAFA] p-4">
+                // A plain div (not <Link>) because the "นัดสัมภาษณ์" button
+                // below needs to be independently clickable — nesting a
+                // <button> inside an <a> is invalid HTML and would also
+                // trigger the link's navigation on every button click.
+                <div
+                  key={m.id}
+                  onClick={() => router.push(`/company/candidates/${m.jobSeekerId}`)}
+                  className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#FAFAFA] p-4 transition-colors hover:bg-[#F0F0F0] cursor-pointer"
+                >
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F0F0F0]">
                     <Image
                       src="/mascot/mascot-blind-candidate.png"
@@ -328,7 +337,10 @@ export default function PositionCandidatesPage() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => setInviteTargetId(m.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInviteTargetId(m.id);
+                        }}
                         className="rounded-full bg-[#0F0F0F] px-3 py-1.5 text-[10px] font-bold text-white transition-opacity hover:opacity-90"
                       >
                         นัดสัมภาษณ์

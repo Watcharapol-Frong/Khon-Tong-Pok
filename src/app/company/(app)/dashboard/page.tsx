@@ -98,7 +98,7 @@ export default function CompanyDashboardPage() {
               {summary.standoutCandidates.map((c) => (
                 <Link
                   key={c.matchId}
-                  href={`/company/positions/${c.positionId}/candidates`}
+                  href={`/company/candidates/${c.jobSeekerId}`}
                   className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs font-semibold text-[#0F0F0F] transition-colors hover:bg-[#FAFAFA]"
                 >
                   <span>

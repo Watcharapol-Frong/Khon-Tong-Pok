@@ -211,3 +211,38 @@ export async function getMatchCountsByPosition(companyId: string): Promise<Recor
   });
   return Object.fromEntries(grouped.map((g) => [g.positionId, g._count._all]));
 }
+
+/**
+ * For /company/candidates/[id] — everything the Blind Review report needs
+ * for one candidate, scoped to this HR's own company. Returns null if this
+ * jobSeeker has no Match with any of this company's positions (wrong
+ * company, or a stale/tampered id) — not-found rather than forbidden, same
+ * reasoning as elsewhere in this file.
+ *
+ * nameRevealed mirrors the mock's exact rule: true once *any* of this
+ * candidate's matches with this company reaches "contacted" — a candidate
+ * matched to multiple positions at the same company isn't still "blind" to
+ * that HR team just because one specific match hasn't converted yet.
+ */
+export async function getCandidateReport(jobSeekerId: string, companyId: string) {
+  const jobSeeker = await prisma.jobSeeker.findUnique({
+    where: { id: jobSeekerId },
+    include: {
+      profile: { include: { workExperience: true } },
+      chatVerifications: true,
+      gameResult: true,
+      aiSummary: true,
+      matches: {
+        where: { position: { companyId } },
+        include: { position: true, interviewSlot: true },
+      },
+    },
+  });
+  if (!jobSeeker || jobSeeker.matches.length === 0) return null;
+
+  return {
+    jobSeeker,
+    nameRevealed: jobSeeker.matches.some((m) => m.status === "contacted"),
+    isStandout: jobSeeker.matches.some((m) => m.isStandout),
+  };
+}
