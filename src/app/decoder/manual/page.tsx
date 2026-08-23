@@ -70,8 +70,15 @@ function toDateInputValue(date: Date | null | undefined): string {
   return new Date(date).toISOString().slice(0, 10);
 }
 
+// h-[38px] pins every field to the same box regardless of element type —
+// <select> renders ~5px taller than <input> by default even with identical
+// padding/border classes (native dropdown-arrow chrome), so without a fixed
+// height, fields sitting side by side in the same grid row visibly mismatch.
 const inputClass =
-  "w-full rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3.5 py-2.5 text-xs font-semibold text-[#0F0F0F] outline-none transition-border focus:border-[#0F0F0F]";
+  "h-[38px] w-full rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3.5 py-2.5 text-xs font-semibold text-[#0F0F0F] outline-none transition-border focus:border-[#0F0F0F]";
+// Same base styling, but without the fixed single-line height — the one
+// multi-line field (work responsibilities) needs to actually grow with rows.
+const textareaClass = inputClass.replace("h-[38px] ", "");
 const labelClass = "mb-1.5 block text-xs font-bold text-[#0F0F0F]";
 
 /**
@@ -755,7 +762,7 @@ function DecoderManualContent() {
                         <label className={labelClass}>หน้าที่ความรับผิดชอบ</label>
                         <textarea
                           rows={2}
-                          className={`${inputClass} resize-none`}
+                          className={`${textareaClass} resize-none`}
                           value={row.responsibilities ?? ""}
                           onChange={(e) => updateWorkRow(i, { responsibilities: e.target.value })}
                         />
