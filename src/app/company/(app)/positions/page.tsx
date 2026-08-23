@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, Plus } from "lucide-react";
 import onetSkills from "@/data/onet_skills_dictionary_full.json";
+import { getMatchCountsByPosition } from "@/lib/actions/interview";
 import {
   closePosition,
   createPosition,
@@ -17,7 +18,6 @@ import {
 import { SkillAutocomplete } from "@/components/SkillAutocomplete";
 import { useCompanySession } from "@/lib/companySession";
 import { SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
-import { getCandidatesForPosition } from "@/lib/companyStore";
 import type { SoftSkillScores } from "@/lib/types";
 
 type PositionFormState = {
@@ -70,6 +70,7 @@ function CompanyPositionsContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [positions, setPositions] = useState<PositionWithSkills[]>([]);
+  const [matchCounts, setMatchCounts] = useState<Record<string, number>>({});
   const [isLoadingPositions, setIsLoadingPositions] = useState(true);
   // Which position's "ปิดรับสมัคร" button is armed for confirmation — only
   // one at a time. Second click on the same position actually closes it;
@@ -78,17 +79,24 @@ function CompanyPositionsContent() {
   const [closeArmedId, setCloseArmedId] = useState<string | null>(null);
 
   const refreshPositions = async () => {
-    const fresh = await getPositionsByCompany(session.company.id);
+    const [fresh, freshMatchCounts] = await Promise.all([
+      getPositionsByCompany(session.company.id),
+      getMatchCountsByPosition(session.company.id),
+    ]);
     setPositions(fresh);
+    setMatchCounts(freshMatchCounts);
   };
 
   useEffect(() => {
     let cancelled = false;
-    getPositionsByCompany(session.company.id).then((fresh) => {
-      if (cancelled) return;
-      setPositions(fresh);
-      setIsLoadingPositions(false);
-    });
+    Promise.all([getPositionsByCompany(session.company.id), getMatchCountsByPosition(session.company.id)]).then(
+      ([fresh, freshMatchCounts]) => {
+        if (cancelled) return;
+        setPositions(fresh);
+        setMatchCounts(freshMatchCounts);
+        setIsLoadingPositions(false);
+      }
+    );
     return () => {
       cancelled = true;
     };
@@ -319,7 +327,7 @@ function CompanyPositionsContent() {
           <div className="flex flex-col gap-3">
             {positions.map((position) => {
               const isOpen = position.status === "open";
-              const candidateCount = getCandidatesForPosition(position.id).length;
+              const candidateCount = matchCounts[position.id] ?? 0;
               const softSkillEntries = SOFT_SKILL_AXIS_ORDER.filter(
                 (key) => position.requiredSoftSkills[key] !== undefined
               );
