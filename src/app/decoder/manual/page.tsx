@@ -561,21 +561,29 @@ function DecoderManualContent() {
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>เงินเดือนที่คาดหวัง (ต่ำสุด)</label>
+                      <label className={labelClass}>เงินเดือนที่คาดหวัง (ต่ำสุด) · บาท/เดือน</label>
                       <input
                         type="number"
+                        min={0}
                         className={inputClass}
                         value={step1.desiredSalaryMin ?? ""}
-                        onChange={(e) => updateStep1("desiredSalaryMin", e.target.value ? Number(e.target.value) : undefined)}
+                        onChange={(e) => {
+                          const n = e.target.value ? Number(e.target.value) : undefined;
+                          updateStep1("desiredSalaryMin", n !== undefined ? Math.max(0, n) : undefined);
+                        }}
                       />
                     </div>
                     <div>
-                      <label className={labelClass}>เงินเดือนที่คาดหวัง (สูงสุด)</label>
+                      <label className={labelClass}>เงินเดือนที่คาดหวัง (สูงสุด) · บาท/เดือน</label>
                       <input
                         type="number"
+                        min={0}
                         className={inputClass}
                         value={step1.desiredSalaryMax ?? ""}
-                        onChange={(e) => updateStep1("desiredSalaryMax", e.target.value ? Number(e.target.value) : undefined)}
+                        onChange={(e) => {
+                          const n = e.target.value ? Number(e.target.value) : undefined;
+                          updateStep1("desiredSalaryMax", n !== undefined ? Math.max(0, n) : undefined);
+                        }}
                       />
                     </div>
                     <div>
