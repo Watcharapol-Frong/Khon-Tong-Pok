@@ -36,6 +36,22 @@ const JOB_TYPE_OPTIONS = ["งานประจำ", "งานพาร์ท�
 const EDUCATION_LEVELS = ["มัธยมศึกษา", "ปวช.", "ปวส.", "ปริญญาตรี", "ปริญญาโท", "ปริญญาเอก"];
 const LANGUAGE_LEVELS = ["ดีมาก", "ดี", "พอใช้", "เล็กน้อย"];
 
+// All 77 provinces — a <datalist> lets these fields stay plain text inputs
+// (so someone can still type freely) while offering the full list to pick
+// from, rather than forcing either a free-text-only or select-only field.
+const THAI_PROVINCES = [
+  "กรุงเทพมหานคร", "กระบี่", "กาญจนบุรี", "กาฬสินธุ์", "กำแพงเพชร", "ขอนแก่น", "จันทบุรี", "ฉะเชิงเทรา",
+  "ชลบุรี", "ชัยนาท", "ชัยภูมิ", "ชุมพร", "เชียงราย", "เชียงใหม่", "ตรัง", "ตราด", "ตาก", "นครนายก",
+  "นครปฐม", "นครพนม", "นครราชสีมา", "นครศรีธรรมราช", "นครสวรรค์", "นนทบุรี", "นราธิวาส", "น่าน",
+  "บึงกาฬ", "บุรีรัมย์", "ปทุมธานี", "ประจวบคีรีขันธ์", "ปราจีนบุรี", "ปัตตานี", "พระนครศรีอยุธยา",
+  "พังงา", "พัทลุง", "พิจิตร", "พิษณุโลก", "เพชรบุรี", "เพชรบูรณ์", "แพร่", "พะเยา", "ภูเก็ต",
+  "มหาสารคาม", "มุกดาหาร", "แม่ฮ่องสอน", "ยโสธร", "ยะลา", "ร้อยเอ็ด", "ระนอง", "ระยอง", "ราชบุรี",
+  "ลพบุรี", "ลำปาง", "ลำพูน", "เลย", "ศรีสะเกษ", "สกลนคร", "สงขลา", "สตูล", "สมุทรปราการ",
+  "สมุทรสงคราม", "สมุทรสาคร", "สระแก้ว", "สระบุรี", "สิงห์บุรี", "สุโขทัย", "สุพรรณบุรี", "สุราษฎร์ธานี",
+  "สุรินทร์", "หนองคาย", "หนองบัวลำภู", "อ่างทอง", "อำนาจเจริญ", "อุดรธานี", "อุตรดิตถ์", "อุทัยธานี",
+  "อุบลราชธานี",
+];
+
 function emptyEducation(): EducationInput {
   return { level: "", institution: "", fieldOfStudy: "", gpa: undefined, startYear: undefined, endYear: undefined };
 }
@@ -463,6 +479,7 @@ function DecoderManualContent() {
                       <label className={labelClass}>จังหวัด</label>
                       <input
                         className={inputClass}
+                        list="thai-provinces"
                         value={step1.province ?? ""}
                         onChange={(e) => updateStep1("province", e.target.value)}
                       />
@@ -521,10 +538,16 @@ function DecoderManualContent() {
                       <label className={labelClass}>จังหวัดที่สนใจทำงาน</label>
                       <input
                         className={inputClass}
+                        list="thai-provinces"
                         value={step1.desiredProvince ?? ""}
                         onChange={(e) => updateStep1("desiredProvince", e.target.value)}
                       />
                     </div>
+                    <datalist id="thai-provinces">
+                      {THAI_PROVINCES.map((p) => (
+                        <option key={p} value={p} />
+                      ))}
+                    </datalist>
                     <div className="sm:col-span-2">
                       <label className={labelClass}>วันที่พร้อมเริ่มงาน</label>
                       <input
