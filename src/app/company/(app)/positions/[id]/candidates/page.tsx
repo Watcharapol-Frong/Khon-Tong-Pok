@@ -1,88 +1,57 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Check, Clock, Star, X } from "lucide-react";
+import { useParams } from "next/navigation";
+import { AlertCircle, ArrowLeft, Check, Clock, Star, X } from "lucide-react";
 import { InterviewInviteModal } from "@/components/InterviewInviteModal";
-import { getPosition, type PositionWithSkills } from "@/lib/actions/position";
-import {
-  createInterviewInvite,
-  ensureMatchesForPosition,
-  getCandidatesSnapshot,
-  getInterviewSlotSnapshot,
-  subscribeToStore,
-} from "@/lib/companyStore";
+import { getMatchesForPosition, sendInterviewInvite } from "@/lib/actions/interview";
 import { useCompanySession } from "@/lib/companySession";
-import { SOFT_SKILL_AXIS_META } from "@/lib/data";
-import type { InterviewSlotStatus, SoftSkillScores } from "@/lib/types";
+import { SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
+import type { PositionSoftSkillRequirements, SoftSkillScores } from "@/lib/types";
 
-// getServerSnapshot must return a referentially stable value across calls —
-// a fresh `[]` literal on every call trips React's "should be cached to
-// avoid an infinite loop" warning, unlike primitives like `null` above.
-const EMPTY_CANDIDATES: never[] = [];
-const getServerEmptyCandidates = () => EMPTY_CANDIDATES;
-
+type MatchesData = Awaited<ReturnType<typeof getMatchesForPosition>>;
+type MatchItem = NonNullable<MatchesData>["matches"][number];
 type SortOrder = "score-desc" | "score-asc";
 
 const PAGE_SIZE = 20;
+const EMPTY_MATCHES: MatchItem[] = [];
 
-// Same status → color/icon mapping as /company/interviews — "declined" must
-// never render green here just because the candidate was contacted; the
-// color has to track the interview outcome, not contact status.
-const INTERVIEW_STATUS_META: Record<
-  InterviewSlotStatus,
-  { label: string; icon: typeof Clock; className: string }
-> = {
+// Same status → color/icon mapping as /company/interviews.
+const INTERVIEW_STATUS_META = {
   pending: { label: "รอผู้สมัครยืนยัน", icon: Clock, className: "bg-[rgba(77,124,255,0.12)] text-[#4D7CFF]" },
   confirmed: { label: "ยืนยันนัดแล้ว", icon: Check, className: "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]" },
   declined: { label: "ปฏิเสธคำเชิญ", icon: X, className: "bg-[#F0F0F0] text-[#8A8A8A]" },
-};
+} as const;
+
+/** Short, stable, non-obviously-sequential label for a Blind Review card — same idea as the mock's "Candidate #XXXX", just off a real cuid instead of a mock "js_..." id. */
+function blindLabel(jobSeekerId: string): string {
+  return `Candidate #${jobSeekerId.slice(-6).toUpperCase()}`;
+}
+
+/** Highest-scoring axis on a candidate's GameResult, or null if they haven't played the games yet — never fabricated. */
+function topSoftSkill(
+  gameResult: MatchItem["jobSeeker"]["gameResult"]
+): { axis: keyof SoftSkillScores; value: number } | null {
+  if (!gameResult) return null;
+  let best: { axis: keyof SoftSkillScores; value: number } | null = null;
+  for (const axis of SOFT_SKILL_AXIS_ORDER) {
+    const value = gameResult[axis];
+    if (!best || value > best.value) best = { axis, value };
+  }
+  return best;
+}
 
 export default function PositionCandidatesPage() {
-  const router = useRouter();
   const params = useParams<{ id: string }>();
   const positionId = params.id;
-
   const session = useCompanySession();
-  const [position, setPosition] = useState<PositionWithSkills | null>(null);
-  const [isLoadingPosition, setIsLoadingPosition] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-    // Resets loading back to true on a genuine positionId change (not just
-    // mount) — the set-state-in-effect rule assumes this should be
-    // derivable from props/state instead, but there's no such derivation
-    // for "a new async fetch just started."
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsLoadingPosition(true);
-    getPosition(positionId).then((fetched) => {
-      if (cancelled) return;
-      setPosition(fetched);
-      setIsLoadingPosition(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [positionId]);
-
-  // Backfills any missing Match records for this position — a mutation, so
-  // it runs from an effect rather than inline in a getSnapshot-wrapped read.
-  // Position now lives in Postgres while Match is still the mock store, so
-  // this is currently a no-op for any real position (it looks the id up in
-  // the mock store's own positions array, which no longer has anything in
-  // it) — matches the same "Match hasn't been migrated yet" gap already
-  // accepted on the dashboard/company-migration side.
-  useEffect(() => {
-    ensureMatchesForPosition(positionId);
-  }, [positionId]);
-
-  const candidates = useSyncExternalStore(
-    subscribeToStore,
-    () => getCandidatesSnapshot(positionId),
-    getServerEmptyCandidates
-  );
+  const [data, setData] = useState<MatchesData>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [inviteTargetId, setInviteTargetId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const [sortOrder, setSortOrder] = useState<SortOrder>("score-desc");
   const [skillFilter, setSkillFilter] = useState("");
@@ -90,38 +59,64 @@ export default function PositionCandidatesPage() {
   // everyone). A system-picked cutoff would silently deny candidates a
   // chance without HR ever deciding to; this only filters when HR drags it.
   const [minScore, setMinScore] = useState(0);
-  const [inviteTargetId, setInviteTargetId] = useState<string | null>(null);
   // How many of the filtered/sorted results are currently shown — resets to
   // one page whenever a filter changes below, so page 3 of an old filter
   // doesn't linger as the new, much shorter list's "page 3".
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const handleSendInvite = (proposedTimes: string[]) => {
-    if (!inviteTargetId) return;
-    createInterviewInvite(positionId, inviteTargetId, proposedTimes);
-    setInviteTargetId(null);
+  const refresh = async () => {
+    const fresh = await getMatchesForPosition(positionId, session.company.id);
+    setData(fresh);
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    getMatchesForPosition(positionId, session.company.id).then((fresh) => {
+      if (cancelled) return;
+      setData(fresh);
+      setIsLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- positionId/session.company.id stable for this page's lifetime
+  }, []);
+
+  // Stable reference (not a fresh `data?.matches ?? []` literal every
+  // render) so this can sit in the useMemo dependency array below without
+  // recomputing on every render whenever data is still null.
+  const matches = data?.matches ?? EMPTY_MATCHES;
+
   const filteredCandidates = useMemo(() => {
-    let list = candidates;
+    let list = matches;
     if (skillFilter.trim()) {
       const needle = skillFilter.trim().toLowerCase();
-      list = list.filter((c) =>
-        c.jobSeeker.hardSkills.some((h) => h.skill.toLowerCase().includes(needle))
-      );
+      list = list.filter((m) => m.jobSeeker.profile?.computerSkills.some((s) => s.toLowerCase().includes(needle)));
     }
     if (minScore > 0) {
-      list = list.filter((c) => c.matchScore >= minScore);
+      list = list.filter((m) => m.matchScore >= minScore);
     }
     list = [...list].sort((a, b) =>
       sortOrder === "score-desc" ? b.matchScore - a.matchScore : a.matchScore - b.matchScore
     );
     return list;
-  }, [candidates, sortOrder, skillFilter, minScore]);
+  }, [matches, sortOrder, skillFilter, minScore]);
 
   const visibleCandidates = filteredCandidates.slice(0, visibleCount);
 
-  if (isLoadingPosition) {
+  const handleSendInvite = async (proposedTimes: string[]) => {
+    if (!inviteTargetId) return;
+    setErrorMsg("");
+    const result = await sendInterviewInvite(inviteTargetId, session.company.id, proposedTimes);
+    setInviteTargetId(null);
+    if ("error" in result) {
+      setErrorMsg(result.error);
+      return;
+    }
+    await refresh();
+  };
+
+  if (isLoading) {
     return (
       <div className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-6 md:px-10">
         <div className="py-16 text-center text-sm text-[#8A8A8A]">กำลังโหลด...</div>
@@ -129,16 +124,12 @@ export default function PositionCandidatesPage() {
     );
   }
 
-  // Guard: only this position's own company may view its candidates.
-  if (!position || position.companyId !== session.company.id) {
+  if (!data) {
     return (
       <div className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-6 md:px-10">
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-sm text-[#8A8A8A]">
           <p>ไม่พบตำแหน่งงานนี้ หรือคุณไม่มีสิทธิ์เข้าถึง</p>
-          <Link
-            href="/company/positions"
-            className="inline-flex items-center gap-1 font-bold text-[#0F0F0F] underline"
-          >
+          <Link href="/company/positions" className="inline-flex items-center gap-1 font-bold text-[#0F0F0F] underline">
             <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
             กลับไปหน้าจัดการตำแหน่งงาน
           </Link>
@@ -147,9 +138,13 @@ export default function PositionCandidatesPage() {
     );
   }
 
+  const { position } = data;
+  const requiredSoftSkills = position.requiredSoftSkills as PositionSoftSkillRequirements;
   const softSkillEntries = (
-    Object.entries(position.requiredSoftSkills) as [keyof SoftSkillScores, number | undefined][]
+    Object.entries(requiredSoftSkills) as [keyof SoftSkillScores, number | undefined][]
   ).filter((entry): entry is [keyof SoftSkillScores, number] => entry[1] !== undefined);
+
+  const inviteTarget = matches.find((m) => m.id === inviteTargetId);
 
   return (
     <>
@@ -163,16 +158,11 @@ export default function PositionCandidatesPage() {
         </Link>
 
         <div className="mt-2 mb-6 rounded-2xl bg-[#FAFAFA] p-4">
-          <h1 className="text-[clamp(20px,3.5vw,26px)] font-extrabold tracking-[-0.02em]">
-            {position.title}
-          </h1>
+          <h1 className="text-[clamp(20px,3.5vw,26px)] font-extrabold tracking-[-0.02em]">{position.title}</h1>
           {position.requiredHardSkills.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {position.requiredHardSkills.map((skill) => (
-                <span
-                  key={skill}
-                  className="rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-[#5A5A5A]"
-                >
+                <span key={skill} className="rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-[#5A5A5A]">
                   {skill}
                 </span>
               ))}
@@ -191,6 +181,13 @@ export default function PositionCandidatesPage() {
             </div>
           )}
         </div>
+
+        {errorMsg && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-600">
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" strokeWidth={2} />
+            <span>{errorMsg}</span>
+          </div>
+        )}
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <input
@@ -237,8 +234,7 @@ export default function PositionCandidatesPage() {
 
         <p className="mb-3 text-xs text-[#8A8A8A]">
           ผู้สมัคร Match {filteredCandidates.length} คน
-          {visibleCandidates.length < filteredCandidates.length &&
-            ` (กำลังแสดง ${visibleCandidates.length} คน)`}
+          {visibleCandidates.length < filteredCandidates.length && ` (กำลังแสดง ${visibleCandidates.length} คน)`}
         </p>
 
         {visibleCandidates.length === 0 ? (
@@ -247,28 +243,14 @@ export default function PositionCandidatesPage() {
           </div>
         ) : (
           <div className="flex flex-col gap-2.5">
-            {visibleCandidates.map((c) => {
-              const verifiedSkills = c.jobSeeker.hardSkills.filter((h) => h.status === "verified");
-              const topSoftSkill = (
-                Object.entries(c.jobSeeker.softSkills) as [keyof SoftSkillScores, number | undefined][]
-              )
-                .filter((entry): entry is [keyof SoftSkillScores, number] => entry[1] !== undefined)
-                .sort((a, b) => b[1] - a[1])[0];
-              const interviewSlot = getInterviewSlotSnapshot(positionId, c.jobSeekerId);
-              const InterviewStatusIcon = interviewSlot
-                ? INTERVIEW_STATUS_META[interviewSlot.status].icon
-                : null;
+            {visibleCandidates.map((m) => {
+              const verifiedSkills = m.jobSeeker.chatVerifications.filter((v) => v.status === "verified");
+              const top = topSoftSkill(m.jobSeeker.gameResult);
+              const slot = m.interviewSlot;
+              const InterviewStatusIcon = slot ? INTERVIEW_STATUS_META[slot.status as keyof typeof INTERVIEW_STATUS_META].icon : null;
 
               return (
-                // A plain div (not <Link>) because the "นัดสัมภาษณ์" button
-                // below needs to be independently clickable — nesting a
-                // <button> inside an <a> is invalid HTML and would also
-                // trigger the link's navigation on every button click.
-                <div
-                  key={c.jobSeekerId}
-                  onClick={() => router.push(`/company/candidates/${c.jobSeekerId}`)}
-                  className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#FAFAFA] p-4 transition-colors hover:bg-[#F0F0F0] cursor-pointer"
-                >
+                <div key={m.id} className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#FAFAFA] p-4">
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F0F0F0]">
                     <Image
                       src="/mascot/mascot-blind-candidate.png"
@@ -281,10 +263,8 @@ export default function PositionCandidatesPage() {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-extrabold text-[#0F0F0F]">
-                        Candidate #{c.jobSeekerId.replace(/^js_/, "").toUpperCase()}
-                      </span>
-                      {c.isStandout && (
+                      <span className="text-xs font-extrabold text-[#0F0F0F]">{blindLabel(m.jobSeekerId)}</span>
+                      {m.isStandout && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(245,217,73,0.25)] px-2.5 py-0.5 text-[10px] font-bold text-[#856700]">
                           <Star className="h-2.5 w-2.5 fill-current" strokeWidth={1.75} />
                           ช้างเผือก
@@ -294,66 +274,61 @@ export default function PositionCandidatesPage() {
                           one exists, the labeled status pill on the right
                           already covers this, so showing both here would be
                           two overlapping badges for the same candidate. */}
-                      {!interviewSlot && (
+                      {!slot && (
                         <span
                           className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                            c.status === "contacted"
+                            m.status === "contacted"
                               ? "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]"
                               : "bg-[#F0F0F0] text-[#5A5A5A]"
                           }`}
                         >
-                          {c.status === "contacted" ? "ติดต่อแล้ว" : "รอติดต่อ"}
+                          {m.status === "contacted" ? "ติดต่อแล้ว" : "รอติดต่อ"}
                         </span>
                       )}
                     </div>
                     {verifiedSkills.length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
-                        {verifiedSkills.map((h) => (
+                        {verifiedSkills.map((v) => (
                           <span
-                            key={h.skill}
+                            key={v.skill}
                             className="inline-flex items-center gap-0.5 rounded bg-[#F0F0F0] px-1.5 py-0.5 text-[10px] font-semibold text-[#5A5A5A]"
                           >
                             <Check className="h-2.5 w-2.5" strokeWidth={2.5} />
-                            {h.skill}
+                            {v.skill}
                           </span>
                         ))}
                       </div>
                     )}
-                    {topSoftSkill && (
+                    {top && (
                       <div className="mt-1 text-[10px] text-[#4D7CFF]">
-                        โดดเด่นด้าน {SOFT_SKILL_AXIS_META[topSoftSkill[0]].en} ({topSoftSkill[1]}%)
+                        โดดเด่นด้าน {SOFT_SKILL_AXIS_META[top.axis].en} ({top.value}%)
                       </div>
                     )}
                   </div>
 
                   <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
                     <div className="text-right">
-                      <div className="text-lg font-extrabold text-[#0F0F0F]">{c.matchScore}%</div>
+                      <div className="text-lg font-extrabold text-[#0F0F0F]">{m.matchScore}%</div>
                       <div className="text-[9px] text-[#8A8A8A]">Match</div>
                     </div>
-                    {interviewSlot && InterviewStatusIcon ? (
-                      interviewSlot.status === "confirmed" && interviewSlot.confirmedTime ? (
+                    {slot && InterviewStatusIcon ? (
+                      slot.status === "confirmed" && slot.confirmedTime ? (
                         // "ยืนยันเวลา: ..." alone already says this is
                         // confirmed — a colored badge repeating "ยืนยันนัดแล้ว"
                         // next to it would just say the same thing twice.
-                        <span className="text-[10px] font-bold text-[#0f5c22]">
-                          ยืนยันเวลา: {interviewSlot.confirmedTime}
-                        </span>
+                        <span className="text-[10px] font-bold text-[#0f5c22]">ยืนยันเวลา: {slot.confirmedTime}</span>
                       ) : (
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-bold ${INTERVIEW_STATUS_META[interviewSlot.status].className}`}
+                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-bold ${INTERVIEW_STATUS_META[slot.status as keyof typeof INTERVIEW_STATUS_META].className}`}
                         >
                           <InterviewStatusIcon className="h-3 w-3" strokeWidth={2.5} />
-                          {INTERVIEW_STATUS_META[interviewSlot.status].label}
+                          {INTERVIEW_STATUS_META[slot.status as keyof typeof INTERVIEW_STATUS_META].label}
                         </span>
                       )
                     ) : (
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setInviteTargetId(c.jobSeekerId);
-                        }}
+                        onClick={() => setInviteTargetId(m.id)}
                         className="rounded-full bg-[#0F0F0F] px-3 py-1.5 text-[10px] font-bold text-white transition-opacity hover:opacity-90"
                       >
                         นัดสัมภาษณ์
@@ -377,9 +352,9 @@ export default function PositionCandidatesPage() {
         )}
       </div>
 
-      {inviteTargetId && (
+      {inviteTarget && (
         <InterviewInviteModal
-          candidateLabel={`Candidate #${inviteTargetId.replace(/^js_/, "").toUpperCase()}`}
+          candidateLabel={blindLabel(inviteTarget.jobSeekerId)}
           onClose={() => setInviteTargetId(null)}
           onSubmit={handleSendInvite}
         />

@@ -96,7 +96,7 @@ export async function respondToInterviewInvite(
       hrUserId: hr.id,
       type: "interview_response",
       message,
-      linkUrl: `/company/positions/${slot.match.positionId}/candidates-live`,
+      linkUrl: `/company/positions/${slot.match.positionId}/candidates`,
     })),
   });
 
@@ -141,8 +141,11 @@ export async function getMyApplications(jobSeekerId: string) {
 }
 
 /**
- * For the temporary /company/positions/[id]/candidates-live page — real
- * Match rows for one position, ranked by score. Returns null on a
+ * For /company/positions/[id]/candidates — real Match rows for one
+ * position, ranked by score, with everything the list view needs to render
+ * Blind Review (jobSeeker for the name/email gate), verified hard-skill
+ * chips (chatVerifications), and the top-soft-skill highlight (gameResult,
+ * nullable — candidate hasn't played the games yet). Returns null on a
  * companyId mismatch (wrong company or a stale/tampered positionId),
  * treated as not-found by the caller.
  */
@@ -152,7 +155,10 @@ export async function getMatchesForPosition(positionId: string, companyId: strin
 
   const matches = await prisma.match.findMany({
     where: { positionId },
-    include: { jobSeeker: { include: { profile: true } }, interviewSlot: true },
+    include: {
+      jobSeeker: { include: { profile: true, chatVerifications: true, gameResult: true } },
+      interviewSlot: true,
+    },
     orderBy: { matchScore: "desc" },
   });
   return { position, matches };
