@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
 import { Footer } from "@/components/Footer";
@@ -8,6 +8,7 @@ import { JobSeekerAuthGuard } from "@/components/JobSeekerAuthGuard";
 import { Navbar } from "@/components/Navbar";
 import { SkillAutocomplete } from "@/components/SkillAutocomplete";
 import {
+  getJobSeekerProfile,
   saveProfileEducation,
   saveProfileSkills,
   saveProfileStep1,
@@ -45,6 +46,12 @@ function emptyLanguage(): LanguageSkillInput {
   return { language: "", speaking: "", reading: "", writing: "" };
 }
 
+/** DB stores Date|null; <input type="date"> needs a "YYYY-MM-DD" string. */
+function toDateInputValue(date: Date | null | undefined): string {
+  if (!date) return "";
+  return new Date(date).toISOString().slice(0, 10);
+}
+
 const inputClass =
   "w-full rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3.5 py-2.5 text-xs font-semibold text-[#0F0F0F] outline-none transition-border focus:border-[#0F0F0F]";
 const labelClass = "mb-1.5 block text-xs font-bold text-[#0F0F0F]";
@@ -70,6 +77,81 @@ function DecoderManualContent() {
   const [workExperience, setWorkExperience] = useState<WorkExperienceInput[]>([emptyWorkExperience()]);
   const [computerSkills, setComputerSkills] = useState<string[]>([]);
   const [languageSkills, setLanguageSkills] = useState<LanguageSkillInput[]>([emptyLanguage()]);
+
+  // Every step's save action here is replace-all (see saveProfileEducation
+  // etc.'s own docstrings) — without this, a returning candidate lands on
+  // blank fields and re-submitting silently wipes whatever they already
+  // saved (via this form before, or via /decoder's resume upload for
+  // computerSkills) instead of just editing it. Runs once on mount only,
+  // so it can't clobber anything the candidate has already started typing.
+  useEffect(() => {
+    let cancelled = false;
+    getJobSeekerProfile(jobSeeker.id).then((profile) => {
+      if (cancelled || !profile) return;
+      setStep1({
+        firstNameTh: profile.firstNameTh ?? undefined,
+        lastNameTh: profile.lastNameTh ?? undefined,
+        firstNameEn: profile.firstNameEn ?? undefined,
+        lastNameEn: profile.lastNameEn ?? undefined,
+        birthDate: toDateInputValue(profile.birthDate) || undefined,
+        gender: profile.gender ?? undefined,
+        nationality: profile.nationality ?? undefined,
+        religion: profile.religion ?? undefined,
+        maritalStatus: profile.maritalStatus ?? undefined,
+        address: profile.address ?? undefined,
+        province: profile.province ?? undefined,
+        postalCode: profile.postalCode ?? undefined,
+        phone: profile.phone ?? undefined,
+        militaryStatus: profile.militaryStatus ?? undefined,
+        desiredPosition: profile.desiredPosition ?? undefined,
+        desiredSalaryMin: profile.desiredSalaryMin ?? undefined,
+        desiredSalaryMax: profile.desiredSalaryMax ?? undefined,
+        desiredJobType: profile.desiredJobType ?? undefined,
+        desiredProvince: profile.desiredProvince ?? undefined,
+        availableDate: toDateInputValue(profile.availableDate) || undefined,
+      });
+      if (profile.education.length > 0) {
+        setEducation(
+          profile.education.map((e) => ({
+            level: e.level,
+            institution: e.institution,
+            fieldOfStudy: e.fieldOfStudy ?? "",
+            gpa: e.gpa ?? undefined,
+            startYear: e.startYear ?? undefined,
+            endYear: e.endYear ?? undefined,
+          }))
+        );
+      }
+      if (profile.workExperience.length > 0) {
+        setWorkExperience(
+          profile.workExperience.map((w) => ({
+            companyName: w.companyName,
+            jobTitle: w.jobTitle,
+            responsibilities: w.responsibilities ?? "",
+            salary: w.salary ?? undefined,
+            startDate: toDateInputValue(w.startDate),
+            endDate: toDateInputValue(w.endDate),
+            isCurrent: w.isCurrent,
+          }))
+        );
+      }
+      setComputerSkills(profile.computerSkills);
+      if (profile.languageSkills.length > 0) {
+        setLanguageSkills(
+          profile.languageSkills.map((l) => ({
+            language: l.language,
+            speaking: l.speaking ?? "",
+            reading: l.reading ?? "",
+            writing: l.writing ?? "",
+          }))
+        );
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- jobSeeker.id is stable for this page's lifetime (set once by the auth guard)
+  }, []);
 
   const updateStep1 = <K extends keyof ProfileStep1Input>(key: K, value: ProfileStep1Input[K]) =>
     setStep1((f) => ({ ...f, [key]: value }));
