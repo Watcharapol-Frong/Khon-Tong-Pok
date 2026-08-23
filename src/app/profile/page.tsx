@@ -12,7 +12,6 @@ import {
   GraduationCap,
   Lightbulb,
   Loader2,
-  Paperclip,
   Pencil,
   Sparkle,
   Target,
@@ -1005,16 +1004,6 @@ export default function ProfilePage() {
               className="cursor-pointer rounded-full bg-white px-7 py-[15px] text-[14px] font-bold text-[#0F0F0F] transition-all hover:bg-[#0F0F0F] hover:text-white active:scale-[0.98]"
             >
               สร้างแบบทั่วไป
-            </Link>
-            {/* Reuses /decoder's own upload flow (its resume-upload box is
-                always reachable from the chat panel once unlocked) instead
-                of duplicating PDF-parsing logic on this page too. */}
-            <Link
-              href="/decoder"
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-white px-7 py-[15px] text-[14px] font-bold text-[#5C5C5C] transition-colors hover:bg-[#F0F0F0] hover:text-[#0F0F0F] active:scale-[0.98]"
-            >
-              <Paperclip className="h-3.5 w-3.5" strokeWidth={2} />
-              อัปโหลด Resume ที่มีอยู่
             </Link>
           </div>
           <button
