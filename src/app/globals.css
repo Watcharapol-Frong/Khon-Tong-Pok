@@ -42,15 +42,24 @@ a {
   animation: marqueeScroll 26s linear infinite;
 }
 
+/* Same loop, slower — the job-card row carries much heavier content
+   (full cards, not small pills), so it needs more dwell time per item to
+   stay readable while scrolling past. */
+.animate-marquee-slow {
+  animation: marqueeScroll 70s linear infinite;
+}
+
 /* Tailwind's group-hover:[animation-play-state:paused] arbitrary-property
    variant doesn't compile in this project's Tailwind v4 setup (silently
    produces no rule) — using a plain scoped selector instead, which does. */
-.marquee-pause-on-hover:hover .animate-marquee {
+.marquee-pause-on-hover:hover .animate-marquee,
+.marquee-pause-on-hover:hover .animate-marquee-slow {
   animation-play-state: paused;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-marquee {
+  .animate-marquee,
+  .animate-marquee-slow {
     animation-play-state: paused;
   }
 }

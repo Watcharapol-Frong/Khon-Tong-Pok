@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import Avatar from "boring-avatars";
 import Link from "next/link";
 import { JobCard } from "@/components/JobCard";
@@ -51,25 +51,6 @@ function pickDiversePreview(jobs: Job[], limit: number): Job[] {
 // this site's own accent palette so they read as belonging here.
 const LOGO_COLORS = ["#F5D949", "#B14DFF", "#4D7CFF", "#FF5CA8", "#3BF55C", "#FF6E5C"];
 
-const FADE_WIDTH = "40px";
-// Edge fades mirror scroll position instead of always being on (unlike the
-// company marquee below, which fades both edges permanently since that
-// content loops infinitely) — there's nothing to scroll to on the left
-// until the user has actually scrolled right, so a static both-edges fade
-// would falsely hint at content that isn't there yet on page load.
-function scrollFadeMask(canScrollLeft: boolean, canScrollRight: boolean) {
-  if (canScrollLeft && canScrollRight) {
-    return `linear-gradient(to right,transparent,#000 ${FADE_WIDTH},#000 calc(100% - ${FADE_WIDTH}),transparent)`;
-  }
-  if (canScrollRight) {
-    return `linear-gradient(to right,#000,#000 calc(100% - ${FADE_WIDTH}),transparent)`;
-  }
-  if (canScrollLeft) {
-    return `linear-gradient(to right,transparent,#000 ${FADE_WIDTH},#000)`;
-  }
-  return "none";
-}
-
 export function JobMatching() {
   const filters = useJobFilters();
   const { filteredJobs } = filters;
@@ -83,24 +64,6 @@ export function JobMatching() {
     () => Array.from(new Set(JOBS.map((j) => j.company.split(" · ")[0]))),
     []
   );
-
-  const jobScrollRef = useRef<HTMLDivElement>(null);
-  const [jobScrollFade, setJobScrollFade] = useState({ left: false, right: false });
-
-  const updateJobScrollFade = useCallback(() => {
-    const el = jobScrollRef.current;
-    if (!el) return;
-    setJobScrollFade({
-      left: el.scrollLeft > 8,
-      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 8,
-    });
-  }, []);
-
-  useEffect(() => {
-    updateJobScrollFade();
-    window.addEventListener("resize", updateJobScrollFade);
-    return () => window.removeEventListener("resize", updateJobScrollFade);
-  }, [updateJobScrollFade, previewJobs]);
 
   return (
     <div
@@ -134,33 +97,29 @@ export function JobMatching() {
         เล่นเกมประเมินทักษะ 10 นาที เพื่อปลดล็อก % Match ส่วนบุคคลกับทุกตำแหน่งงาน
       </div>
 
-      <div
-        ref={jobScrollRef}
-        onScroll={updateJobScrollFade}
-        className="flex gap-4 overflow-x-auto pb-2"
-        style={{
-          scrollSnapType: "x proximity",
-          maskImage: scrollFadeMask(jobScrollFade.left, jobScrollFade.right),
-          WebkitMaskImage: scrollFadeMask(jobScrollFade.left, jobScrollFade.right),
-        }}
-      >
+      {previewJobs.length > 0 ? (
         <div
-          className="grid flex-shrink-0 gap-4"
+          className="marquee-pause-on-hover relative overflow-hidden"
+          role="group"
+          aria-label="ตัวอย่างตำแหน่งงาน"
           style={{
-            gridAutoFlow: "column",
-            gridTemplateRows: "repeat(2, auto)",
-            gridAutoColumns: "min(320px, 80vw)",
+            maskImage: "linear-gradient(to right,transparent,#000 4%,#000 96%,transparent)",
+            WebkitMaskImage: "linear-gradient(to right,transparent,#000 4%,#000 96%,transparent)",
           }}
         >
-          {previewJobs.map((job) => (
-            <div key={job.title + job.company} style={{ scrollSnapAlign: "start" }}>
-              <JobCard job={job} />
-            </div>
-          ))}
+          <div className="animate-marquee-slow flex w-max gap-4">
+            {[...previewJobs, ...previewJobs].map((job, i) => (
+              <div
+                key={`${job.title}-${job.company}-${i}`}
+                aria-hidden={i >= previewJobs.length}
+                className="w-[min(320px,80vw)] flex-shrink-0"
+              >
+                <JobCard job={job} />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-
-      {filteredJobs.length === 0 && (
+      ) : (
         <div className="p-8 text-center text-[13px] text-[#8A8A8A]">
           ไม่พบตำแหน่งงานที่ตรงกับเงื่อนไข ลองปรับตัวกรองใหม่
         </div>
