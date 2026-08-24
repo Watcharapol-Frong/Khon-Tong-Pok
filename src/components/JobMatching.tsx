@@ -7,6 +7,41 @@ import { JobCard } from "@/components/JobCard";
 import { JobFilterBar } from "@/components/JobFilterBar";
 import { useJobFilters } from "@/hooks/useJobFilters";
 import { JOBS } from "@/lib/data";
+import type { Job } from "@/lib/types";
+
+// This row is a homepage *preview*, not the job board itself (that's
+// /job, which uses the same useJobFilters hook without this cap) — as the
+// real dataset grows to many companies/positions, showing "all of them"
+// in a horizontally-scrolling row stops being something anyone actually
+// scrolls through. Capping keeps the preview scannable regardless of how
+// large the underlying data gets; "ดูตำแหน่งงานทั้งหมด" is the real
+// unbounded browsing entry point.
+const PREVIEW_LIMIT = 8;
+
+// Round-robin across categories (not just the first N in array order) so
+// the preview stays representative — a dataset that happens to list many
+// "dev" jobs before any "marketing"/"design" ones shouldn't make the
+// preview look dev-only.
+function pickDiversePreview(jobs: Job[], limit: number): Job[] {
+  if (jobs.length <= limit) return jobs;
+  const buckets = new Map<string, Job[]>();
+  for (const job of jobs) {
+    const bucket = buckets.get(job.category);
+    if (bucket) bucket.push(job);
+    else buckets.set(job.category, [job]);
+  }
+  const bucketArrays = Array.from(buckets.values());
+  const result: Job[] = [];
+  for (let round = 0; result.length < limit; round++) {
+    const before = result.length;
+    for (const bucket of bucketArrays) {
+      if (result.length >= limit) break;
+      if (bucket[round]) result.push(bucket[round]);
+    }
+    if (result.length === before) break; // every bucket exhausted
+  }
+  return result;
+}
 
 // These are mock/placeholder companies with no real logos to show, so a
 // generic building icon or plain initial reads as an obvious stand-in.
@@ -39,6 +74,11 @@ export function JobMatching() {
   const filters = useJobFilters();
   const { filteredJobs } = filters;
 
+  const previewJobs = useMemo(
+    () => pickDiversePreview(filteredJobs, PREVIEW_LIMIT),
+    [filteredJobs]
+  );
+
   const marqueeCompanies = useMemo(
     () => Array.from(new Set(JOBS.map((j) => j.company.split(" · ")[0]))),
     []
@@ -60,7 +100,7 @@ export function JobMatching() {
     updateJobScrollFade();
     window.addEventListener("resize", updateJobScrollFade);
     return () => window.removeEventListener("resize", updateJobScrollFade);
-  }, [updateJobScrollFade, filteredJobs]);
+  }, [updateJobScrollFade, previewJobs]);
 
   return (
     <div
@@ -112,7 +152,7 @@ export function JobMatching() {
             gridAutoColumns: "min(320px, 80vw)",
           }}
         >
-          {filteredJobs.map((job) => (
+          {previewJobs.map((job) => (
             <div key={job.title + job.company} style={{ scrollSnapAlign: "start" }}>
               <JobCard job={job} />
             </div>

@@ -37,12 +37,12 @@ export function StrategyPanel() {
           {AXIS_CHIPS.map((a) => {
             const Icon = AXIS_ICONS[a.en as keyof typeof AXIS_ICONS];
             return (
-              <div key={a.en} className="min-w-0 rounded-2xl bg-white/5 p-5">
-                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-white/10">
-                  <Icon className="h-4 w-4 text-white" strokeWidth={2} />
+              <div key={a.en} className="min-w-0 rounded-2xl bg-white p-5">
+                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-[#F5F5F5]">
+                  <Icon className="h-4 w-4 text-[#0F0F0F]" strokeWidth={2} />
                 </div>
-                <div className="text-sm font-bold text-white">{a.en}</div>
-                <div className="mt-1 text-xs text-[#8A8A8A]">{a.th}</div>
+                <div className="text-sm font-bold text-[#0F0F0F]">{a.en}</div>
+                <div className="mt-1 text-xs text-[#5C5C5C]">{a.th}</div>
               </div>
             );
           })}
