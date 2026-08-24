@@ -20,9 +20,11 @@ const ICONS = { users: Users, gamepad: Gamepad2, chart: BarChart3, target: Targe
  * separate features. Card anatomy is fixed top-to-bottom (Step badge →
  * Icon → Title → Description) in the same position on every card so the
  * eye can scan across the row. Cards stretch to equal height
- * (lg:items-stretch) with content centered, since there's no longer a
- * bottom tag/result block to anchor against. Chevrons between cards make
- * the left-to-right progression explicit.
+ * (lg:items-stretch) but content is top-anchored, not centered — every
+ * "Step 0X" badge starts on the same line regardless of how many lines a
+ * given card's description wraps to; any leftover space from a shorter
+ * description just falls at the bottom instead of shifting the badge down.
+ * Chevrons between cards make the left-to-right progression explicit.
  */
 export function CandidateHowItWorksSteps({ steps }: { steps: CandidateStep[] }) {
   return (
@@ -31,7 +33,7 @@ export function CandidateHowItWorksSteps({ steps }: { steps: CandidateStep[] }) 
         const Icon = ICONS[step.iconKey];
         return (
           <Fragment key={step.n}>
-            <div className="flex flex-1 flex-col items-center justify-center rounded-2xl bg-[#FAFAFA] p-5 text-center sm:p-6">
+            <div className="flex flex-1 flex-col items-center rounded-2xl bg-[#FAFAFA] p-5 text-center sm:p-6">
               <div className="mb-2 text-[11px] font-bold tracking-wide text-[#8A8A8A] uppercase">
                 Step {step.n}
               </div>
