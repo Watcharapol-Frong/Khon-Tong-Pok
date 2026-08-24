@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import { FAQ_DATA } from "@/lib/data";
 import type { FaqItem } from "@/lib/types";
 
@@ -10,7 +11,16 @@ export function Faq({ title = "คำถามที่พบบ่อย", item
 
   return (
     <div className="mx-auto w-full max-w-[1240px] px-[clamp(20px,4vw,48px)] pt-[clamp(24px,4vw,40px)] pb-[clamp(40px,6vw,56px)]">
-      <h2 className="mb-7 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">{title}</h2>
+      <div className="mb-7 flex items-center gap-3">
+        <Image
+          src="/mascot/mascot-faq.png"
+          alt=""
+          width={112}
+          height={112}
+          className="h-16 w-16 flex-shrink-0 object-contain sm:h-20 sm:w-20"
+        />
+        <h2 className="text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">{title}</h2>
+      </div>
       <div className="flex flex-col gap-px overflow-hidden rounded-2xl border border-[rgba(15,15,15,0.08)] bg-[rgba(15,15,15,0.08)]">
         {items.map((faq, i) => {
           const open = openFaq === i;
