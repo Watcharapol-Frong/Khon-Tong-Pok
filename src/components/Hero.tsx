@@ -17,12 +17,10 @@ const HERO_SPARKLES = [
   { top: "8%", right: "8%", size: 15, color: "#FF5CA8", rotate: -10 },
 ];
 
-// Same card shell as AuthCard (login/register) for the sample-assessment
-// card — flat accent square + 4-corner sparkles. Unlike JobFilterBar (a
-// small functional toolbar where this same treatment read as a stray
-// box), this card IS the visual focus of its half of the hero, the same
-// role AuthCard's own card plays on its page, so the accent reads as
-// intentional here.
+// Sparkle-corner accent from AuthCard's card shell (login/register), minus
+// the flat accent square — tried that here too, but per feedback it read
+// as a stray green blob rather than a deliberate accent, same call as
+// JobFilterBar.
 const CARD_SPARKLES = [
   { top: "2%", left: "-18px", size: 26, color: "#F5D949", rotate: -18, opacity: 0.65 },
   { top: "10%", right: "-18px", size: 20, color: "#B14DFF", rotate: 15, opacity: 0.6 },
@@ -125,9 +123,7 @@ export function Hero() {
             />
           ))}
 
-          <div className="relative isolate w-full max-w-[500px] rounded-2xl bg-[#F5F5F5] p-[clamp(24px,3vw,36px)]">
-            <div className="absolute -top-3 -left-3 -z-10 h-12 w-12 rounded-2xl bg-[#3BF55C]" />
-
+          <div className="relative w-full max-w-[500px] rounded-2xl bg-[#F5F5F5] p-[clamp(24px,3vw,36px)]">
             <div className="mb-[6px] text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
               ตัวอย่างผลประเมิน
             </div>
