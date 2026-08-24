@@ -49,19 +49,21 @@ export function HowItWorks() {
           สำหรับผู้สมัคร
         </div>
 
-        <div className="mb-3 flex items-center gap-3">
+        <div className="mb-[30px] flex items-center gap-4">
           <Image
             src="/mascot/mascot-ai-thinking.png"
             alt=""
-            width={96}
-            height={96}
-            className="h-20 w-20 flex-shrink-0 object-contain sm:h-24 sm:w-24"
+            width={128}
+            height={128}
+            className="h-24 w-24 flex-shrink-0 object-contain sm:h-32 sm:w-32"
           />
-          <h2 className="text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">ทำงานยังไง</h2>
+          <div>
+            <h2 className="mb-1.5 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">ทำงานยังไง</h2>
+            <p className="max-w-[640px] text-sm leading-[1.7] text-[#B5B5B5]">
+              จากเลือกสถานะผู้สมัครถึง Match งานที่ใช่ ครบ 4 ขั้นตอนในระบบเดียว
+            </p>
+          </div>
         </div>
-        <p className="mb-[30px] max-w-[640px] text-sm leading-[1.7] text-[#B5B5B5]">
-          จากเลือกสถานะผู้สมัครถึง Match งานที่ใช่ ครบ 4 ขั้นตอนในระบบเดียว
-        </p>
 
         <CandidateHowItWorksSteps steps={CANDIDATE_STEPS} />
       </div>
