@@ -58,13 +58,25 @@ export function JobMatching() {
       id="job-matching"
       className="mx-auto w-full max-w-[1240px] scroll-mt-[90px] border-t border-[rgba(15,15,15,0.08)] px-[clamp(20px,4vw,48px)] pt-[clamp(40px,6vw,56px)] pb-[clamp(40px,5vw,56px)]"
     >
-      <div className="mb-6">
-        <div className="mb-[6px] text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
-          JOB MATCHING
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="mb-[6px] text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
+            JOB MATCHING
+          </div>
+          <h2 className="m-0 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">
+            ตำแหน่งงานและ Soft Skill ที่องค์กรมองหา
+          </h2>
         </div>
-        <h2 className="m-0 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">
-          ตำแหน่งงานและ Soft Skill ที่องค์กรมองหา
-        </h2>
+        {/* Always visible instead of only reachable by scrolling the job
+            row all the way to its trailing card — the row's own "ดูงาน
+            ทั้งหมด" card still exists as a natural cap at the end, but
+            shouldn't be the only way to find it. */}
+        <Link
+          href="/job"
+          className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 text-sm font-bold text-[#0F0F0F] transition-opacity hover:opacity-60"
+        >
+          ดูตำแหน่งงานทั้งหมด <span className="text-base">→</span>
+        </Link>
       </div>
 
       <JobFilterBar filters={filters} />
