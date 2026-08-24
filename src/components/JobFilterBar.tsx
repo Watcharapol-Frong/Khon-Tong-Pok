@@ -117,10 +117,11 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
         {filterPanelOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto", transitionEnd: { overflow: "visible" } }}
+            exit={{ opacity: 0, height: 0, overflow: "hidden" }}
             transition={{ duration: 0.15 }}
-            className="mt-[10px] overflow-hidden rounded-2xl border border-[rgba(15,15,15,0.08)] bg-[#F5F5F5]"
+            style={{ overflow: "hidden" }}
+            className="mt-[10px] rounded-2xl border border-[rgba(15,15,15,0.08)] bg-[#F5F5F5]"
           >
             <div className="p-[18px]">
             <div className="mb-[14px] flex items-center justify-between border-b border-[rgba(15,15,15,0.1)] pb-3">
