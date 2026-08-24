@@ -11,7 +11,7 @@ export function Faq({ title = "คำถามที่พบบ่อย", item
 
   return (
     <div className="mx-auto w-full max-w-[1240px] px-[clamp(20px,4vw,48px)] pt-[clamp(24px,4vw,40px)] pb-[clamp(40px,6vw,56px)]">
-      <div className="mb-7 flex items-center gap-3">
+      <div className="mb-4 flex items-center gap-3">
         <Image
           src="/mascot/mascot-faq.png"
           alt=""
@@ -19,7 +19,9 @@ export function Faq({ title = "คำถามที่พบบ่อย", item
           height={112}
           className="h-24 w-24 flex-shrink-0 object-contain sm:h-32 sm:w-32"
         />
-        <h2 className="text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">{title}</h2>
+        <h2 className="mt-3 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em] sm:mt-4">
+          {title}
+        </h2>
       </div>
       <div className="flex flex-col gap-px overflow-hidden rounded-2xl border border-[rgba(15,15,15,0.08)] bg-[rgba(15,15,15,0.08)]">
         {items.map((faq, i) => {
