@@ -4,11 +4,11 @@ import { Brain, Gauge, Lightbulb, RefreshCw, TrendingUp, Users } from "lucide-re
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { AXIS_CHIPS } from "@/lib/data";
 
-// Icons stay monochrome (white on white/10) rather than colored per axis —
-// the site's overall palette is pastel/black-and-white, so the per-axis
-// accent color already lives on the border + title text; doubling it onto
-// the icon too would push this further toward "colorful" than the rest of
-// the site goes.
+// Icons stay monochrome (white on white/10) rather than colored per axis.
+// The per-axis accent color is kept to just the thin left border now —
+// it was on the title text too at one point, but 6 different saturated
+// title colors in one grid read as too colorful for the site's overall
+// pastel/black-and-white palette.
 const AXIS_ICONS = {
   "Learning Agility": Lightbulb,
   "Resilience & Adaptability": RefreshCw,
@@ -50,9 +50,7 @@ export function StrategyPanel() {
                 <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
                   <Icon className="h-4 w-4 text-white" strokeWidth={2} />
                 </div>
-                <div className="text-sm font-bold" style={{ color: a.color }}>
-                  {a.en}
-                </div>
+                <div className="text-sm font-bold text-white">{a.en}</div>
                 <div className="mt-1 text-xs text-[#8A8A8A]">{a.th}</div>
               </div>
             );
