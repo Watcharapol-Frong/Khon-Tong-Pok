@@ -6,26 +6,38 @@ import { CandidateHowItWorksSteps, type CandidateStep } from "@/components/Candi
 // in src/app/company/page.tsx), just candidate-flavored steps/details, so
 // both sides of the site read as the same product instead of one looking
 // noticeably plainer than the other.
+//
+// 4 steps, not 3 — mirrors the actual AssessmentStepBar sequence used
+// throughout onboarding (Role Selection → Mini-Games → น้องตรงปก → Smart
+// Profile) instead of compressing it. Job matching isn't a separate
+// tracked step in the app, so it's folded into what Smart Profile unlocks.
 const CANDIDATE_STEPS: CandidateStep[] = [
   {
     n: "01",
-    iconKey: "gamepad",
-    title: "เล่นเกมประเมินศักยภาพ",
-    desc: "ไม่ต้องมีเรซูเม่ก่อนก็เริ่มได้ เล่นมินิเกมเพื่อวัดตัวตนและสไตล์การทำงานจริง จากนั้นระบบช่วยสร้างหรืออัปโหลดเรซูเม่เพื่อยื่นสมัครได้เลย",
-    detailType: "tags",
+    iconKey: "users",
+    title: "เลือกสถานะผู้สมัคร",
+    desc: "บอกเราว่าคุณอยู่ช่วงไหนของสายอาชีพ เพื่อปรับคำถามและบริบทในมินิเกมให้ตรงกับตัวคุณที่สุด",
+    detailType: "role",
   },
   {
     n: "02",
-    iconKey: "chart",
-    title: "น้องตรงปกวิเคราะห์ 6 มิติศักยภาพ",
-    desc: "แปลงพฤติกรรมการเล่นเป็น Radar Chart และ Feedback Report แบบเจาะลึก",
-    detailType: "axes",
+    iconKey: "gamepad",
+    title: "เล่นเกมประเมินศักยภาพ",
+    desc: "ไม่ต้องมีเรซูเม่ก่อนก็เริ่มได้ เล่นมินิเกมเพื่อวัดตัวตนและสไตล์การทำงานจริง",
+    detailType: "tags",
   },
   {
     n: "03",
+    iconKey: "chart",
+    title: "น้องตรงปกวิเคราะห์ 6 มิติศักยภาพ",
+    desc: "แปลงพฤติกรรมการเล่นเป็น Radar Chart และ Feedback Report แบบเจาะลึก จากนั้นระบบช่วยสร้างหรืออัปโหลดเรซูเม่เพื่อยื่นสมัครได้เลย",
+    detailType: "axes",
+  },
+  {
+    n: "04",
     iconKey: "target",
     title: "Match งานที่ใช่ ไม่ใช่แค่ที่ตรงสเปค",
-    desc: "ระบบแนะนำตำแหน่งงานจาก Soft Skill ก่อน แล้วค่อยดู Hard Skill ประกอบ",
+    desc: "ได้ Smart Profile พร้อม Match Rate ระบบแนะนำตำแหน่งงานจาก Soft Skill ก่อน แล้วค่อยดู Hard Skill ประกอบ",
     detailType: "match",
   },
 ];
@@ -52,7 +64,7 @@ export function HowItWorks() {
           <h2 className="text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">ทำงานยังไง</h2>
         </div>
         <p className="mb-[30px] max-w-[640px] text-sm leading-[1.7] text-[#B5B5B5]">
-          จากเล่นเกมประเมินศักยภาพถึง Match งานที่ใช่ ทำได้ในระบบเดียว
+          จากเลือกสถานะผู้สมัครถึง Match งานที่ใช่ ครบ 4 ขั้นตอนในระบบเดียว
         </p>
 
         <CandidateHowItWorksSteps steps={CANDIDATE_STEPS} />

@@ -1,22 +1,24 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
-import { BarChart3, ChevronDown, ChevronRight, Gamepad2, Star, Target } from "lucide-react";
+import { BarChart3, ChevronDown, ChevronRight, Gamepad2, Star, Target, Users } from "lucide-react";
 
 export type CandidateStep = {
   n: string;
-  iconKey: "gamepad" | "chart" | "target";
+  iconKey: "users" | "gamepad" | "chart" | "target";
   title: string;
   desc: string;
-  detailType: "tags" | "axes" | "match";
+  detailType: "role" | "tags" | "axes" | "match";
 };
 
 // lucide icon components can't cross the Server → Client Component
 // boundary as props (they're functions, not serializable data), so the
 // page passes a plain string key and this map resolves it locally — same
 // convention as CompanyHowItWorksSteps.
-const ICONS = { gamepad: Gamepad2, chart: BarChart3, target: Target };
+const ICONS = { users: Users, gamepad: Gamepad2, chart: BarChart3, target: Target };
 
+// Same 4 personas as /onboarding's ROLE_GROUPS, kept short for chip display.
+const ROLE_TAGS = ["เด็กจบใหม่", "Early Career", "Career Switcher", "Upskiller"];
 const GAME_TAGS = ["Neuroscience Games", "~10 นาที", "ไม่ต้องมี Resume"];
 const AXIS_TAGS = ["Learning Agility", "Critical Thinking", "Risk Tolerance", "+3 มิติ"];
 
@@ -84,6 +86,19 @@ export function CandidateHowItWorksSteps({ steps }: { steps: CandidateStep[] }) 
                 </div>
                 <div className="mb-2 text-lg font-extrabold tracking-[-0.01em] text-white">{step.title}</div>
                 <div className="text-sm leading-[1.7] text-[#B5B5B5]">{step.desc}</div>
+
+                {isActive && step.detailType === "role" && (
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {ROLE_TAGS.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {isActive && step.detailType === "tags" && (
                   <div className="mt-4 flex flex-wrap gap-1.5">
