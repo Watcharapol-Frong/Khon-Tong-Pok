@@ -1,11 +1,30 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { JobCard } from "@/components/JobCard";
 import { JobFilterBar } from "@/components/JobFilterBar";
 import { useJobFilters } from "@/hooks/useJobFilters";
 import { JOBS } from "@/lib/data";
+
+const FADE_WIDTH = "40px";
+// Edge fades mirror scroll position instead of always being on (unlike the
+// company marquee below, which fades both edges permanently since that
+// content loops infinitely) — there's nothing to scroll to on the left
+// until the user has actually scrolled right, so a static both-edges fade
+// would falsely hint at content that isn't there yet on page load.
+function scrollFadeMask(canScrollLeft: boolean, canScrollRight: boolean) {
+  if (canScrollLeft && canScrollRight) {
+    return `linear-gradient(to right,transparent,#000 ${FADE_WIDTH},#000 calc(100% - ${FADE_WIDTH}),transparent)`;
+  }
+  if (canScrollRight) {
+    return `linear-gradient(to right,#000,#000 calc(100% - ${FADE_WIDTH}),transparent)`;
+  }
+  if (canScrollLeft) {
+    return `linear-gradient(to right,transparent,#000 ${FADE_WIDTH},#000)`;
+  }
+  return "none";
+}
 
 export function JobMatching() {
   const filters = useJobFilters();
@@ -15,6 +34,24 @@ export function JobMatching() {
     () => Array.from(new Set(JOBS.map((j) => j.company.split(" · ")[0]))),
     []
   );
+
+  const jobScrollRef = useRef<HTMLDivElement>(null);
+  const [jobScrollFade, setJobScrollFade] = useState({ left: false, right: false });
+
+  const updateJobScrollFade = useCallback(() => {
+    const el = jobScrollRef.current;
+    if (!el) return;
+    setJobScrollFade({
+      left: el.scrollLeft > 8,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 8,
+    });
+  }, []);
+
+  useEffect(() => {
+    updateJobScrollFade();
+    window.addEventListener("resize", updateJobScrollFade);
+    return () => window.removeEventListener("resize", updateJobScrollFade);
+  }, [updateJobScrollFade, filteredJobs]);
 
   return (
     <div
@@ -37,7 +74,16 @@ export function JobMatching() {
         เล่นเกมประเมินทักษะ 10 นาที เพื่อปลดล็อก % Match ส่วนบุคคลกับทุกตำแหน่งงาน
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-2" style={{ scrollSnapType: "x proximity" }}>
+      <div
+        ref={jobScrollRef}
+        onScroll={updateJobScrollFade}
+        className="flex gap-4 overflow-x-auto pb-2"
+        style={{
+          scrollSnapType: "x proximity",
+          maskImage: scrollFadeMask(jobScrollFade.left, jobScrollFade.right),
+          WebkitMaskImage: scrollFadeMask(jobScrollFade.left, jobScrollFade.right),
+        }}
+      >
         <div
           className="grid flex-shrink-0 gap-4"
           style={{
