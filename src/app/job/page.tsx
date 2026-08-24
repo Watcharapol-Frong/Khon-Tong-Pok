@@ -42,7 +42,22 @@ export default function JobBoardPage() {
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
       <Navbar />
 
-      <div className="mx-auto flex w-full max-w-[1240px] flex-col px-[clamp(20px,4vw,48px)]">
+      <div className="relative flex-1">
+        {/* Same soft dot-grid backdrop as the login/register cards, ties this
+            page into that visual language. Masked to fade out toward the
+            bottom so it doesn't compete with the job list further down. */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(15,15,15,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(15,15,15,0.04) 1px,transparent 1px)",
+            backgroundSize: "44px 44px",
+            maskImage: "radial-gradient(ellipse 70% 50% at 50% 0%,#000 30%,transparent 100%)",
+            WebkitMaskImage: "radial-gradient(ellipse 70% 50% at 50% 0%,#000 30%,transparent 100%)",
+          }}
+        />
+
+      <div className="relative mx-auto flex w-full max-w-[1240px] flex-col px-[clamp(20px,4vw,48px)]">
         <div className="flex-shrink-0 pt-4 pb-3 lg:pt-6 lg:pb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="mb-[6px] text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
@@ -119,6 +134,7 @@ export default function JobBoardPage() {
             )}
           </div>
         </div>
+      </div>
       </div>
 
       <Footer />

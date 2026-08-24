@@ -1,6 +1,6 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Sparkle } from "lucide-react";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 import type { JobFilters } from "@/hooks/useJobFilters";
 import { BIZ_LABELS, CATEGORY_TABS, LEVEL_LABELS, LOCATION_LABELS, WORK_TYPE_LABELS } from "@/lib/data";
@@ -8,6 +8,15 @@ import type { JobCategory } from "@/lib/types";
 
 const SALARY_MIN_OPTIONS = [0, 20000, 40000, 60000, 80000, 100000];
 const SALARY_MAX_OPTIONS: (number | "all")[] = [40000, 60000, 80000, 100000, "all"];
+
+// Same sparkle-corner accent as AuthCard (login/register) and JobFilterBar,
+// to tie this sidebar into the same visual language — kept to 2 (not 4) since
+// this panel is much taller than those, and 4 corners on a tall sticky panel
+// read as scattered rather than framing a single card.
+const SIDEBAR_SPARKLES = [
+  { top: "1%", left: "-14px", size: 20, color: "#F5D949", rotate: -18, opacity: 0.6 },
+  { bottom: "3%", right: "-12px", size: 18, color: "#4D7CFF", rotate: 15, opacity: 0.55 },
+];
 
 function CheckboxGroup({
   label,
@@ -72,7 +81,28 @@ export function JobFilterSidebar({ filters }: { filters: JobFilters }) {
   } = filters;
 
   return (
-    <div className="rounded-xl border border-[rgba(15,15,15,0.08)] p-4">
+    <div className="relative">
+      {SIDEBAR_SPARKLES.map((s, i) => (
+        <Sparkle
+          key={i}
+          className="pointer-events-none absolute"
+          style={{
+            top: s.top,
+            bottom: s.bottom,
+            left: s.left,
+            right: s.right,
+            opacity: s.opacity,
+            transform: `rotate(${s.rotate}deg)`,
+          }}
+          width={s.size}
+          height={s.size}
+          fill={s.color}
+          color={s.color}
+          strokeWidth={1}
+        />
+      ))}
+
+      <div className="relative rounded-2xl bg-[#F5F5F5] p-4">
       <div className="relative mb-4">
         <input
           type="text"
@@ -185,6 +215,7 @@ export function JobFilterSidebar({ filters }: { filters: JobFilters }) {
           <RotateCcw className="h-3 w-3" strokeWidth={2} /> ล้างตัวกรองทั้งหมด
         </button>
       )}
+      </div>
     </div>
   );
 }
