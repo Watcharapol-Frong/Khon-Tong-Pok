@@ -35,12 +35,7 @@ export function Hero() {
         }}
       />
 
-      {/* items-end, not items-center: the left column is shorter than the
-          radar-chart card, so centering stranded the mascot in a gap of
-          unexplained white space below it instead of anchoring it to
-          anything — bottom-aligning both columns gives it a shared
-          baseline with the card instead. */}
-      <div className="relative mx-auto flex w-full max-w-[1240px] flex-wrap items-end gap-[clamp(28px,4vw,64px)] px-[clamp(20px,4vw,48px)] pt-[clamp(48px,8vw,88px)] pb-[clamp(28px,4vw,44px)]">
+      <div className="relative mx-auto flex w-full max-w-[1240px] flex-wrap items-center gap-[clamp(28px,4vw,64px)] px-[clamp(20px,4vw,48px)] pt-[clamp(48px,8vw,88px)] pb-[clamp(28px,4vw,44px)]">
         <div
           className={`relative min-w-0 flex-[1_1_440px] ${centerHero ? "flex flex-col items-center text-center" : ""}`}
         >
