@@ -114,7 +114,10 @@ export function JobMatching() {
                 aria-hidden={i >= previewJobs.length}
                 className="w-[min(320px,80vw)] flex-shrink-0"
               >
-                <JobCard job={job} />
+                {/* Duplicate half exists only for the seamless loop — now
+                    that JobCard is a real link, it must be removed from tab
+                    order too, not just hidden from screen readers. */}
+                <JobCard job={job} tabIndex={i >= previewJobs.length ? -1 : undefined} />
               </div>
             ))}
           </div>

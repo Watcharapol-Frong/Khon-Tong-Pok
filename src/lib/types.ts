@@ -8,6 +8,8 @@ export type JobLevel = "entry" | "mid-senior" | "senior";
 export type City = "bangkok" | "upcountry";
 
 export type Job = {
+  /** Stable slug used for /job/[id] — must be unique across JOBS. */
+  id: string;
   title: string;
   company: string;
   salary: string;

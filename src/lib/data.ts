@@ -158,6 +158,7 @@ export const COMPANY_FAQ_DATA: FaqItem[] = [
 
 export const JOBS: Job[] = [
   {
+    id: "senior-frontend-developer",
     title: "Senior Frontend Developer",
     company: "TechCorp Global · Bangkok (Hybrid)",
     salary: "฿65k - ฿95k",
@@ -176,6 +177,7 @@ export const JOBS: Job[] = [
     ],
   },
   {
+    id: "ai-data-scientist-analyst",
     title: "AI Data Scientist & Analyst",
     company: "DataDrive Insights · Bangkok (Remote)",
     salary: "฿55k - ฿85k",
@@ -194,6 +196,7 @@ export const JOBS: Job[] = [
     ],
   },
   {
+    id: "growth-marketing-specialist",
     title: "Growth Marketing Specialist",
     company: "FinTech Dynamics · Bangkok (On-site)",
     salary: "฿45k - ฿70k",
@@ -211,6 +214,7 @@ export const JOBS: Job[] = [
     ],
   },
   {
+    id: "ui-ux-product-designer",
     title: "UI/UX Product Designer",
     company: "Creative Lab Studio · Bangkok (Hybrid)",
     salary: "฿50k - ฿75k",
@@ -229,6 +233,7 @@ export const JOBS: Job[] = [
     ],
   },
   {
+    id: "backend-engineer-nodejs",
     title: "Backend Engineer (Node.js)",
     company: "CloudNine Systems · Bangkok (Remote)",
     salary: "฿60k - ฿90k",
@@ -246,6 +251,7 @@ export const JOBS: Job[] = [
     ],
   },
   {
+    id: "product-manager",
     title: "Product Manager",
     company: "Nimbus Labs · Bangkok (Hybrid)",
     salary: "฿70k - ฿100k",
@@ -264,6 +270,7 @@ export const JOBS: Job[] = [
     ],
   },
   {
+    id: "content-marketing-lead",
     title: "Content Marketing Lead",
     company: "BrightWave Media · Bangkok (On-site)",
     salary: "฿40k - ฿60k",
@@ -281,6 +288,7 @@ export const JOBS: Job[] = [
     ],
   },
   {
+    id: "brand-performance-marketer",
     title: "Brand & Performance Marketer",
     company: "FinTech Dynamics · ต่างจังหวัด (On-site)",
     salary: "฿35k - ฿55k",
@@ -298,6 +306,7 @@ export const JOBS: Job[] = [
     ],
   },
   {
+    id: "growth-community-marketer",
     title: "Growth & Community Marketer",
     company: "PlayNext Studio · Work Anywhere (Remote)",
     salary: "฿38k - ฿58k",
@@ -315,6 +324,7 @@ export const JOBS: Job[] = [
     ],
   },
   {
+    id: "junior-product-designer",
     title: "Junior Product Designer",
     company: "Studio Loom · Bangkok (Hybrid)",
     salary: "฿30k - ฿45k",
@@ -332,6 +342,7 @@ export const JOBS: Job[] = [
     ],
   },
   {
+    id: "design-systems-lead",
     title: "Design Systems Lead",
     company: "Creative Lab Studio · ต่างจังหวัด (Hybrid)",
     salary: "฿65k - ฿90k",
@@ -350,6 +361,7 @@ export const JOBS: Job[] = [
     ],
   },
   {
+    id: "qa-automation-engineer",
     title: "QA Automation Engineer",
     company: "TechCorp Global · Bangkok (Hybrid)",
     salary: "฿48k - ฿68k",

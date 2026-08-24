@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Job } from "@/lib/types";
 
 function fullSalaryLabel(job: Job) {
@@ -15,7 +16,10 @@ export function JobCardWide({
   matchRate?: number;
 }) {
   return (
-    <div className="flex cursor-pointer flex-col rounded-xl border border-[rgba(15,15,15,0.1)] bg-white p-3 transition-all hover:border-[rgba(15,15,15,0.3)] shadow-xs sm:p-3.5">
+    <Link
+      href={`/job/${job.id}`}
+      className="flex cursor-pointer flex-col rounded-xl border border-[rgba(15,15,15,0.1)] bg-white p-3 transition-all hover:border-[rgba(15,15,15,0.3)] shadow-xs sm:p-3.5"
+    >
       <div className="mb-1 flex items-start justify-between gap-2">
         <div className="min-w-0 truncate">
           <div className="mb-1 flex items-center gap-2">
@@ -72,6 +76,6 @@ export function JobCardWide({
           ดูรายละเอียด <span className="text-xs sm:text-[13px]">→</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
