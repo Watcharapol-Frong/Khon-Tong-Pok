@@ -25,8 +25,14 @@ export function StrategyPanel() {
           style={{ gridTemplateColumns: axisGridCols }}
         >
           {AXIS_CHIPS.map((a) => (
-            <div key={a.en} className="min-w-0 bg-[#0F0F0F] p-[18px]">
-              <div className="text-sm font-bold text-white">{a.en}</div>
+            <div
+              key={a.en}
+              className="min-w-0 border-l-2 bg-[#0F0F0F] p-[18px]"
+              style={{ borderColor: a.color }}
+            >
+              <div className="text-sm font-bold" style={{ color: a.color }}>
+                {a.en}
+              </div>
               <div className="mt-1 text-xs text-[#8A8A8A]">{a.th}</div>
             </div>
           ))}
