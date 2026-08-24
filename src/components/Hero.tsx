@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Clock, Sparkle, Sparkles } from "lucide-react";
 import { RadarChart } from "@/components/RadarChart";
@@ -86,18 +85,10 @@ export function Hero() {
               หา Candidate (HR)
             </Link>
           </div>
-          <div className="mb-4 flex items-center gap-1.5 text-[13px] text-[#8A8A8A]">
+          <div className="flex items-center gap-1.5 text-[13px] text-[#8A8A8A]">
             <Clock className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={2} />
             ใช้เวลาไม่ถึง 10 นาที · ไม่ต้องมีประสบการณ์ก็เล่นได้
           </div>
-
-          <Image
-            src="/mascot/mascot-hero-candidate.png"
-            alt=""
-            width={220}
-            height={220}
-            className={`h-auto w-[160px] object-contain sm:w-[190px] ${centerHero ? "" : "-ml-2"}`}
-          />
         </div>
 
         <div className="relative flex min-w-[280px] flex-[1_1_320px] justify-center">
