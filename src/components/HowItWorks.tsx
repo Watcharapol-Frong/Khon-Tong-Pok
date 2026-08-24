@@ -17,28 +17,24 @@ const CANDIDATE_STEPS: CandidateStep[] = [
     iconKey: "users",
     title: "เลือกสถานะผู้สมัคร",
     desc: "บอกเราว่าคุณอยู่ช่วงไหนของสายอาชีพ เพื่อปรับคำถามและบริบทในมินิเกมให้ตรงกับตัวคุณที่สุด",
-    detailType: "role",
   },
   {
     n: "02",
     iconKey: "gamepad",
     title: "เล่นเกมประเมินศักยภาพ",
-    desc: "ไม่ต้องมีเรซูเม่ก่อนก็เริ่มได้ เล่นมินิเกมเพื่อวัดตัวตนและสไตล์การทำงานจริง",
-    detailType: "tags",
+    desc: "ไม่ต้องมีเรซูเม่ก่อนก็เริ่มได้ เล่นมินิเกม Neuroscience Games เพื่อวัดตัวตนและสไตล์การทำงานจริง",
   },
   {
     n: "03",
     iconKey: "chart",
     title: "น้องตรงปกวิเคราะห์ 6 มิติศักยภาพ",
     desc: "แปลงพฤติกรรมการเล่นเป็น Radar Chart และ Feedback Report แบบเจาะลึก จากนั้นระบบช่วยสร้างหรืออัปโหลดเรซูเม่เพื่อยื่นสมัครได้เลย",
-    detailType: "axes",
   },
   {
     n: "04",
     iconKey: "target",
     title: "Match งานที่ใช่ ไม่ใช่แค่ที่ตรงสเปค",
     desc: "ได้ Smart Profile พร้อม Match Rate ระบบแนะนำตำแหน่งงานจาก Soft Skill ก่อน แล้วค่อยดู Hard Skill ประกอบ",
-    detailType: "match",
   },
 ];
 
