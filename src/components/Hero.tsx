@@ -1,32 +1,26 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { Check, Clock, EyeOff, Sparkle, Sparkles, Star } from "lucide-react";
+import { Clock, Sparkle, Sparkles } from "lucide-react";
 import { RadarChart } from "@/components/RadarChart";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { AXIS_CHIPS, RADAR_DATA } from "@/lib/data";
 
 // Same handful-not-a-shower sparkle treatment and pastel set as the
-// company-side hero (src/app/company/page.tsx) — same 4-sparkle layout too,
-// now that this hero has the same mascot-plus-floating-cards composition
-// for the sparkles to sit in the gaps of.
+// company-side hero (src/app/company/page.tsx) — kept to a few accents
+// around the headline text only. mascot-hero-candidate.png already has its
+// own baked-in sparkles/speech-bubble props, so a sparkle placed near the
+// mascot just stacks a second, redundant set of stars on top of it — reads
+// as clutter, not accent.
 const HERO_SPARKLES = [
-  { top: "4%", left: "8%", size: 20, color: "#F5D949", rotate: -15 },
-  { top: "10%", right: "22%", size: 15, color: "#B14DFF", rotate: 20 },
-  { bottom: "18%", left: "4%", size: 16, color: "#4D7CFF", rotate: 12 },
-  { bottom: "6%", right: "10%", size: 18, color: "#FF5CA8", rotate: -10 },
+  { top: "2%", left: "6%", size: 16, color: "#F5D949", rotate: -12 },
+  { top: "8%", right: "8%", size: 15, color: "#FF5CA8", rotate: -10 },
 ];
-
-// Candidate-side mirror of company/page.tsx's TOP_STRENGTHS card — top 3
-// AXIS_CHIPS by score instead of a hardcoded list, since the candidate
-// hero doesn't have a fixed persona to hand-pick strengths for.
-const TOP_STRENGTHS = [...AXIS_CHIPS].sort((a, b) => b.value - a.value).slice(0, 3);
 
 export function Hero() {
   const { isMobile, isTablet } = useBreakpoint();
   const centerHero = isMobile || isTablet;
-  const radarSize = isMobile ? 70 : 100;
+  const radarSize = isMobile ? 230 : 290;
 
   return (
     <div className="relative overflow-hidden">
@@ -45,6 +39,19 @@ export function Hero() {
         <div
           className={`relative min-w-0 flex-[1_1_440px] ${centerHero ? "flex flex-col items-center text-center" : ""}`}
         >
+          {HERO_SPARKLES.map((s, i) => (
+            <Sparkle
+              key={i}
+              className="pointer-events-none absolute hidden sm:block"
+              style={{ top: s.top, left: s.left, right: s.right, transform: `rotate(${s.rotate}deg)` }}
+              width={s.size}
+              height={s.size}
+              fill={s.color}
+              color={s.color}
+              strokeWidth={1}
+            />
+          ))}
+
           <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-[#FAFAFA] px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
             <Sparkles className="h-3.5 w-3.5" strokeWidth={2} />
             <span>AI-Powered Assessment</span>
@@ -84,145 +91,46 @@ export function Hero() {
           </div>
         </div>
 
-        {/* Mascot + floating stat cards — right. Same composition as the
-            company-side hero (mascot centered, small stat cards floating
-            around it, real components/colors instead of decorative
-            filler), mirrored for the candidate audience: Blind Review
-            becomes "HR sees your skills first," Top Strengths becomes the
-            candidate's own top 3 scored axes instead of a fixed persona. */}
-        <div className="relative flex min-w-[280px] flex-[1_1_460px] flex-col items-center py-6 sm:block sm:min-w-[640px] sm:py-10">
-          {HERO_SPARKLES.map((s, i) => (
+        <div className="relative flex min-w-[280px] flex-[1_1_320px] justify-center">
+          <div
+            className="w-full max-w-[440px] rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[clamp(24px,3vw,36px)]"
+            style={{ position: "relative" }}
+          >
             <Sparkle
-              key={i}
-              className="pointer-events-none absolute hidden sm:block"
-              style={{
-                top: s.top,
-                bottom: s.bottom,
-                left: s.left,
-                right: s.right,
-                transform: `rotate(${s.rotate}deg)`,
-              }}
-              width={s.size}
-              height={s.size}
-              fill={s.color}
-              color={s.color}
+              className="pointer-events-none absolute top-[-16px] left-[-14px] hidden sm:block"
+              width={22}
+              height={22}
+              fill="#3BF55C"
+              color="#3BF55C"
               strokeWidth={1}
             />
-          ))}
-
-          {/* Soft Skill — top-left */}
-          <div className="absolute top-[4%] right-[calc(50%+146px)] hidden w-[148px] rounded-2xl bg-[#FAFAFA] p-3 sm:block">
-            <div className="mb-1 text-[10px] font-bold tracking-wide text-[#8A8A8A] uppercase">
-              Soft Skill
+            <Sparkle
+              className="pointer-events-none absolute right-[-10px] bottom-[-12px] hidden rotate-12 sm:block"
+              width={16}
+              height={16}
+              fill="#B14DFF"
+              color="#B14DFF"
+              strokeWidth={1}
+            />
+            <div className="mb-[6px] text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
+              ตัวอย่างผลประเมิน
+            </div>
+            <div className="mb-[18px] text-[17px] font-extrabold">
+              คุณกันต์ ธ. — Frontend Dev Candidate
             </div>
             <div className="flex justify-center">
-              <RadarChart data={RADAR_DATA} size={100} theme="mono" showLabels={false} animate={false} />
+              <RadarChart data={RADAR_DATA} size={radarSize} theme="mono" showLabels animate />
             </div>
-          </div>
-
-          {/* Blind Review, candidate framing — bottom-left */}
-          <div className="absolute bottom-[8%] right-[calc(50%+146px)] hidden w-[172px] rounded-2xl bg-[#FAFAFA] p-3.5 sm:block">
-            <div className="mb-2 flex items-center gap-1.5 text-[10px] font-bold tracking-wide text-[#8A8A8A] uppercase">
-              <EyeOff className="h-3 w-3" strokeWidth={2} />
-              Blind Review
-            </div>
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[rgba(59,245,92,0.15)]">
-                <EyeOff className="h-4 w-4 text-[#0f5c22]" strokeWidth={2} />
-              </div>
-              <div className="text-[11px] leading-snug font-bold text-[#0F0F0F]">
-                HR เห็นทักษะคุณก่อน
-                <br />
-                ไม่เห็นชื่อ-รูปจนสัมภาษณ์
-              </div>
-            </div>
-          </div>
-
-          {/* Match Insight — top-right */}
-          <div className="absolute top-0 left-[calc(50%+146px)] hidden w-[140px] rounded-2xl bg-[#FAFAFA] p-3.5 sm:block">
-            <div className="mb-1 text-[10px] font-bold tracking-wide text-[#8A8A8A] uppercase">
-              Match Insight
-            </div>
-            <div className="text-2xl font-extrabold text-[#0F0F0F]">92%</div>
-            <div className="mt-1 flex gap-0.5">
-              {[0, 1, 2, 3].map((i) => (
-                <Star key={i} className="h-3 w-3 fill-[#F5D949] text-[#856700]" strokeWidth={1.75} />
-              ))}
-              <Star className="h-3 w-3 text-[#E5E5E5]" strokeWidth={1.75} />
-            </div>
-          </div>
-
-          {/* Top Strengths — bottom-right */}
-          <div className="absolute bottom-[2%] left-[calc(50%+146px)] hidden w-[176px] rounded-2xl bg-[#FAFAFA] p-3.5 sm:block">
-            <div className="mb-2 text-[10px] font-bold tracking-wide text-[#8A8A8A] uppercase">
-              Top Strengths
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {TOP_STRENGTHS.map((s) => (
-                <div key={s.en} className="flex items-center gap-1.5 text-[11px] font-semibold text-[#0F0F0F]">
-                  <Check className="h-3 w-3 flex-shrink-0 text-[#0f5c22]" strokeWidth={2.5} />
-                  {s.th}
+            <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2">
+              {AXIS_CHIPS.map((chip) => (
+                <div
+                  key={chip.en}
+                  className="rounded-xl border border-[rgba(15,15,15,0.1)] bg-white px-[11px] py-[9px] text-[11px] text-[#0F0F0F]"
+                >
+                  <div className="font-extrabold">{chip.value}%</div>
+                  <div className="opacity-60">{chip.th}</div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          <Image
-            src="/mascot/mascot-hero-candidate.png"
-            alt=""
-            width={320}
-            height={336}
-            className="relative z-10 mx-auto block h-auto w-[220px] object-contain sm:w-[260px]"
-          />
-
-          {/* Mobile-only: same four data points, plain 2x2 grid below the
-              mascot instead of floating around it — normal flow, nothing
-              for it to collide with. */}
-          <div className="mt-6 grid w-full max-w-[320px] grid-cols-2 gap-2.5 sm:hidden">
-            <div className="rounded-2xl bg-[#FAFAFA] p-3">
-              <div className="mb-1.5 text-[9px] font-bold tracking-wide text-[#8A8A8A] uppercase">
-                Soft Skill
-              </div>
-              <div className="flex justify-center">
-                <RadarChart data={RADAR_DATA} size={radarSize} theme="mono" showLabels={false} animate={false} />
-              </div>
-            </div>
-            <div className="rounded-2xl bg-[#FAFAFA] p-3">
-              <div className="mb-1.5 flex items-center gap-1 text-[9px] font-bold tracking-wide text-[#8A8A8A] uppercase">
-                <EyeOff className="h-2.5 w-2.5" strokeWidth={2} />
-                Blind Review
-              </div>
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgba(59,245,92,0.15)]">
-                <EyeOff className="h-3.5 w-3.5 text-[#0f5c22]" strokeWidth={2} />
-              </div>
-              <div className="mt-1.5 text-[10px] leading-snug font-bold text-[#0F0F0F]">
-                HR เห็นทักษะคุณก่อน ไม่เห็นชื่อ-รูปจนสัมภาษณ์
-              </div>
-            </div>
-            <div className="rounded-2xl bg-[#FAFAFA] p-3">
-              <div className="mb-1 text-[9px] font-bold tracking-wide text-[#8A8A8A] uppercase">
-                Match Insight
-              </div>
-              <div className="text-xl font-extrabold text-[#0F0F0F]">92%</div>
-              <div className="mt-1 flex gap-0.5">
-                {[0, 1, 2, 3].map((i) => (
-                  <Star key={i} className="h-2.5 w-2.5 fill-[#F5D949] text-[#856700]" strokeWidth={1.75} />
-                ))}
-                <Star className="h-2.5 w-2.5 text-[#E5E5E5]" strokeWidth={1.75} />
-              </div>
-            </div>
-            <div className="rounded-2xl bg-[#FAFAFA] p-3">
-              <div className="mb-1.5 text-[9px] font-bold tracking-wide text-[#8A8A8A] uppercase">
-                Top Strengths
-              </div>
-              <div className="flex flex-col gap-1">
-                {TOP_STRENGTHS.map((s) => (
-                  <div key={s.en} className="flex items-center gap-1 text-[10px] font-semibold text-[#0F0F0F]">
-                    <Check className="h-2.5 w-2.5 flex-shrink-0 text-[#0f5c22]" strokeWidth={2.5} />
-                    {s.th}
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
