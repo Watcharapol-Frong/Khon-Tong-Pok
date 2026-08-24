@@ -91,9 +91,9 @@ export function Hero() {
           </div>
         </div>
 
-        <div className="relative flex min-w-[280px] flex-[1_1_320px] justify-center">
+        <div className="relative flex min-w-[300px] flex-[1_1_380px] justify-center">
           <div
-            className="w-full max-w-[440px] rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[clamp(24px,3vw,36px)]"
+            className="w-full max-w-[500px] rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[clamp(24px,3vw,36px)]"
             style={{ position: "relative" }}
           >
             <Sparkle
@@ -121,14 +121,14 @@ export function Hero() {
             <div className="flex justify-center">
               <RadarChart data={RADAR_DATA} size={radarSize} theme="mono" showLabels animate />
             </div>
-            <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2">
+            <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2.5">
               {AXIS_CHIPS.map((chip) => (
                 <div
                   key={chip.en}
-                  className="rounded-xl border border-[rgba(15,15,15,0.1)] bg-white px-[11px] py-[9px] text-[11px] text-[#0F0F0F]"
+                  className="rounded-xl border border-[rgba(15,15,15,0.1)] bg-white px-3.5 py-3 text-[#0F0F0F]"
                 >
-                  <div className="font-extrabold">{chip.value}%</div>
-                  <div className="opacity-60">{chip.th}</div>
+                  <div className="text-sm font-extrabold">{chip.value}%</div>
+                  <div className="mt-0.5 text-xs opacity-60">{chip.th}</div>
                 </div>
               ))}
             </div>
