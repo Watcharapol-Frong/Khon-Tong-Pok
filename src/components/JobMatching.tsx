@@ -67,10 +67,9 @@ export function JobMatching() {
             ตำแหน่งงานและ Soft Skill ที่องค์กรมองหา
           </h2>
         </div>
-        {/* Always visible instead of only reachable by scrolling the job
-            row all the way to its trailing card — the row's own "ดูงาน
-            ทั้งหมด" card still exists as a natural cap at the end, but
-            shouldn't be the only way to find it. */}
+        {/* Was previously reachable only via a trailing card at the very
+            end of the horizontal-scroll job row — removed that card since
+            this header link is now the one way to reach it. */}
         <Link
           href="/job"
           className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 text-sm font-bold text-[#0F0F0F] transition-opacity hover:opacity-60"
@@ -110,17 +109,6 @@ export function JobMatching() {
             </div>
           ))}
         </div>
-
-        {filteredJobs.length > 0 && (
-          <Link
-            href="/job"
-            style={{ scrollSnapAlign: "start" }}
-            className="flex w-[120px] flex-shrink-0 flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-[rgba(15,15,15,0.2)] bg-[#FAFAFA] p-3 text-center transition-colors hover:border-[rgba(15,15,15,0.4)]"
-          >
-            <span className="text-lg">→</span>
-            <span className="text-xs font-extrabold">ดูงานทั้งหมด</span>
-          </Link>
-        )}
       </div>
 
       {filteredJobs.length === 0 && (
