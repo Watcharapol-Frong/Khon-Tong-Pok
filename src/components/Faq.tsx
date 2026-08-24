@@ -17,7 +17,7 @@ export function Faq({ title = "คำถามที่พบบ่อย", item
           alt=""
           width={112}
           height={112}
-          className="h-16 w-16 flex-shrink-0 object-contain sm:h-20 sm:w-20"
+          className="h-20 w-20 flex-shrink-0 object-contain sm:h-24 sm:w-24"
         />
         <h2 className="text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">{title}</h2>
       </div>
