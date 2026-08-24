@@ -1,11 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Avatar from "boring-avatars";
 import Link from "next/link";
 import { JobCard } from "@/components/JobCard";
 import { JobFilterBar } from "@/components/JobFilterBar";
 import { useJobFilters } from "@/hooks/useJobFilters";
 import { JOBS } from "@/lib/data";
+
+// These are mock/placeholder companies with no real logos to show, so a
+// generic building icon or plain initial reads as an obvious stand-in.
+// boring-avatars (MIT, zero runtime deps, fully client-side/offline —
+// deterministic SVG generated from the name string, no network calls)
+// generates a distinct abstract mark per company instead, seeded with
+// this site's own accent palette so they read as belonging here.
+const LOGO_COLORS = ["#F5D949", "#B14DFF", "#4D7CFF", "#FF5CA8", "#3BF55C", "#FF6E5C"];
 
 const FADE_WIDTH = "40px";
 // Edge fades mirror scroll position instead of always being on (unlike the
@@ -137,9 +146,7 @@ export function JobMatching() {
                 aria-hidden={i >= marqueeCompanies.length}
                 className="flex flex-shrink-0 items-center gap-2 rounded-full border border-[rgba(15,15,15,0.08)] bg-white px-4 py-2"
               >
-                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#0F0F0F] text-[10px] font-extrabold text-white">
-                  {co.charAt(0)}
-                </div>
+                <Avatar size={24} name={co} variant="marble" colors={LOGO_COLORS} square={false} />
                 <span className="text-sm font-bold whitespace-nowrap text-[#5C5C5C]">{co}</span>
               </div>
             ))}
