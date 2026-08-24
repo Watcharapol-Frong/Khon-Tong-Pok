@@ -76,16 +76,24 @@ export function JobMatching() {
           บริษัทที่กำลังเปิดรับตำแหน่งงานผ่านคนตรงปก
         </div>
         <div
-          className="relative overflow-hidden"
+          className="marquee-pause-on-hover relative overflow-hidden"
+          role="group"
+          aria-label="บริษัทที่กำลังเปิดรับตำแหน่งงานผ่านคนตรงปก"
           style={{
             maskImage: "linear-gradient(to right,transparent,#000 8%,#000 92%,transparent)",
             WebkitMaskImage: "linear-gradient(to right,transparent,#000 8%,#000 92%,transparent)",
           }}
         >
-          <div className="animate-marquee flex w-max">
+          <div className="animate-marquee flex w-max gap-3">
             {[...marqueeCompanies, ...marqueeCompanies].map((co, i) => (
-              <div key={i} className="flex flex-shrink-0 items-center gap-2 px-7 py-[10px]">
-                <div className="h-2 w-2 flex-shrink-0 rounded-sm bg-[#0F0F0F]" />
+              <div
+                key={i}
+                aria-hidden={i >= marqueeCompanies.length}
+                className="flex flex-shrink-0 items-center gap-2 rounded-full border border-[rgba(15,15,15,0.08)] bg-white px-4 py-2"
+              >
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#0F0F0F] text-[10px] font-extrabold text-white">
+                  {co.charAt(0)}
+                </div>
                 <span className="text-sm font-bold whitespace-nowrap text-[#5C5C5C]">{co}</span>
               </div>
             ))}

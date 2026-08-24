@@ -42,6 +42,19 @@ a {
   animation: marqueeScroll 26s linear infinite;
 }
 
+/* Tailwind's group-hover:[animation-play-state:paused] arbitrary-property
+   variant doesn't compile in this project's Tailwind v4 setup (silently
+   produces no rule) — using a plain scoped selector instead, which does. */
+.marquee-pause-on-hover:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee {
+    animation-play-state: paused;
+  }
+}
+
 @keyframes radarGrow {
   from {
     transform: scale(0);
