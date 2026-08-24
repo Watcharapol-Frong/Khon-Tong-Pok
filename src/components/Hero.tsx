@@ -17,6 +17,19 @@ const HERO_SPARKLES = [
   { top: "8%", right: "8%", size: 15, color: "#FF5CA8", rotate: -10 },
 ];
 
+// Same card shell as AuthCard (login/register) for the sample-assessment
+// card — flat accent square + 4-corner sparkles. Unlike JobFilterBar (a
+// small functional toolbar where this same treatment read as a stray
+// box), this card IS the visual focus of its half of the hero, the same
+// role AuthCard's own card plays on its page, so the accent reads as
+// intentional here.
+const CARD_SPARKLES = [
+  { top: "2%", left: "-18px", size: 26, color: "#F5D949", rotate: -18, opacity: 0.65 },
+  { top: "10%", right: "-18px", size: 20, color: "#B14DFF", rotate: 15, opacity: 0.6 },
+  { bottom: "14%", left: "-20px", size: 18, color: "#4D7CFF", rotate: 20, opacity: 0.6 },
+  { bottom: "4%", right: "-14px", size: 22, color: "#FF5CA8", rotate: -12, opacity: 0.6 },
+];
+
 export function Hero() {
   const { isMobile, isTablet } = useBreakpoint();
   const centerHero = isMobile || isTablet;
@@ -92,26 +105,29 @@ export function Hero() {
         </div>
 
         <div className="relative flex min-w-[300px] flex-[1_1_380px] justify-center">
-          <div
-            className="w-full max-w-[500px] rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[clamp(24px,3vw,36px)]"
-            style={{ position: "relative" }}
-          >
+          {CARD_SPARKLES.map((s, i) => (
             <Sparkle
-              className="pointer-events-none absolute top-[-16px] left-[-14px] hidden sm:block"
-              width={22}
-              height={22}
-              fill="#3BF55C"
-              color="#3BF55C"
+              key={i}
+              className="pointer-events-none absolute hidden sm:block"
+              style={{
+                top: s.top,
+                bottom: s.bottom,
+                left: s.left,
+                right: s.right,
+                opacity: s.opacity,
+                transform: `rotate(${s.rotate}deg)`,
+              }}
+              width={s.size}
+              height={s.size}
+              fill={s.color}
+              color={s.color}
               strokeWidth={1}
             />
-            <Sparkle
-              className="pointer-events-none absolute right-[-10px] bottom-[-12px] hidden rotate-12 sm:block"
-              width={16}
-              height={16}
-              fill="#B14DFF"
-              color="#B14DFF"
-              strokeWidth={1}
-            />
+          ))}
+
+          <div className="relative isolate w-full max-w-[500px] rounded-2xl bg-[#F5F5F5] p-[clamp(24px,3vw,36px)]">
+            <div className="absolute -top-3 -left-3 -z-10 h-12 w-12 rounded-2xl bg-[#3BF55C]" />
+
             <div className="mb-[6px] text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
               ตัวอย่างผลประเมิน
             </div>
