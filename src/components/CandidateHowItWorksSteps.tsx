@@ -68,31 +68,33 @@ export function CandidateHowItWorksSteps({ steps }: { steps: CandidateStep[] }) 
               <button
                 type="button"
                 onClick={() => selectStep(i)}
-                className={`cursor-pointer rounded-2xl p-5 text-left transition-colors sm:p-6 ${
-                  isActive ? "bg-white/10 lg:flex-[1.3]" : "bg-white/5 hover:bg-white/[0.07] lg:flex-1"
+                className={`cursor-pointer rounded-2xl bg-white p-5 text-left transition-all sm:p-6 ${
+                  isActive
+                    ? "shadow-md ring-2 ring-[#3BF55C] lg:flex-[1.3]"
+                    : "opacity-75 hover:opacity-100 lg:flex-1"
                 }`}
               >
                 <div className="mb-3 flex items-center gap-2.5">
                   <div
                     className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${
-                      isActive ? "bg-[#4D7CFF]" : "bg-white/10"
+                      isActive ? "bg-[#4D7CFF]" : "bg-[#F5F5F5]"
                     }`}
                   >
-                    <Icon className="h-4 w-4 text-white" strokeWidth={2} />
+                    <Icon className={`h-4 w-4 ${isActive ? "text-white" : "text-[#0F0F0F]"}`} strokeWidth={2} />
                   </div>
                   <div className="text-[11px] font-bold tracking-wide text-[#8A8A8A] uppercase">
                     Step {step.n}
                   </div>
                 </div>
-                <div className="mb-2 text-lg font-extrabold tracking-[-0.01em] text-white">{step.title}</div>
-                <div className="text-sm leading-[1.7] text-[#B5B5B5]">{step.desc}</div>
+                <div className="mb-2 text-lg font-extrabold tracking-[-0.01em] text-[#0F0F0F]">{step.title}</div>
+                <div className="text-sm leading-[1.7] text-[#5C5C5C]">{step.desc}</div>
 
                 {isActive && step.detailType === "role" && (
                   <div className="mt-4 flex flex-wrap gap-1.5">
                     {ROLE_TAGS.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white"
+                        className="rounded-full bg-[#F5F5F5] px-2.5 py-1 text-[11px] font-bold text-[#0F0F0F]"
                       >
                         {tag}
                       </span>
@@ -105,7 +107,7 @@ export function CandidateHowItWorksSteps({ steps }: { steps: CandidateStep[] }) 
                     {GAME_TAGS.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white"
+                        className="rounded-full bg-[#F5F5F5] px-2.5 py-1 text-[11px] font-bold text-[#0F0F0F]"
                       >
                         {tag}
                       </span>
@@ -118,7 +120,7 @@ export function CandidateHowItWorksSteps({ steps }: { steps: CandidateStep[] }) 
                     {AXIS_TAGS.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold text-white"
+                        className="rounded-full bg-[#F5F5F5] px-2.5 py-1 text-[11px] font-bold text-[#0F0F0F]"
                       >
                         {tag}
                       </span>
@@ -127,17 +129,17 @@ export function CandidateHowItWorksSteps({ steps }: { steps: CandidateStep[] }) 
                 )}
 
                 {isActive && step.detailType === "match" && (
-                  <div className="mt-4 flex items-center gap-3 rounded-xl bg-white/5 px-3.5 py-2.5">
+                  <div className="mt-4 flex items-center gap-3 rounded-xl bg-[#F5F5F5] px-3.5 py-2.5">
                     <div className="text-[11px] font-bold tracking-wide text-[#8A8A8A] uppercase">
                       ตัวอย่าง Match
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-base font-extrabold text-white">92%</span>
+                      <span className="text-base font-extrabold text-[#0F0F0F]">92%</span>
                       <div className="flex gap-0.5">
                         {[0, 1, 2, 3].map((j) => (
                           <Star key={j} className="h-3 w-3 fill-[#F5D949] text-[#856700]" strokeWidth={1.75} />
                         ))}
-                        <Star className="h-3 w-3 text-white/20" strokeWidth={1.75} />
+                        <Star className="h-3 w-3 text-[rgba(15,15,15,0.15)]" strokeWidth={1.75} />
                       </div>
                     </div>
                   </div>
