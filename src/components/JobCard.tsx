@@ -13,7 +13,7 @@ export function JobCard({ job }: { job: Job }) {
           {job.skillTags.map((tag) => (
             <span
               key={tag.label}
-              className="rounded-lg px-2.5 py-1 text-[11px] font-bold"
+              className="rounded-full px-2.5 py-1 text-[11px] font-bold"
               style={{ background: tag.bg, color: tag.color }}
             >
               {tag.label}
