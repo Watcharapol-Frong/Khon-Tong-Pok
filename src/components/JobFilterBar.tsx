@@ -44,7 +44,7 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
   } = filters;
 
   return (
-    <div className="mb-5 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[10px]">
+    <div className="mb-5 rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#F5F5F5] p-[10px]">
       <div className="flex max-w-full flex-wrap items-center gap-[10px]">
         <div className="relative min-w-[200px] flex-[1_1_260px]">
           <input
@@ -52,9 +52,9 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="ค้นหางานด้วย AI หรือทักษะ..."
-            className="w-full rounded-xl border border-[rgba(15,15,15,0.1)] bg-white py-[11px] pr-[76px] pl-4 font-sans text-[13px] text-[#0F0F0F] outline-none"
+            className="w-full rounded-full border border-[rgba(15,15,15,0.1)] bg-white py-[11px] pr-[76px] pl-4 font-sans text-[13px] text-[#0F0F0F] outline-none"
           />
-          <span className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer rounded-lg bg-[#0F0F0F] px-[14px] py-[7px] text-xs font-extrabold text-white">
+          <span className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer rounded-full bg-[#0F0F0F] px-[14px] py-[7px] text-xs font-extrabold text-white">
             ค้นหา
           </span>
         </div>
@@ -62,7 +62,7 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
         <div className="flex min-w-0 flex-[1_1_auto] items-center gap-1.5">
           <span
             onClick={() => setFilterPanelOpen((v) => !v)}
-            className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-[10px] bg-[#0F0F0F] px-[14px] py-[9px] text-xs font-extrabold whitespace-nowrap text-white"
+            className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[#0F0F0F] px-[14px] py-[9px] text-xs font-extrabold whitespace-nowrap text-white"
           >
             <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={2} /> กรองผลลัพธ์
             {hasActiveFilters && <span className="h-[7px] w-[7px] rounded-full bg-[#3BF55C]" />}
@@ -75,7 +75,7 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
                 <span
                   key={tab.key}
                   onClick={() => setCategory(tab.key)}
-                  className="flex-shrink-0 cursor-pointer rounded-[10px] px-[14px] py-[9px] text-xs font-bold whitespace-nowrap"
+                  className="flex-shrink-0 cursor-pointer rounded-full px-[14px] py-[9px] text-xs font-bold whitespace-nowrap"
                   style={{
                     background: active ? "#0F0F0F" : "#FFFFFF",
                     color: active ? "#FFFFFF" : "#5C5C5C",
