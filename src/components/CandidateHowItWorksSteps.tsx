@@ -35,15 +35,18 @@ export function CandidateHowItWorksSteps({ steps }: { steps: CandidateStep[] }) 
       {steps.map((step) => {
         const Icon = ICONS[step.iconKey];
         return (
-          <div key={step.n} className="flex flex-col items-center rounded-2xl bg-[#FAFAFA] p-5 text-center sm:p-6">
-            <div className="mb-2 text-[11px] font-bold tracking-wide text-[#8A8A8A] uppercase">
+          <div
+            key={step.n}
+            className="flex flex-col items-center justify-center rounded-2xl bg-[#FAFAFA] p-5 text-center sm:p-6"
+          >
+            <div className="mb-1.5 text-[11px] font-bold tracking-wide text-[#8A8A8A] uppercase">
               Step {step.n}
             </div>
-            <div className="mb-4 text-lg font-extrabold tracking-[-0.01em] text-[#0F0F0F]">{step.title}</div>
-            <div className="mb-4 flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-white">
-              <Icon className="h-6 w-6 text-[#0F0F0F]" strokeWidth={2} />
+            <div className="mb-3 text-lg font-extrabold tracking-[-0.01em] text-[#0F0F0F]">{step.title}</div>
+            <div className="mb-3 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-white">
+              <Icon className="h-5 w-5 text-[#0F0F0F]" strokeWidth={2} />
             </div>
-            <div className="text-sm leading-[1.7] text-[#5C5C5C]">{step.desc}</div>
+            <div className="text-sm leading-[1.6] text-[#5C5C5C]">{step.desc}</div>
 
             {step.detailType === "role" && (
               <div className="mt-4 flex flex-wrap justify-center gap-1.5">
