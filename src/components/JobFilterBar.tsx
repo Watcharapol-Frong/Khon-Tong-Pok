@@ -10,10 +10,11 @@ import type { JobCategory } from "@/lib/types";
 const SALARY_MIN_OPTIONS = [0, 20000, 40000, 60000, 80000, 100000];
 const SALARY_MAX_OPTIONS: (number | "all")[] = [40000, 60000, 80000, 100000, "all"];
 
-// Same card-shell language as AuthCard (login/register) — flat accent
-// square + sparkle corners — so this reads as the same product instead of
-// its own plain bordered box. Candidate green since this bar only ever
-// appears on candidate-facing pages (homepage JobMatching, /job).
+// Sparkle-corner accent borrowed from AuthCard (login/register) to tie this
+// bar into the same visual language. The flat accent square that also
+// lives on AuthCard was tried here too, but on a small functional toolbar
+// embedded in a busy page it just read as an unexplained stray box rather
+// than a deliberate accent — dropped, keeping only the subtler sparkles.
 const FILTER_BAR_SPARKLES = [
   { top: "2%", left: "-18px", size: 20, color: "#F5D949", rotate: -18, opacity: 0.65 },
   { top: "12%", right: "-20px", size: 16, color: "#B14DFF", rotate: 15, opacity: 0.6 },
@@ -86,9 +87,7 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
         />
       ))}
 
-      <div className="relative isolate rounded-2xl bg-[#F5F5F5] p-[10px]">
-        <div className="absolute -top-3 -left-3 -z-10 h-12 w-12 rounded-2xl bg-[#3BF55C]" />
-
+      <div className="relative rounded-2xl bg-[#F5F5F5] p-[10px]">
       <div className="flex max-w-full flex-wrap items-center gap-[10px]">
         <div className="relative min-w-[200px] flex-[1_1_260px]">
           <Search
