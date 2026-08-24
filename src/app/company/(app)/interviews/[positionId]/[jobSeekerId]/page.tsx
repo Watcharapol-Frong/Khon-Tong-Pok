@@ -114,7 +114,7 @@ export default function InterviewDetailPage() {
             <p className="mt-0.5 text-xs text-[#8A8A8A]">{slot.positionTitle}</p>
           </div>
           <span
-            className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-bold ${STATUS_META[slot.status].className}`}
+            className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-bold whitespace-nowrap ${STATUS_META[slot.status].className}`}
           >
             <StatusIcon className="h-3 w-3" strokeWidth={2.5} />
             {STATUS_META[slot.status].label}

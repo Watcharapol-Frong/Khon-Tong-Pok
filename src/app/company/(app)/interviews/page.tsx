@@ -85,7 +85,7 @@ export default function CompanyInterviewsPage() {
                       card states their status. */}
                   {!(slot.status === "confirmed" && slot.confirmedTime) && (
                     <span
-                      className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-bold ${STATUS_META[slot.status].className}`}
+                      className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[10px] font-bold whitespace-nowrap ${STATUS_META[slot.status].className}`}
                     >
                       <StatusIcon className="h-3 w-3" strokeWidth={2.5} />
                       {STATUS_META[slot.status].label}

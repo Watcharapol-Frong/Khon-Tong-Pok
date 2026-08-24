@@ -165,7 +165,7 @@ export default function CompanyDashboardPage() {
                         {position.title}
                       </span>
                       <span
-                        className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${STATUS_META[statusKey].className}`}
+                        className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap ${STATUS_META[statusKey].className}`}
                       >
                         {STATUS_META[statusKey].label}
                       </span>

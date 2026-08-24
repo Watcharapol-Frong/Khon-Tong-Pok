@@ -340,12 +340,12 @@ function CompanyPositionsContent() {
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-extrabold text-[#0F0F0F]">
                           {position.title}
                         </span>
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${
                             isOpen
                               ? "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]"
                               : "bg-[#F0F0F0] text-[#8A8A8A]"

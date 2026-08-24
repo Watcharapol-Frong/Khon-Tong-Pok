@@ -271,10 +271,10 @@ export default function PositionCandidatesPage() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs font-extrabold text-[#0F0F0F]">{blindLabel(m.jobSeekerId)}</span>
                       {m.isStandout && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(245,217,73,0.25)] px-2.5 py-0.5 text-[10px] font-bold text-[#856700]">
+                        <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-[rgba(245,217,73,0.25)] px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap text-[#856700]">
                           <Star className="h-2.5 w-2.5 fill-current" strokeWidth={1.75} />
                           ช้างเผือก
                         </span>
@@ -285,7 +285,7 @@ export default function PositionCandidatesPage() {
                           two overlapping badges for the same candidate. */}
                       {!slot && (
                         <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${
                             m.status === "contacted"
                               ? "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]"
                               : "bg-[#F0F0F0] text-[#5A5A5A]"

@@ -181,10 +181,10 @@ export default function CandidateReportPage() {
                 </div>
               )}
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-lg font-extrabold tracking-[-0.02em]">{displayName}</h1>
                   {isStandout && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(245,217,73,0.25)] px-2.5 py-0.5 text-[10px] font-bold text-[#856700]">
+                    <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-[rgba(245,217,73,0.25)] px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap text-[#856700]">
                       <Star className="h-2.5 w-2.5 fill-current" strokeWidth={1.75} />
                       ช้างเผือก
                     </span>
