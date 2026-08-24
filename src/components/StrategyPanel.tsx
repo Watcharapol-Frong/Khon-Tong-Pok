@@ -26,7 +26,6 @@ export function StrategyPanel() {
         >
           {AXIS_CHIPS.map((a) => (
             <div key={a.en} className="min-w-0 bg-[#0F0F0F] p-[18px]">
-              <div className="mb-[10px] h-2.5 w-2.5 rounded-full" style={{ background: a.color }} />
               <div className="text-sm font-bold text-white">{a.en}</div>
               <div className="mt-1 text-xs text-[#8A8A8A]">{a.th}</div>
             </div>
