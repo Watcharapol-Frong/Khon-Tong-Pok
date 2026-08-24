@@ -9,11 +9,12 @@ import { AXIS_CHIPS, RADAR_DATA } from "@/lib/data";
 
 // Same handful-not-a-shower sparkle treatment and pastel set as the
 // company-side hero (src/app/company/page.tsx) — kept to a few accents
-// around the mascot rather than a wash of color, per the same "pink stays
-// mascot-only" restraint already established there.
+// around the headline text only. mascot-hero-candidate.png already has its
+// own baked-in sparkles/speech-bubble props, so a sparkle placed near the
+// mascot just stacks a second, redundant set of stars on top of it — reads
+// as clutter, not accent.
 const HERO_SPARKLES = [
   { top: "2%", left: "6%", size: 16, color: "#F5D949", rotate: -12 },
-  { bottom: "10%", left: "-2%", size: 14, color: "#4D7CFF", rotate: 16 },
   { top: "8%", right: "8%", size: 15, color: "#FF5CA8", rotate: -10 },
 ];
 
@@ -43,7 +44,7 @@ export function Hero() {
             <Sparkle
               key={i}
               className="pointer-events-none absolute hidden sm:block"
-              style={{ top: s.top, bottom: s.bottom, left: s.left, right: s.right, transform: `rotate(${s.rotate}deg)` }}
+              style={{ top: s.top, left: s.left, right: s.right, transform: `rotate(${s.rotate}deg)` }}
               width={s.size}
               height={s.size}
               fill={s.color}
