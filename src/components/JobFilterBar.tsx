@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { RotateCcw, Search, SlidersHorizontal } from "lucide-react";
+import { RotateCcw, Search, Sparkle, SlidersHorizontal } from "lucide-react";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 import type { JobFilters } from "@/hooks/useJobFilters";
 import { BIZ_LABELS, CATEGORY_TABS, LEVEL_LABELS, LOCATION_LABELS, WORK_TYPE_LABELS } from "@/lib/data";
@@ -9,6 +9,17 @@ import type { JobCategory } from "@/lib/types";
 
 const SALARY_MIN_OPTIONS = [0, 20000, 40000, 60000, 80000, 100000];
 const SALARY_MAX_OPTIONS: (number | "all")[] = [40000, 60000, 80000, 100000, "all"];
+
+// Same card-shell language as AuthCard (login/register) — flat accent
+// square + sparkle corners — so this reads as the same product instead of
+// its own plain bordered box. Candidate green since this bar only ever
+// appears on candidate-facing pages (homepage JobMatching, /job).
+const FILTER_BAR_SPARKLES = [
+  { top: "2%", left: "-18px", size: 20, color: "#F5D949", rotate: -18, opacity: 0.65 },
+  { top: "12%", right: "-20px", size: 16, color: "#B14DFF", rotate: 15, opacity: 0.6 },
+  { bottom: "16%", left: "-22px", size: 15, color: "#4D7CFF", rotate: 20, opacity: 0.6 },
+  { bottom: "4%", right: "-16px", size: 18, color: "#FF5CA8", rotate: -12, opacity: 0.6 },
+];
 
 export function JobFilterBar({ filters }: { filters: JobFilters }) {
   const {
@@ -54,7 +65,30 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
     (categories.length > 0 ? 1 : 0);
 
   return (
-    <div className="mb-5 rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#F5F5F5] p-[10px]">
+    <div className="relative mb-5">
+      {FILTER_BAR_SPARKLES.map((s, i) => (
+        <Sparkle
+          key={i}
+          className="pointer-events-none absolute hidden sm:block"
+          style={{
+            top: s.top,
+            bottom: s.bottom,
+            left: s.left,
+            right: s.right,
+            opacity: s.opacity,
+            transform: `rotate(${s.rotate}deg)`,
+          }}
+          width={s.size}
+          height={s.size}
+          fill={s.color}
+          color={s.color}
+          strokeWidth={1}
+        />
+      ))}
+
+      <div className="relative isolate rounded-2xl bg-[#F5F5F5] p-[10px]">
+        <div className="absolute -top-3 -left-3 -z-10 h-12 w-12 rounded-2xl bg-[#3BF55C]" />
+
       <div className="flex max-w-full flex-wrap items-center gap-[10px]">
         <div className="relative min-w-[200px] flex-[1_1_260px]">
           <Search
@@ -245,6 +279,7 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }
