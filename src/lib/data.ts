@@ -4,6 +4,7 @@ import type {
   GameStage,
   InterviewSlot,
   Job,
+  JobCategory,
   JobSeeker,
   Match,
   RadarAxisDatum,
@@ -378,6 +379,81 @@ export const JOBS: Job[] = [
       { label: "Decision Under Pressure ≥65%", bg: "rgba(245,217,73,0.2)", color: "#856700" },
     ],
   },
+  // --- Below: one representative listing per newly-added category (sales/
+  // finance/hr/ops) so each new tab/filter actually has something to show,
+  // rather than being a permanently-empty option.
+  {
+    id: "business-development-executive",
+    title: "Business Development Executive",
+    company: "Momentum Partners · Bangkok (Hybrid)",
+    salary: "฿40k - ฿65k",
+    category: "sales",
+    workType: "hybrid",
+    city: "bangkok",
+    salaryMin: 40000,
+    salaryMax: 65000,
+    level: "mid-senior",
+    hardSkills: "B2B Sales · CRM (HubSpot) · Negotiation · Lead Generation",
+    skillTags: [
+      { label: "Risk Tolerance ≥60%", bg: "rgba(177,77,255,0.1)", color: "#B14DFF" },
+      { label: "Resilience ≥70%", bg: "rgba(59,245,92,0.2)", color: "#0f5c22" },
+      { label: "Collaboration ≥85%", bg: "rgba(255,92,168,0.1)", color: "#c22d76" },
+    ],
+  },
+  {
+    id: "financial-analyst",
+    title: "Financial Analyst",
+    company: "Meridian Capital · Bangkok (On-site)",
+    salary: "฿45k - ฿70k",
+    category: "finance",
+    workType: "onsite",
+    city: "bangkok",
+    salaryMin: 45000,
+    salaryMax: 70000,
+    level: "mid-senior",
+    hardSkills: "Financial Modeling · Excel · SAP · Budgeting",
+    skillTags: [
+      { label: "Critical Thinking ≥80%", bg: "rgba(77,124,255,0.1)", color: "#4D7CFF" },
+      { label: "Decision Under Pressure ≥65%", bg: "rgba(245,217,73,0.2)", color: "#856700" },
+      { label: "Resilience ≥70%", bg: "rgba(59,245,92,0.2)", color: "#0f5c22" },
+    ],
+  },
+  {
+    id: "hr-talent-acquisition-specialist",
+    title: "HR & Talent Acquisition Specialist",
+    company: "PeopleFirst Group · Bangkok (Hybrid)",
+    salary: "฿35k - ฿55k",
+    category: "hr",
+    workType: "hybrid",
+    city: "bangkok",
+    salaryMin: 35000,
+    salaryMax: 55000,
+    level: "mid-senior",
+    hardSkills: "Recruitment · HRIS · Employee Relations · Onboarding",
+    skillTags: [
+      { label: "Collaboration ≥85%", bg: "rgba(255,92,168,0.1)", color: "#c22d76" },
+      { label: "Learning Agility ≥75%", bg: "rgba(255,110,92,0.1)", color: "#d63d28" },
+      { label: "Resilience & Adaptability ≥70%", bg: "rgba(59,245,92,0.2)", color: "#0f5c22" },
+    ],
+  },
+  {
+    id: "supply-chain-coordinator",
+    title: "Supply Chain Coordinator",
+    company: "Anchor Logistics · ต่างจังหวัด (On-site)",
+    salary: "฿32k - ฿48k",
+    category: "ops",
+    workType: "onsite",
+    city: "upcountry",
+    salaryMin: 32000,
+    salaryMax: 48000,
+    level: "entry",
+    hardSkills: "Inventory Mgmt · SAP · Vendor Coordination · Logistics Planning",
+    skillTags: [
+      { label: "Decision Under Pressure ≥65%", bg: "rgba(245,217,73,0.2)", color: "#856700" },
+      { label: "Risk Tolerance ≥60%", bg: "rgba(177,77,255,0.1)", color: "#B14DFF" },
+      { label: "Collaboration ≥85%", bg: "rgba(255,92,168,0.1)", color: "#c22d76" },
+    ],
+  },
 ];
 
 export const WORK_TYPE_LABELS: Record<string, string> = {
@@ -402,13 +478,21 @@ export const BIZ_LABELS: Record<string, string> = {
   dev: "Software & Data",
   marketing: "Marketing",
   design: "Design",
+  sales: "Sales & Business Dev.",
+  finance: "Finance & Accounting",
+  hr: "HR & Administration",
+  ops: "Operations & Supply Chain",
 };
 
-export const CATEGORY_TABS: { key: "all" | "dev" | "marketing" | "design"; label: string }[] = [
+export const CATEGORY_TABS: { key: "all" | JobCategory; label: string }[] = [
   { key: "all", label: "ทั้งหมด" },
   { key: "dev", label: "Software & Data" },
   { key: "marketing", label: "Marketing" },
   { key: "design", label: "Design" },
+  { key: "sales", label: "Sales & Business Dev." },
+  { key: "finance", label: "Finance & Accounting" },
+  { key: "hr", label: "HR & Administration" },
+  { key: "ops", label: "Operations & Supply Chain" },
 ];
 
 // Position moved to a real Postgres table — see src/lib/actions/position.ts.

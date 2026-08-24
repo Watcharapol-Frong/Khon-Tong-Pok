@@ -247,7 +247,7 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
               <MultiSelectDropdown
                 label="ประเภทธุรกิจ"
                 summary={categorySummary}
-                options={["dev", "marketing", "design"].map((v) => ({
+                options={["dev", "marketing", "design", "sales", "finance", "hr", "ops"].map((v) => ({
                   value: v,
                   label: BIZ_LABELS[v],
                 }))}

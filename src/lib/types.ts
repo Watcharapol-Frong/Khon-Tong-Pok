@@ -2,7 +2,11 @@ export type RadarAxisDatum = { axis: string; value: number };
 
 export type SkillTag = { label: string; bg: string; color: string };
 
-export type JobCategory = "dev" | "marketing" | "design";
+// A general recruiting platform spans far more than tech/marketing/design —
+// matches the broad category families standard on Thai/international job
+// boards (JobThai, LinkedIn Jobs), so the filter reads as a real multi-
+// industry platform rather than a narrow tech-company careers page.
+export type JobCategory = "dev" | "marketing" | "design" | "sales" | "finance" | "hr" | "ops";
 export type WorkType = "hybrid" | "remote" | "onsite";
 export type JobLevel = "entry" | "mid-senior" | "senior";
 export type City = "bangkok" | "upcountry";
