@@ -125,7 +125,7 @@ export function JobMatching() {
         </div>
       )}
 
-      <div className="mt-8">
+      <div className="mt-12">
         <div className="mb-4 text-center text-xs font-bold text-[#8A8A8A]">
           บริษัทที่กำลังเปิดรับตำแหน่งงานผ่านคนตรงปก
         </div>
@@ -138,7 +138,10 @@ export function JobMatching() {
             WebkitMaskImage: "linear-gradient(to right,transparent,#000 8%,#000 92%,transparent)",
           }}
         >
-          <div className="animate-marquee flex w-max gap-3">
+          {/* Reversed relative to the job-card row above — two adjacent
+              rows drifting the same direction at different speeds read as
+              an unintentional glitch, not two distinct content groups. */}
+          <div className="animate-marquee-reverse flex w-max gap-3">
             {[...marqueeCompanies, ...marqueeCompanies].map((co, i) => (
               <div
                 key={i}
