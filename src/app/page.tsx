@@ -16,7 +16,13 @@ export default function Home() {
       <HowItWorks />
       <StrategyPanel />
       <Faq />
-      <ClosingCta />
+      {/* By this point the visitor has already scrolled past HowItWorks and
+          StrategyPanel — routing to /game here would mean re-showing that
+          exact same pitch a second time before reaching the same /login
+          link /game's own Hero already points to. Skip straight there
+          instead; Hero's CTA up top still goes to /game since a visitor who
+          clicks that hasn't seen any of the pitch yet and needs it. */}
+      <ClosingCta primaryHref="/login" />
       <Footer />
     </div>
   );
