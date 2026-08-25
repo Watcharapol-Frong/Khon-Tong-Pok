@@ -100,6 +100,17 @@ export default function LoginSelectPage() {
               </div>
             ))}
           </div>
+
+          {/* Same role ambiguity as the login cards above — can't send
+              someone straight to /register (candidate) or /company/register
+              (HR) without knowing which one they mean, so this also goes
+              through a picker rather than a single link. */}
+          <div className="mt-8 text-center text-xs text-[#8A8A8A]">
+            ยังไม่มีบัญชี?{" "}
+            <Link href="/register/select" className="font-extrabold text-[#0F0F0F] underline hover:opacity-80">
+              สมัครใช้งานฟรีที่นี่
+            </Link>
+          </div>
         </div>
       </div>
 
