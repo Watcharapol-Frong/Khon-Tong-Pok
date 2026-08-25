@@ -1,36 +1,28 @@
 import { ClosingCta } from "@/components/ClosingCta";
+import { Faq } from "@/components/Faq";
 import { Footer } from "@/components/Footer";
 import { Hero } from "@/components/Hero";
-import { MatchShowcase } from "@/components/MatchShowcase";
+import { HowItWorks } from "@/components/HowItWorks";
+import { JobMatching } from "@/components/JobMatching";
 import { Navbar } from "@/components/Navbar";
-import { ProcessOverview } from "@/components/ProcessOverview";
-import { Problem } from "@/components/Problem";
-import { Solution } from "@/components/Solution";
-import { Trust } from "@/components/Trust";
+import { StrategyPanel } from "@/components/StrategyPanel";
 
-// General landing — serves both jobseeker and HR audiences. The audience
-// fork ("สำหรับผู้หางาน" / "สำหรับองค์กร") lives directly in Hero's own CTAs,
-// not a separate section, since it's a navigation decision (each button is
-// a hard link off this page) rather than something to persuade someone
-// into after a scroll. Everything below Hero is for visitors still
-// deciding, not a gate blocking that fork.
-//
-// The sample Smart Profile/radar chart lives in Hero itself — an earlier
-// pass pulled it out into its own section and replaced Hero's visual with
-// an abstract flow diagram, which read as clutter competing with Hero's
-// actual job (headline + CTAs). Reverted; Hero keeps the result card.
+// Back to the original structure after the "General Landing" experiment
+// (Problem/Solution/PlatformOverview/ProcessOverview/MatchShowcase/Trust)
+// didn't land — those sections and their components have been removed.
+// Hero's own CTAs ("สำหรับผู้หางาน" / "สำหรับองค์กร") still carry the
+// audience fork; everything else keeps whatever fixes/polish it picked up
+// this session (marquee auto-scroll, category filters, FAQ accordion
+// accessibility, StrategyPanel's monochrome redesign, honest CTA copy).
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
       <Navbar />
       <Hero />
-      <Problem />
-      <Solution />
-      {/* Lightweight proof-of-concept, not the real job board — that's
-          /job. Nobody here is choosing a job yet. */}
-      <MatchShowcase />
-      <ProcessOverview />
-      <Trust />
+      <JobMatching />
+      <HowItWorks />
+      <StrategyPanel />
+      <Faq />
       <ClosingCta
         title="พร้อมเริ่มต้นแล้วหรือยัง?"
         primaryHref="/game"
