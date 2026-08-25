@@ -1,5 +1,4 @@
 import { ClosingCta } from "@/components/ClosingCta";
-import { ExampleResult } from "@/components/ExampleResult";
 import { Footer } from "@/components/Footer";
 import { Hero } from "@/components/Hero";
 import { MatchShowcase } from "@/components/MatchShowcase";
@@ -16,13 +15,10 @@ import { Trust } from "@/components/Trust";
 // into after a scroll. Everything below Hero is for visitors still
 // deciding, not a gate blocking that fork.
 //
-// Product-storytelling pass: leads with the actual transformation
-// (Resume -> Behavioral Data -> AI Profile -> Match, shown as chips right
-// in Hero) and Smart Profile Demo + Match Recommendation come right after
-// Solution — proof of the concept before the mechanism gets explained in
-// ProcessOverview, since a result someone can see matters more here than
-// an explanation of how it was produced. Trust stays last before the CTA,
-// as reinforcement rather than another feature set to read through.
+// The sample Smart Profile/radar chart lives in Hero itself — an earlier
+// pass pulled it out into its own section and replaced Hero's visual with
+// an abstract flow diagram, which read as clutter competing with Hero's
+// actual job (headline + CTAs). Reverted; Hero keeps the result card.
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
@@ -30,7 +26,6 @@ export default function Home() {
       <Hero />
       <Problem />
       <Solution />
-      <ExampleResult />
       {/* Lightweight proof-of-concept, not the real job board — that's
           /job. Nobody here is choosing a job yet. */}
       <MatchShowcase />
