@@ -103,15 +103,17 @@ export function CompanyNavbar() {
                 </>
               ) : (
                 <>
-                  <Link
-                    href="/"
-                    className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
-                  >
+                  {/* text-sm font-bold, no gray — matches the primary
+                      nav-link style used everywhere else on the site
+                      (Navbar.tsx's หางาน/สำหรับองค์กร/วิธีการทำงาน, and this
+                      component's own logged-in state below). These aren't
+                      secondary actions like "เข้าสู่ระบบ"/"ออกจากระบบ". */}
+                  <Link href="/" className="cursor-pointer whitespace-nowrap text-sm font-bold">
                     สำหรับผู้หางาน
                   </Link>
                   <a
                     href="/company#how-it-works"
-                    className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
+                    className="cursor-pointer whitespace-nowrap text-sm font-bold"
                   >
                     วิธีการทำงาน
                   </a>
@@ -222,7 +224,7 @@ export function CompanyNavbar() {
                   <a
                     href="/company#how-it-works"
                     onClick={closeMenu}
-                    className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
+                    className="cursor-pointer px-3 py-[10px] text-sm font-bold"
                   >
                     วิธีการทำงาน
                   </a>
