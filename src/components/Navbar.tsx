@@ -46,11 +46,15 @@ export function Navbar() {
   // Gray by default, black once it's the page you're actually on — same
   // active-state convention as CompanyAppNavbar's isActive, just a plain
   // text-color toggle here instead of a filled pill (these are marketing
-  // nav links in a shared pill container, not app-shell tabs). Strips
-  // hash/query before comparing since "วิธีการทำงาน" points at
-  // /game#how-it-works but should still read as active on all of /game.
+  // nav links in a shared pill container, not app-shell tabs). Anchor
+  // links (#...) never count as active — "วิธีการทำงาน" points at
+  // /game#how-it-works, but it's a section within /game, not its own
+  // destination, so just being on /game (which "สำหรับผู้สมัคร" also treats
+  // as its own page when shown) shouldn't light it up as if it had been
+  // navigated to specifically.
   const isActive = (href: string) => {
-    const path = href.split("#")[0].split("?")[0];
+    if (href.includes("#")) return false;
+    const path = href.split("?")[0];
     return path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(`${path}/`);
   };
 

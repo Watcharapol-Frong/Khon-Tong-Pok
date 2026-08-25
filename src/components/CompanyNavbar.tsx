@@ -26,9 +26,11 @@ export function CompanyNavbar() {
   // convention as Navbar.tsx and CompanyAppNavbar's isActive, but exact-
   // match only (no prefix matching): /company/login, /company/register,
   // /company/dashboard etc. are sibling pages under /company, not pages
-  // nested under it, so a prefix check would light up "วิธีการทำงาน" (which
-  // points at /company) on every one of them.
-  const isActive = (href: string) => pathname === href.split("#")[0].split("?")[0];
+  // nested under it. Anchor links (#...) never count as active either —
+  // "วิธีการทำงาน" points at /company#how-it-works, but it's a section
+  // within /company, not its own destination, so just being on /company
+  // shouldn't light it up as if it had been navigated to specifically.
+  const isActive = (href: string) => !href.includes("#") && pathname === href.split("?")[0];
 
   // Just a display hint for which nav links to show (dashboard/logout vs.
   // login/register) — not a real auth check, so a plain localStorage read
