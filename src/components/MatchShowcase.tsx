@@ -26,7 +26,7 @@ export function MatchShowcase() {
     <div className="mx-auto w-full max-w-[1240px] border-t border-[rgba(15,15,15,0.08)] px-[clamp(20px,4vw,48px)] py-[clamp(40px,6vw,56px)]">
       <div className="mb-8 text-center">
         <div className="mb-2 text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
-          Match Showcase
+          Match Recommendation
         </div>
         <h2 className="text-[clamp(22px,3vw,30px)] font-extrabold tracking-[-0.02em]">
           ตัวอย่างการ Match จาก Soft Skill จริง

@@ -16,18 +16,13 @@ import { Trust } from "@/components/Trust";
 // into after a scroll. Everything below Hero is for visitors still
 // deciding, not a gate blocking that fork.
 //
-// Content-pruning pass: every section used to carry equal visual weight
-// (text + card + long explanation each), which read as a brochure rather
-// than a page with rhythm. PlatformOverview was cut entirely — it answered
-// the same "how does this work" question as ProcessOverview, just longer.
-// Trust moved to just before the CTA, as reinforcement rather than another
-// feature set to read through.
-//
-// ExampleResult sits after ProcessOverview, not in Hero — showing a result
-// card before explaining what the platform even is read like opening on a
-// report before anyone knew what they were looking at. "What does the
-// output look like" only becomes the relevant question once someone
-// understands assess -> understand -> match.
+// Product-storytelling pass: leads with the actual transformation
+// (Resume -> Behavioral Data -> AI Profile -> Match, shown as chips right
+// in Hero) and Smart Profile Demo + Match Recommendation come right after
+// Solution — proof of the concept before the mechanism gets explained in
+// ProcessOverview, since a result someone can see matters more here than
+// an explanation of how it was produced. Trust stays last before the CTA,
+// as reinforcement rather than another feature set to read through.
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
@@ -35,11 +30,11 @@ export default function Home() {
       <Hero />
       <Problem />
       <Solution />
-      <ProcessOverview />
       <ExampleResult />
       {/* Lightweight proof-of-concept, not the real job board — that's
           /job. Nobody here is choosing a job yet. */}
       <MatchShowcase />
+      <ProcessOverview />
       <Trust />
       <ClosingCta
         title="พร้อมเริ่มต้นแล้วหรือยัง?"

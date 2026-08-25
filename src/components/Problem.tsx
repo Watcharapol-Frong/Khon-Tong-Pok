@@ -9,9 +9,7 @@ export function Problem() {
         ปัญหาของการจ้างงานแบบเดิม
       </div>
       <div className="mb-3 text-[clamp(22px,3.4vw,32px)] leading-[1.3] font-extrabold tracking-[-0.02em]">
-        Resume ≠ Potential
-        <br />
-        ประกาศงาน ≠ คนที่ใช่
+        Resume ไม่เคยเห็นศักยภาพทั้งหมด
       </div>
       <p className="mx-auto max-w-[440px] text-sm leading-[1.7] text-[#5C5C5C]">
         เพราะสิ่งสำคัญอย่าง Soft Skill ไม่เคยถูกวัดจริง

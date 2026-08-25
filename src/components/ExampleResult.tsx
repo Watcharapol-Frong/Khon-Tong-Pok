@@ -6,25 +6,26 @@ import { AXIS_CHIPS, RADAR_DATA } from "@/lib/data";
 
 // Moved out of Hero — showing a result card before explaining what the
 // platform even is read like opening on a report before anyone knew what
-// they were looking at. Now sits right after How It Works, where "what
-// does the output actually look like" is the question someone's asking
-// once they understand the mechanism.
+// they were looking at. Sits right after Solution instead: "what does the
+// output actually look like" is the natural next question once someone
+// knows AI + behavioral data replaces resume + keyword. Sized up (500px ->
+// 560px card) since this is meant to be a page highlight, not a footnote.
 export function ExampleResult() {
   const { isMobile } = useBreakpoint();
-  const radarSize = isMobile ? 230 : 290;
+  const radarSize = isMobile ? 240 : 300;
 
   return (
-    <div className="mx-auto w-full max-w-[1240px] border-t border-[rgba(15,15,15,0.08)] px-[clamp(20px,4vw,48px)] py-[clamp(40px,6vw,56px)]">
+    <div className="mx-auto w-full max-w-[1240px] border-t border-[rgba(15,15,15,0.08)] px-[clamp(20px,4vw,48px)] py-[clamp(40px,6vw,64px)]">
       <div className="mb-8 text-center">
         <div className="mb-2 text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
-          Example Result
+          Smart Profile Demo
         </div>
-        <h2 className="text-[clamp(22px,3vw,30px)] font-extrabold tracking-[-0.02em]">
-          ตัวอย่าง Smart Profile หลังเล่นจบ
+        <h2 className="text-[clamp(24px,3.2vw,32px)] font-extrabold tracking-[-0.02em]">
+          ผลลัพธ์จริงหลังเล่นจบ ไม่ใช่แค่คำอธิบาย
         </h2>
       </div>
 
-      <div className="relative mx-auto w-full max-w-[500px] rounded-2xl bg-[#F5F5F5] p-[clamp(24px,3vw,36px)]">
+      <div className="relative mx-auto w-full max-w-[560px] rounded-2xl bg-[#F5F5F5] p-[clamp(28px,3.5vw,40px)]">
         <div className="mb-[6px] text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
           ตัวอย่างผลประเมิน
         </div>
