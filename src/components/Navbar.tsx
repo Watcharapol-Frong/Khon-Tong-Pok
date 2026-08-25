@@ -99,17 +99,17 @@ export function Navbar() {
                   {link.label}
                 </a>
               ))}
+              {/* Single black-pill CTA now — "เริ่มต้นใช้งาน" (which always
+                  went to /game, i.e. only the candidate path) is gone, since
+                  a nav shared by both audiences shouldn't default to one of
+                  them. "เข้าสู่ระบบ" takes over as the pill and routes
+                  through a role picker first, since /login and
+                  /company/login are two different forms. */}
               <Link
-                href="/login"
-                className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
-              >
-                เข้าสู่ระบบ
-              </Link>
-              <Link
-                href="/game"
+                href="/login/select"
                 className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
               >
-                เริ่มต้นใช้งาน
+                เข้าสู่ระบบ
               </Link>
               {/* Notifications belong to the logged-in candidate experience,
                   not this public marketing shell — Home stays notification-
@@ -182,7 +182,7 @@ export function Navbar() {
                 </a>
               ))}
               <Link
-                href="/login"
+                href="/login/select"
                 onClick={closeMenu}
                 className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
               >
