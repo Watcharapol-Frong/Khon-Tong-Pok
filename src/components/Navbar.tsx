@@ -28,12 +28,20 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const open = isTablet && menuOpen;
 
-  // Home doesn't have its own "how it works" content anymore (that moved to
-  // /game's HowItWorks section) — "วิธีการทำงาน" would just navigate away
-  // from Home into content someone didn't come here for, so it's hidden
-  // there. Every other candidate page still gets it, linking into /game's
-  // section same as before.
-  const navLinks = pathname === "/" ? NAV_LINKS.filter((l) => l.label !== "วิธีการทำงาน") : NAV_LINKS;
+  // The navbar on Home (the General Landing) is not the same navbar as the
+  // one on candidate pages, even though they're the same component —
+  // Home doesn't know who's visiting yet, so it needs the full audience
+  // fork and a role picker before login. Every other page here (/game,
+  // /job, /profile, ...) IS the candidate landing/app context already, so
+  // "สำหรับผู้สมัคร" would be redundant (you're already there) and login
+  // can skip straight to the candidate form instead of asking again. Home
+  // also has no "how it works" content of its own anymore (moved to
+  // /game's HowItWorks section), so that link only makes sense elsewhere.
+  const isGeneralLanding = pathname === "/";
+  const navLinks = isGeneralLanding
+    ? NAV_LINKS.filter((l) => l.label !== "วิธีการทำงาน")
+    : NAV_LINKS.filter((l) => l.label !== "สำหรับผู้สมัคร");
+  const loginHref = isGeneralLanding ? "/login/select" : "/login";
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -102,11 +110,12 @@ export function Navbar() {
               {/* Single black-pill CTA now — "เริ่มต้นใช้งาน" (which always
                   went to /game, i.e. only the candidate path) is gone, since
                   a nav shared by both audiences shouldn't default to one of
-                  them. "เข้าสู่ระบบ" takes over as the pill and routes
-                  through a role picker first, since /login and
-                  /company/login are two different forms. */}
+                  them. "เข้าสู่ระบบ" takes over as the pill; on Home it
+                  routes through the role picker first (context unknown), on
+                  every candidate page it skips straight to /login (context
+                  already established). */}
               <Link
-                href="/login/select"
+                href={loginHref}
                 className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
               >
                 เข้าสู่ระบบ
@@ -182,7 +191,7 @@ export function Navbar() {
                 </a>
               ))}
               <Link
-                href="/login/select"
+                href={loginHref}
                 onClick={closeMenu}
                 className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
               >
