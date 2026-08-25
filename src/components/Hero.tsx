@@ -101,28 +101,32 @@ export function Hero() {
           >
             <Link
               href="/game"
-              className="flex cursor-pointer items-center gap-2 rounded-full bg-[#0F0F0F] py-3 pr-[26px] pl-3 text-[15px] font-bold text-white transition-transform hover:scale-[1.03] active:scale-95"
+              className="flex cursor-pointer items-center gap-3 rounded-full bg-[#0F0F0F] py-2.5 pr-[26px] pl-2.5 text-[15px] font-bold text-white transition-transform hover:scale-[1.03] active:scale-95"
             >
-              <Image
-                src="/mascot/mascot-navbar-icon.png"
-                alt=""
-                width={44}
-                height={44}
-                className="h-7 w-7 flex-shrink-0 rounded-full bg-white/10 object-contain"
-              />
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
+                <Image
+                  src="/mascot/mascot-navbar-icon.png"
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="h-6 w-6 object-contain"
+                />
+              </span>
               สำหรับผู้หางาน
             </Link>
             <Link
               href="/company"
-              className="flex cursor-pointer items-center gap-2 rounded-full border-[1.5px] border-[#0F0F0F] bg-white py-[11px] pr-6 pl-3 text-[15px] font-bold text-[#0F0F0F] transition-transform hover:scale-[1.03] active:scale-95"
+              className="flex cursor-pointer items-center gap-3 rounded-full border-[1.5px] border-[#0F0F0F] bg-white py-2 pr-6 pl-2.5 text-[15px] font-bold text-[#0F0F0F] transition-transform hover:scale-[1.03] active:scale-95"
             >
-              <Image
-                src="/mascot/mascot-navbar-icon.png"
-                alt=""
-                width={44}
-                height={44}
-                className="h-7 w-7 flex-shrink-0 rounded-full bg-[#FAFAFA] object-contain"
-              />
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#FAFAFA]">
+                <Image
+                  src="/mascot/mascot-navbar-icon.png"
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="h-6 w-6 object-contain"
+                />
+              </span>
               สำหรับองค์กร
             </Link>
           </div>
