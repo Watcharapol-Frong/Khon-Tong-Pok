@@ -41,7 +41,16 @@ export function Navbar() {
   const navLinks = isGeneralLanding
     ? NAV_LINKS.filter((l) => l.label !== "วิธีการทำงาน")
     : NAV_LINKS.filter((l) => l.label !== "สำหรับผู้สมัคร");
-  const loginHref = isGeneralLanding ? "/login/select" : "/login";
+
+  // On Home, the pill leads with signup ("เริ่มต้นใช้งานฟรี" -> /register/
+  // select) instead of login — a first-time visitor with unknown context
+  // is more likely to be starting than returning, matching CompanyNavbar's
+  // own "เริ่มใช้งานฟรี" pill pattern. Every candidate page still shows
+  // "เข้าสู่ระบบ" -> /login directly, since a returning user wanting to log
+  // in is the more likely intent once they're already looking at candidate
+  // content specifically.
+  const pillLabel = isGeneralLanding ? "เริ่มต้นใช้งานฟรี" : "เข้าสู่ระบบ";
+  const pillHref = isGeneralLanding ? "/register/select" : "/login";
 
   // Gray by default, black once it's the page you're actually on — same
   // active-state convention as CompanyAppNavbar's isActive, just a plain
@@ -124,18 +133,11 @@ export function Navbar() {
                   {link.label}
                 </a>
               ))}
-              {/* Single black-pill CTA now — "เริ่มต้นใช้งาน" (which always
-                  went to /game, i.e. only the candidate path) is gone, since
-                  a nav shared by both audiences shouldn't default to one of
-                  them. "เข้าสู่ระบบ" takes over as the pill; on Home it
-                  routes through the role picker first (context unknown), on
-                  every candidate page it skips straight to /login (context
-                  already established). */}
               <Link
-                href={loginHref}
+                href={pillHref}
                 className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
               >
-                เข้าสู่ระบบ
+                {pillLabel}
               </Link>
               {/* Notifications belong to the logged-in candidate experience,
                   not this public marketing shell — Home stays notification-
@@ -210,11 +212,11 @@ export function Navbar() {
                 </a>
               ))}
               <Link
-                href={loginHref}
+                href={pillHref}
                 onClick={closeMenu}
                 className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
               >
-                เข้าสู่ระบบ
+                {pillLabel}
               </Link>
             </motion.div>
           )}
