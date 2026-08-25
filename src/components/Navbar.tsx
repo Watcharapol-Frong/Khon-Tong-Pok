@@ -52,6 +52,16 @@ export function Navbar() {
   const pillLabel = isGeneralLanding ? "เริ่มต้นใช้งานฟรี" : "เข้าสู่ระบบ";
   const pillHref = isGeneralLanding ? "/register/select" : "/login";
 
+  // The pill is hidden entirely on /login/select and /register/select —
+  // those pages exist specifically to resolve "which role, and which
+  // action" before sending someone to a specific form, and the pill above
+  // would otherwise short-circuit exactly that: it'd say "เข้าสู่ระบบ" and
+  // jump straight to /login (candidate-only), bypassing the page's own
+  // role choice — including on /register/select, where it wouldn't even
+  // match the page's own signup purpose. The page's own cards + its
+  // cross-link to the other picker already cover both actions completely.
+  const hidePill = pathname === "/login/select" || pathname === "/register/select";
+
   // Gray by default, black once it's the page you're actually on — same
   // active-state convention as CompanyAppNavbar's isActive, just a plain
   // text-color toggle here instead of a filled pill (these are marketing
@@ -133,12 +143,14 @@ export function Navbar() {
                   {link.label}
                 </a>
               ))}
-              <Link
-                href={pillHref}
-                className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
-              >
-                {pillLabel}
-              </Link>
+              {!hidePill && (
+                <Link
+                  href={pillHref}
+                  className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
+                >
+                  {pillLabel}
+                </Link>
+              )}
               {/* Notifications belong to the logged-in candidate experience,
                   not this public marketing shell — Home stays notification-
                   free even if a session persists from an earlier login,
@@ -211,13 +223,15 @@ export function Navbar() {
                   {link.label}
                 </a>
               ))}
-              <Link
-                href={pillHref}
-                onClick={closeMenu}
-                className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
-              >
-                {pillLabel}
-              </Link>
+              {!hidePill && (
+                <Link
+                  href={pillHref}
+                  onClick={closeMenu}
+                  className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
+                >
+                  {pillLabel}
+                </Link>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
