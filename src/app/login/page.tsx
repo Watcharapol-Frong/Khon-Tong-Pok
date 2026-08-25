@@ -203,20 +203,13 @@ export default function LoginPage() {
               <Globe className="h-3.5 w-3.5" strokeWidth={2} /> เข้าสู่ระบบด้วย Google
             </button>
 
+            {/* No "สำหรับองค์กร / HR? เข้าสู่ระบบที่นี่" fallback here anymore
+                — redundant now that /login/select exists as the actual
+                role picker upstream of this page. */}
             <div className="mt-4 text-center text-xs text-[#5C5C5C]">
               ยังไม่มีบัญชีสมาชิก?{" "}
               <Link href="/register" className="font-extrabold text-[#0F0F0F] underline hover:opacity-80">
                 สมัครเลย (เล่นมินิเกมฟรี)
-              </Link>
-            </div>
-
-            <div className="text-center text-xs text-[#5C5C5C]">
-              สำหรับองค์กร / HR?{" "}
-              <Link
-                href="/company/login"
-                className="font-extrabold text-[#0F0F0F] underline hover:opacity-80"
-              >
-                เข้าสู่ระบบที่นี่
               </Link>
             </div>
           </form>
