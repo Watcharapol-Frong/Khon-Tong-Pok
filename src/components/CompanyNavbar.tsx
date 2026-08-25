@@ -121,8 +121,12 @@ export function CompanyNavbar() {
                   >
                     เข้าสู่ระบบ
                   </Link>
+                  {/* Not straight to /company/register — someone landing on
+                      this public HR page isn't necessarily committed to the
+                      HR side yet, so the black-pill CTA offers both roles
+                      via the same picker pattern as /login/select. */}
                   <Link
-                    href="/company/register"
+                    href="/register/select"
                     className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
                   >
                     เริ่มใช้งานฟรี
@@ -230,7 +234,7 @@ export function CompanyNavbar() {
                     เข้าสู่ระบบ
                   </Link>
                   <Link
-                    href="/company/register"
+                    href="/register/select"
                     onClick={closeMenu}
                     className="px-3 py-[10px] text-sm font-bold"
                   >
