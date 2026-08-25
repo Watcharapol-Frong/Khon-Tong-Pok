@@ -32,11 +32,11 @@ type CompanyAppNavbarProps = {
  * on desktop) so HR always gets a top bar.
  */
 export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
-  const { isMobile } = useBreakpoint();
+  const { isTablet } = useBreakpoint();
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const open = isMobile && menuOpen;
+  const open = isTablet && menuOpen;
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
@@ -87,7 +87,7 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
             </div>
           </Link>
 
-          {!isMobile && (
+          {!isTablet && (
             <div className="flex flex-1 items-center justify-between gap-4 pl-4">
               <nav className="flex items-center gap-1">
                 {NAV_ITEMS.map((item) => {
@@ -129,7 +129,7 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
             </div>
           )}
 
-          {isMobile && (
+          {isTablet && (
             <div className="flex flex-shrink-0 items-center gap-2">
               <NotificationBell
                 notifications={notifications}

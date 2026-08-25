@@ -16,10 +16,10 @@ const NAV_LINKS = [
 ];
 
 export function Navbar() {
-  const { isMobile } = useBreakpoint();
+  const { isTablet } = useBreakpoint();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const open = isMobile && menuOpen;
+  const open = isTablet && menuOpen;
 
   // "วิธีใช้งาน" explains the candidate-facing home page flow — hide it on
   // pages that aren't that page, since the anchor has nothing to scroll to there.
@@ -78,7 +78,7 @@ export function Navbar() {
             </div>
           </Link>
 
-          {!isMobile && (
+          {!isTablet && (
             <div className="flex flex-wrap items-center gap-[clamp(10px,2vw,24px)]">
               {navLinks.map((link) => (
                 <a
@@ -117,7 +117,7 @@ export function Navbar() {
             </div>
           )}
 
-          {isMobile && (
+          {isTablet && (
             <div className="flex flex-shrink-0 items-center gap-2">
               {jobSeekerId && (
                 <NotificationBell

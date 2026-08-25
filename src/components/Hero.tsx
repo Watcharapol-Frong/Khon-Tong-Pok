@@ -12,9 +12,16 @@ import { AXIS_CHIPS, RADAR_DATA } from "@/lib/data";
 // own baked-in sparkles/speech-bubble props, so a sparkle placed near the
 // mascot just stacks a second, redundant set of stars on top of it — reads
 // as clutter, not accent.
+//
+// Positioned just above the column (negative px, not a percentage of the
+// column's own height) so they never land on the "AI-Powered Matching"
+// badge — that badge is the column's first child, and the column's width
+// (and therefore its height, since text reflows) varies a lot between the
+// two-column desktop layout and the single-column wrapped one, so a
+// percentage-based top coincided with the badge at some in-between widths.
 const HERO_SPARKLES = [
-  { top: "2%", left: "6%", size: 16, color: "#F5D949", rotate: -12 },
-  { top: "8%", right: "8%", size: 15, color: "#FF5CA8", rotate: -10 },
+  { top: "-14px", left: "10%", size: 16, color: "#F5D949", rotate: -12 },
+  { top: "-10px", right: "6%", size: 15, color: "#FF5CA8", rotate: -10 },
 ];
 
 // Sparkle-corner accent from AuthCard's card shell (login/register), minus

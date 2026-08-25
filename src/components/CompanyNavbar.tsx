@@ -16,10 +16,10 @@ import { clearHRSessionIds, getHRSessionIds } from "@/lib/hrSession";
  * affect the other.
  */
 export function CompanyNavbar() {
-  const { isMobile } = useBreakpoint();
+  const { isTablet } = useBreakpoint();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const open = isMobile && menuOpen;
+  const open = isTablet && menuOpen;
 
   // Just a display hint for which nav links to show (dashboard/logout vs.
   // login/register) — not a real auth check, so a plain localStorage read
@@ -64,7 +64,7 @@ export function CompanyNavbar() {
             </div>
           </Link>
 
-          {!isMobile && (
+          {!isTablet && (
             <div className="flex flex-wrap items-center gap-[clamp(10px,2vw,24px)]">
               {session ? (
                 <>
@@ -125,7 +125,7 @@ export function CompanyNavbar() {
             </div>
           )}
 
-          {isMobile && (
+          {isTablet && (
             <button
               aria-label="เปิดเมนู"
               onClick={() => setMenuOpen((v) => !v)}
