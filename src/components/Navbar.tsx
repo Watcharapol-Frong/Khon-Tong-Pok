@@ -10,9 +10,16 @@ import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { getJobSeekerNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/actions/interview";
 import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
 
+// Mirrors the General Landing's own audience fork (Hero's "สำหรับผู้หางาน" /
+// "สำหรับองค์กร" CTAs) instead of a candidate-only "หางาน" link — the nav is
+// shared across every page, so it should read as general-audience
+// everywhere, not just on Home. All three are full navigations (not
+// same-page anchors), so unlike the old "วิธีใช้งาน" link, none of them need
+// to be hidden depending on which page you're already on.
 const NAV_LINKS = [
-  { label: "หางาน", href: "/job" },
-  { label: "วิธีใช้งาน", href: "/#how-it-works" },
+  { label: "สำหรับผู้สมัคร", href: "/game" },
+  { label: "สำหรับองค์กร", href: "/company" },
+  { label: "วิธีการทำงาน", href: "/game#how-it-works" },
 ];
 
 export function Navbar() {
@@ -20,10 +27,6 @@ export function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const open = isTablet && menuOpen;
-
-  // "วิธีใช้งาน" explains the candidate-facing home page flow — hide it on
-  // pages that aren't that page, since the anchor has nothing to scroll to there.
-  const navLinks = pathname === "/" ? NAV_LINKS : NAV_LINKS.filter((l) => l.label !== "วิธีใช้งาน");
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -80,7 +83,7 @@ export function Navbar() {
 
           {!isTablet && (
             <div className="flex flex-wrap items-center gap-[clamp(10px,2vw,24px)]">
-              {navLinks.map((link) => (
+              {NAV_LINKS.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
@@ -89,12 +92,6 @@ export function Navbar() {
                   {link.label}
                 </a>
               ))}
-              <Link
-                href="/company"
-                className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
-              >
-                สำหรับองค์กร
-              </Link>
               <Link
                 href="/login"
                 className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
@@ -105,7 +102,7 @@ export function Navbar() {
                 href="/game"
                 className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
               >
-                เริ่มเล่นเกมเพื่อประเมิน
+                เริ่มต้นใช้งาน
               </Link>
               {/* Notifications belong to the logged-in candidate experience,
                   not this public marketing shell — Home stays notification-
@@ -167,7 +164,7 @@ export function Navbar() {
               transition={{ duration: 0.15 }}
               className="absolute top-[calc(100%+8px)] right-0 left-0 z-50 flex flex-col gap-1 rounded-[20px] bg-[#F5F5F5] p-[14px] shadow-[0_12px_32px_rgba(15,15,15,0.14)]"
             >
-              {navLinks.map((link) => (
+              {NAV_LINKS.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
@@ -177,13 +174,6 @@ export function Navbar() {
                   {link.label}
                 </a>
               ))}
-              <Link
-                href="/company"
-                onClick={closeMenu}
-                className="px-3 py-[10px] text-sm font-bold"
-              >
-                สำหรับองค์กร
-              </Link>
               <Link
                 href="/login"
                 onClick={closeMenu}
