@@ -23,7 +23,7 @@ const MATCH_RATES = [92, 88, 90];
 
 export function MatchShowcase() {
   return (
-    <div className="mx-auto w-full max-w-[1240px] px-[clamp(20px,4vw,48px)] py-[clamp(40px,6vw,56px)]">
+    <div className="mx-auto w-full max-w-[1240px] border-t border-[rgba(15,15,15,0.08)] px-[clamp(20px,4vw,48px)] py-[clamp(40px,6vw,56px)]">
       <div className="mb-8 text-center">
         <div className="mb-2 text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
           Match Showcase

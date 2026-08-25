@@ -1,4 +1,5 @@
 import { ClosingCta } from "@/components/ClosingCta";
+import { ExampleResult } from "@/components/ExampleResult";
 import { Footer } from "@/components/Footer";
 import { Hero } from "@/components/Hero";
 import { MatchShowcase } from "@/components/MatchShowcase";
@@ -21,6 +22,12 @@ import { Trust } from "@/components/Trust";
 // the same "how does this work" question as ProcessOverview, just longer.
 // Trust moved to just before the CTA, as reinforcement rather than another
 // feature set to read through.
+//
+// ExampleResult sits after ProcessOverview, not in Hero — showing a result
+// card before explaining what the platform even is read like opening on a
+// report before anyone knew what they were looking at. "What does the
+// output look like" only becomes the relevant question once someone
+// understands assess -> understand -> match.
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
@@ -29,6 +36,7 @@ export default function Home() {
       <Problem />
       <Solution />
       <ProcessOverview />
+      <ExampleResult />
       {/* Lightweight proof-of-concept, not the real job board — that's
           /job. Nobody here is choosing a job yet. */}
       <MatchShowcase />
@@ -36,9 +44,9 @@ export default function Home() {
       <ClosingCta
         title="พร้อมเริ่มต้นแล้วหรือยัง?"
         primaryHref="/game"
-        primaryLabel="เริ่มหางาน เล่นเกมเลย →"
+        primaryLabel="เริ่มต้นสำหรับผู้หางาน →"
         secondaryHref="/company"
-        secondaryLabel="หา Candidate (HR)"
+        secondaryLabel="เริ่มต้นสำหรับองค์กร →"
       />
       <Footer />
     </div>

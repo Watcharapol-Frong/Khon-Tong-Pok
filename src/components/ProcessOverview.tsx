@@ -4,10 +4,14 @@ import { Brain, Sparkles, Target } from "lucide-react";
 // answered the same question ("ระบบทำงานยังไง"), which is exactly the kind
 // of redundancy this page had too much of. Keeping this one, short:
 // icon + title + one line each, no paragraph intro.
+//
+// "Understand" instead of "AI Profile" for step 2 — AI Profile names the
+// feature, Understand names what it does for the user, matching Assess/
+// Match's benefit-oriented framing either side of it.
 const STEPS = [
-  { icon: Brain, title: "Assessment", desc: "วัดพฤติกรรมจริง" },
-  { icon: Sparkles, title: "AI Profile", desc: "เข้าใจศักยภาพ" },
-  { icon: Target, title: "Smart Matching", desc: "เชื่อมคนกับงาน" },
+  { n: "01", icon: Brain, title: "Assess", desc: "วัดพฤติกรรมจริง" },
+  { n: "02", icon: Sparkles, title: "Understand", desc: "สร้าง Smart Profile" },
+  { n: "03", icon: Target, title: "Match", desc: "เชื่อมคนกับโอกาส" },
 ];
 
 export function ProcessOverview() {
@@ -27,6 +31,7 @@ export function ProcessOverview() {
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#F5F5F5]">
               <s.icon className="h-5 w-5 text-[#0F0F0F]" strokeWidth={2} />
             </div>
+            <div className="mb-0.5 text-[10px] font-bold text-[#8A8A8A]">{s.n}</div>
             <div className="text-sm font-extrabold">{s.title}</div>
             <div className="mt-0.5 text-xs text-[#8A8A8A]">{s.desc}</div>
           </div>

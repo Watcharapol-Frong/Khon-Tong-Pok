@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Sparkle, Sparkles } from "lucide-react";
-import { RadarChart } from "@/components/RadarChart";
+import { Building2, ChevronDown, Sparkle, Sparkles, Target, User, Waves } from "lucide-react";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
-import { AXIS_CHIPS, RADAR_DATA } from "@/lib/data";
 
 // Same handful-not-a-shower sparkle treatment and pastel set as the
 // company-side hero (src/app/company/page.tsx) — kept to a few accents
@@ -28,10 +26,21 @@ const CARD_SPARKLES = [
   { bottom: "4%", right: "-14px", size: 22, color: "#FF5CA8", rotate: -12, opacity: 0.6 },
 ];
 
+// Answers "how do the two sides actually meet" without spoiling a result —
+// the sample Smart Profile/radar chart that used to live here moved to its
+// own ExampleResult section (after How It Works, where "what does the
+// output look like" is actually the question someone's asking).
+const FLOW_NODES = [
+  { icon: User, label: "Candidate" },
+  { icon: Waves, label: "Behavioral Data" },
+  { icon: Sparkles, label: "AI" },
+  { icon: Target, label: "Matching" },
+  { icon: Building2, label: "Company" },
+];
+
 export function Hero() {
   const { isMobile, isTablet } = useBreakpoint();
   const centerHero = isMobile || isTablet;
-  const radarSize = isMobile ? 230 : 290;
 
   return (
     <div className="relative overflow-hidden">
@@ -68,14 +77,14 @@ export function Hero() {
             <span>AI-Powered Matching</span>
           </div>
 
-          {/* Leads with the platform's actual axis (matching people <-> orgs)
-              rather than "come play a game" — that framing sells the
-              jobseeker journey first and only reveals the HR side
-              afterward, even once the CTAs below branch into both. */}
+          {/* Concrete outcome statement instead of the more abstract "we
+              change how people and orgs find fit" — easier to grasp on
+              first read, while still stating the platform-level value prop
+              (not "come play a game") that keeps it audience-neutral. */}
           <h1
             className={`mb-[22px] max-w-[560px] text-[clamp(26px,4.2vw,42px)] leading-[1.25] font-extrabold tracking-[-0.02em] ${centerHero ? "mx-auto" : ""}`}
           >
-            เราเปลี่ยนวิธีที่คนและองค์กรค้นหาความเหมาะสมระหว่างกัน
+            เราช่วยให้คนเจองานที่เหมาะ และองค์กรเจอคนที่ใช่ จากศักยภาพจริง
           </h1>
           <p
             className={`mb-8 max-w-[520px] text-[clamp(15px,1.6vw,18px)] leading-[1.7] text-[#4A4A4A] ${centerHero ? "mx-auto" : ""}`}
@@ -127,27 +136,18 @@ export function Hero() {
             />
           ))}
 
-          <div className="relative w-full max-w-[500px] rounded-2xl bg-[#F5F5F5] p-[clamp(24px,3vw,36px)]">
-            <div className="mb-[6px] text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
-              ตัวอย่างผลประเมิน
-            </div>
-            <div className="mb-[18px] text-[17px] font-extrabold">
-              คุณกันต์ ธ. — Frontend Dev Candidate
-            </div>
-            <div className="flex justify-center">
-              <RadarChart data={RADAR_DATA} size={radarSize} theme="mono" showLabels animate />
-            </div>
-            <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2.5">
-              {AXIS_CHIPS.map((chip) => (
-                <div
-                  key={chip.en}
-                  className="rounded-xl border border-[rgba(15,15,15,0.1)] bg-white px-3.5 py-3 text-[#0F0F0F]"
-                >
-                  <div className="text-sm font-extrabold">{chip.value}%</div>
-                  <div className="mt-0.5 text-xs opacity-60">{chip.th}</div>
+          <div className="relative flex w-full max-w-[340px] flex-col items-center rounded-2xl bg-[#F5F5F5] p-[clamp(24px,3vw,36px)]">
+            {FLOW_NODES.map((node, i) => (
+              <div key={node.label} className="flex flex-col items-center">
+                <div className="flex flex-col items-center gap-2 rounded-xl bg-white px-6 py-3.5">
+                  <node.icon className="h-5 w-5 text-[#0F0F0F]" strokeWidth={1.75} />
+                  <div className="text-xs font-bold whitespace-nowrap text-[#0F0F0F]">{node.label}</div>
                 </div>
-              ))}
-            </div>
+                {i < FLOW_NODES.length - 1 && (
+                  <ChevronDown className="my-1.5 h-4 w-4 text-[#8A8A8A]" strokeWidth={2} />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>
