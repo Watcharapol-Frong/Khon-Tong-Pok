@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Sparkle, Sparkles } from "lucide-react";
 import { RadarChart } from "@/components/RadarChart";
@@ -100,14 +101,28 @@ export function Hero() {
           >
             <Link
               href="/game"
-              className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white"
+              className="flex cursor-pointer items-center gap-2 rounded-full bg-[#0F0F0F] py-3 pr-[26px] pl-3 text-[15px] font-bold text-white transition-transform hover:scale-[1.03] active:scale-95"
             >
+              <Image
+                src="/mascot/mascot-navbar-icon.png"
+                alt=""
+                width={44}
+                height={44}
+                className="h-7 w-7 flex-shrink-0 rounded-full bg-white/10 object-contain"
+              />
               สำหรับผู้หางาน
             </Link>
             <Link
               href="/company"
-              className="cursor-pointer rounded-full border-[1.5px] border-[#0F0F0F] bg-white px-7 py-[15px] text-[15px] font-bold text-[#0F0F0F]"
+              className="flex cursor-pointer items-center gap-2 rounded-full border-[1.5px] border-[#0F0F0F] bg-white py-[11px] pr-6 pl-3 text-[15px] font-bold text-[#0F0F0F] transition-transform hover:scale-[1.03] active:scale-95"
             >
+              <Image
+                src="/mascot/mascot-navbar-icon.png"
+                alt=""
+                width={44}
+                height={44}
+                className="h-7 w-7 flex-shrink-0 rounded-full bg-[#FAFAFA] object-contain"
+              />
               สำหรับองค์กร
             </Link>
           </div>
