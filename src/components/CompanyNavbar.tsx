@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { clearHRSessionIds, getHRSessionIds } from "@/lib/hrSession";
 
@@ -17,9 +17,18 @@ import { clearHRSessionIds, getHRSessionIds } from "@/lib/hrSession";
  */
 export function CompanyNavbar() {
   const { isTablet } = useBreakpoint();
+  const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const open = isTablet && menuOpen;
+
+  // Gray by default, black once it's the page you're actually on — same
+  // convention as Navbar.tsx and CompanyAppNavbar's isActive, but exact-
+  // match only (no prefix matching): /company/login, /company/register,
+  // /company/dashboard etc. are sibling pages under /company, not pages
+  // nested under it, so a prefix check would light up "วิธีการทำงาน" (which
+  // points at /company) on every one of them.
+  const isActive = (href: string) => pathname === href.split("#")[0].split("?")[0];
 
   // Just a display hint for which nav links to show (dashboard/logout vs.
   // login/register) — not a real auth check, so a plain localStorage read
@@ -71,19 +80,25 @@ export function CompanyNavbar() {
                 <>
                   <Link
                     href="/company/dashboard"
-                    className="cursor-pointer whitespace-nowrap text-sm font-bold"
+                    className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                      isActive("/company/dashboard") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     แดชบอร์ด
                   </Link>
                   <Link
                     href="/company/positions"
-                    className="cursor-pointer whitespace-nowrap text-sm font-bold"
+                    className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                      isActive("/company/positions") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     ตำแหน่งงาน
                   </Link>
                   <Link
                     href="/company/interviews"
-                    className="cursor-pointer whitespace-nowrap text-sm font-bold"
+                    className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                      isActive("/company/interviews") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     นัดสัมภาษณ์
                   </Link>
@@ -108,12 +123,19 @@ export function CompanyNavbar() {
                       (Navbar.tsx's หางาน/สำหรับองค์กร/วิธีการทำงาน, and this
                       component's own logged-in state below). These aren't
                       secondary actions like "เข้าสู่ระบบ"/"ออกจากระบบ". */}
-                  <Link href="/" className="cursor-pointer whitespace-nowrap text-sm font-bold">
+                  <Link
+                    href="/"
+                    className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                      isActive("/") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
+                  >
                     สำหรับผู้หางาน
                   </Link>
                   <a
                     href="/company#how-it-works"
-                    className="cursor-pointer whitespace-nowrap text-sm font-bold"
+                    className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                      isActive("/company#how-it-works") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     วิธีการทำงาน
                   </a>
@@ -179,21 +201,27 @@ export function CompanyNavbar() {
                   <Link
                     href="/company/dashboard"
                     onClick={closeMenu}
-                    className="rounded-lg px-3 py-[10px] text-sm font-bold"
+                    className={`rounded-lg px-3 py-[10px] text-sm font-bold ${
+                      isActive("/company/dashboard") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     แดชบอร์ด
                   </Link>
                   <Link
                     href="/company/positions"
                     onClick={closeMenu}
-                    className="rounded-lg px-3 py-[10px] text-sm font-bold"
+                    className={`rounded-lg px-3 py-[10px] text-sm font-bold ${
+                      isActive("/company/positions") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     ตำแหน่งงาน
                   </Link>
                   <Link
                     href="/company/interviews"
                     onClick={closeMenu}
-                    className="rounded-lg px-3 py-[10px] text-sm font-bold"
+                    className={`rounded-lg px-3 py-[10px] text-sm font-bold ${
+                      isActive("/company/interviews") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     นัดสัมภาษณ์
                   </Link>
@@ -217,14 +245,18 @@ export function CompanyNavbar() {
                   <Link
                     href="/"
                     onClick={closeMenu}
-                    className="px-3 py-[10px] text-sm font-bold"
+                    className={`px-3 py-[10px] text-sm font-bold ${
+                      isActive("/") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     สำหรับผู้หางาน
                   </Link>
                   <a
                     href="/company#how-it-works"
                     onClick={closeMenu}
-                    className="cursor-pointer px-3 py-[10px] text-sm font-bold"
+                    className={`cursor-pointer px-3 py-[10px] text-sm font-bold ${
+                      isActive("/company#how-it-works") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     วิธีการทำงาน
                   </a>

@@ -43,6 +43,17 @@ export function Navbar() {
     : NAV_LINKS.filter((l) => l.label !== "สำหรับผู้สมัคร");
   const loginHref = isGeneralLanding ? "/login/select" : "/login";
 
+  // Gray by default, black once it's the page you're actually on — same
+  // active-state convention as CompanyAppNavbar's isActive, just a plain
+  // text-color toggle here instead of a filled pill (these are marketing
+  // nav links in a shared pill container, not app-shell tabs). Strips
+  // hash/query before comparing since "วิธีการทำงาน" points at
+  // /game#how-it-works but should still read as active on all of /game.
+  const isActive = (href: string) => {
+    const path = href.split("#")[0].split("?")[0];
+    return path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(`${path}/`);
+  };
+
   const closeMenu = () => setMenuOpen(false);
 
   // This navbar renders on public pages too (login/register/home) where
@@ -102,7 +113,9 @@ export function Navbar() {
                 <a
                   key={link.href}
                   href={link.href}
-                  className="cursor-pointer whitespace-nowrap text-sm font-bold"
+                  className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                    isActive(link.href) ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                  }`}
                 >
                   {link.label}
                 </a>
@@ -185,7 +198,9 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={closeMenu}
-                  className="cursor-pointer rounded-lg px-3 py-[10px] text-sm font-bold"
+                  className={`cursor-pointer rounded-lg px-3 py-[10px] text-sm font-bold ${
+                    isActive(link.href) ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                  }`}
                 >
                   {link.label}
                 </a>
