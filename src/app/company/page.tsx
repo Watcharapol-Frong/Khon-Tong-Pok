@@ -345,7 +345,10 @@ export default function CompanyPage() {
       </div>
 
       {/* How it works for companies */}
-      <div className="mx-auto w-full max-w-[1240px] px-[clamp(20px,4vw,48px)] pt-[clamp(24px,4vw,40px)] pb-[clamp(64px,8vw,100px)]">
+      <div
+        id="how-it-works"
+        className="mx-auto w-full scroll-mt-[90px] px-[clamp(20px,4vw,48px)] pt-[clamp(24px,4vw,40px)] pb-[clamp(64px,8vw,100px)] max-w-[1240px]"
+      >
         <div className="relative rounded-[28px] bg-[#0F0F0F] p-[clamp(32px,5vw,52px)] text-white">
           <div className="mb-[18px] inline-flex items-center gap-2 text-xs font-bold tracking-[0.08em] text-[#9A9A9A] uppercase">
             สำหรับทีม HR

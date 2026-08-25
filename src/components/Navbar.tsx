@@ -15,9 +15,6 @@ import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
 // only the fork — the nav is shared across every page, so it should read
 // as general-audience everywhere, not just on Home, but browsing jobs
 // directly is still a distinct, common enough action to keep its own link.
-// All four are full navigations (not same-page anchors), so unlike the old
-// "วิธีใช้งาน" link, none of them need to be hidden depending on which page
-// you're already on.
 const NAV_LINKS = [
   { label: "หางาน", href: "/job" },
   { label: "สำหรับผู้สมัคร", href: "/game" },
@@ -30,6 +27,13 @@ export function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const open = isTablet && menuOpen;
+
+  // Home doesn't have its own "how it works" content anymore (that moved to
+  // /game's HowItWorks section) — "วิธีการทำงาน" would just navigate away
+  // from Home into content someone didn't come here for, so it's hidden
+  // there. Every other candidate page still gets it, linking into /game's
+  // section same as before.
+  const navLinks = pathname === "/" ? NAV_LINKS.filter((l) => l.label !== "วิธีการทำงาน") : NAV_LINKS;
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -86,7 +90,7 @@ export function Navbar() {
 
           {!isTablet && (
             <div className="flex flex-wrap items-center gap-[clamp(10px,2vw,24px)]">
-              {NAV_LINKS.map((link) => (
+              {navLinks.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
@@ -167,7 +171,7 @@ export function Navbar() {
               transition={{ duration: 0.15 }}
               className="absolute top-[calc(100%+8px)] right-0 left-0 z-50 flex flex-col gap-1 rounded-[20px] bg-[#F5F5F5] p-[14px] shadow-[0_12px_32px_rgba(15,15,15,0.14)]"
             >
-              {NAV_LINKS.map((link) => (
+              {navLinks.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}

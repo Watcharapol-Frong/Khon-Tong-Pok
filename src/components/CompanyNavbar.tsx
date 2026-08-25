@@ -109,6 +109,12 @@ export function CompanyNavbar() {
                   >
                     สำหรับผู้หางาน
                   </Link>
+                  <a
+                    href="/company#how-it-works"
+                    className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
+                  >
+                    วิธีการทำงาน
+                  </a>
                   <Link
                     href="/company/login"
                     className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
@@ -209,6 +215,13 @@ export function CompanyNavbar() {
                   >
                     สำหรับผู้หางาน
                   </Link>
+                  <a
+                    href="/company#how-it-works"
+                    onClick={closeMenu}
+                    className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
+                  >
+                    วิธีการทำงาน
+                  </a>
                   <Link
                     href="/company/login"
                     onClick={closeMenu}
