@@ -38,9 +38,22 @@ export function Navbar() {
   // also has no "how it works" content of its own anymore (moved to
   // /game's HowItWorks section), so that link only makes sense elsewhere.
   const isGeneralLanding = pathname === "/";
-  const navLinks = isGeneralLanding
-    ? NAV_LINKS.filter((l) => l.label !== "วิธีการทำงาน")
-    : NAV_LINKS.filter((l) => l.label !== "สำหรับผู้สมัคร");
+  const isLoginSelect = pathname === "/login/select";
+  const isRegisterSelect = pathname === "/register/select";
+
+  // /login/select and /register/select get a stripped-down nav: just the
+  // logo and a single link to the OTHER picker (same action the page's own
+  // cross-link at the bottom already offers) — every other nav item
+  // (หางาน, สำหรับองค์กร, วิธีการทำงาน, the pill) would either compete with
+  // or short-circuit the one choice these pages exist to walk someone
+  // through.
+  const navLinks = isLoginSelect
+    ? [{ label: "สมัครใช้งานฟรี", href: "/register/select" }]
+    : isRegisterSelect
+      ? [{ label: "เข้าสู่ระบบ", href: "/login/select" }]
+      : isGeneralLanding
+        ? NAV_LINKS.filter((l) => l.label !== "วิธีการทำงาน")
+        : NAV_LINKS.filter((l) => l.label !== "สำหรับผู้สมัคร");
 
   // On Home, the pill leads with signup ("เริ่มต้นใช้งานฟรี" -> /register/
   // select) instead of login — a first-time visitor with unknown context
@@ -52,15 +65,7 @@ export function Navbar() {
   const pillLabel = isGeneralLanding ? "เริ่มต้นใช้งานฟรี" : "เข้าสู่ระบบ";
   const pillHref = isGeneralLanding ? "/register/select" : "/login";
 
-  // The pill is hidden entirely on /login/select and /register/select —
-  // those pages exist specifically to resolve "which role, and which
-  // action" before sending someone to a specific form, and the pill above
-  // would otherwise short-circuit exactly that: it'd say "เข้าสู่ระบบ" and
-  // jump straight to /login (candidate-only), bypassing the page's own
-  // role choice — including on /register/select, where it wouldn't even
-  // match the page's own signup purpose. The page's own cards + its
-  // cross-link to the other picker already cover both actions completely.
-  const hidePill = pathname === "/login/select" || pathname === "/register/select";
+  const hidePill = isLoginSelect || isRegisterSelect;
 
   // Gray by default, black once it's the page you're actually on — same
   // active-state convention as CompanyAppNavbar's isActive, just a plain
