@@ -29,7 +29,7 @@ export function PlatformOverview() {
           Platform Overview
         </div>
         <h2 className="mb-3 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">
-          สามส่วนที่ทำให้คนตรงปกต่างจากแพลตฟอร์มหางานทั่วไป
+          สามส่วนที่ทำให้คนตรงปกต่างจากแพลตฟอร์มทั่วไป
         </h2>
         <p className="mb-[30px] max-w-[640px] text-sm leading-[1.7] text-[#B5B5B5]">
           แต่ละส่วนทำงานต่อเนื่องกัน ตั้งแต่วัดผลจนถึงจับคู่ ไม่ใช่ฟีเจอร์แยกส่วนที่ไม่เกี่ยวข้องกัน

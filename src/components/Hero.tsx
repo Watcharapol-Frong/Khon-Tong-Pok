@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Clock, Sparkle, Sparkles } from "lucide-react";
+import { Sparkle, Sparkles } from "lucide-react";
 import { RadarChart } from "@/components/RadarChart";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { AXIS_CHIPS, RADAR_DATA } from "@/lib/data";
@@ -65,22 +65,27 @@ export function Hero() {
 
           <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-[#FAFAFA] px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
             <Sparkles className="h-3.5 w-3.5" strokeWidth={2} />
-            <span>AI-Powered Assessment</span>
+            <span>AI-Powered Matching</span>
           </div>
 
-          <h1 className="mb-[22px] text-[clamp(36px,6vw,60px)] leading-[1.08] font-extrabold tracking-[-0.03em]">
-            พิสูจน์ศักยภาพจริง
-            <br />
-            ด้วยตัวตนและทักษะ
+          {/* Leads with the platform's actual axis (matching people <-> orgs)
+              rather than "come play a game" — that framing sells the
+              jobseeker journey first and only reveals the HR side
+              afterward, which reads as jobseeker-first even once
+              ChooseYourJourney below explicitly branches into both. */}
+          <h1
+            className={`mb-[22px] max-w-[560px] text-[clamp(26px,4.2vw,42px)] leading-[1.25] font-extrabold tracking-[-0.02em] ${centerHero ? "mx-auto" : ""}`}
+          >
+            เราเปลี่ยนวิธีที่คนและองค์กรค้นหาความเหมาะสมระหว่างกัน
           </h1>
           <p
             className={`mb-8 max-w-[520px] text-[clamp(15px,1.6vw,18px)] leading-[1.7] text-[#4A4A4A] ${centerHero ? "mx-auto" : ""}`}
           >
-            แพลตฟอร์มที่ใช้มินิเกมประสาทวิทยาศาสตร์และ AI วิเคราะห์ตัวตนและสไตล์การทำงานจริง
-            เพื่อจับคู่คนกับงานที่ใช่ ทั้งฝั่งผู้หางานและ HR — ไม่ใช่แค่คำในเรซูเม่หรือประกาศงาน
+            ใช้ข้อมูลพฤติกรรมจริงจากมินิเกมประสาทวิทยาศาสตร์และการวิเคราะห์ด้วย AI
+            แทนการเดาใจกันจากเรซูเม่หรือประกาศงาน ให้ทั้งคนหางานและองค์กรเจอคนที่ใช่ได้เร็วขึ้น
           </p>
           <div
-            className={`mb-[18px] flex flex-wrap gap-3 ${centerHero ? "justify-center" : ""}`}
+            className={`flex flex-wrap gap-3 ${centerHero ? "justify-center" : ""}`}
           >
             <Link
               href="#choose-your-journey"
@@ -88,10 +93,6 @@ export function Hero() {
             >
               เริ่มต้นใช้งาน
             </Link>
-          </div>
-          <div className="flex items-center gap-1.5 text-[13px] text-[#8A8A8A]">
-            <Clock className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={2} />
-            ใช้เวลาไม่ถึง 10 นาที ต่อการประเมินหนึ่งครั้ง
           </div>
         </div>
 
