@@ -32,6 +32,13 @@ export function CompanyNavbar() {
   // shouldn't light it up as if it had been navigated to specifically.
   const isActive = (href: string) => !href.includes("#") && pathname === href.split("?")[0];
 
+  // Both auth form pages already carry their own reciprocal in-page link
+  // (/company/login -> "สมัครเลย" to /company/register, and vice versa), so
+  // repeating "เข้าสู่ระบบ"/"เริ่มใช้งานฟรี" in the navbar there is just
+  // noise — same reasoning already applied to /login/select and
+  // /register/select.
+  const hideAuthLinks = pathname === "/company/login" || pathname === "/company/register";
+
   // Just a display hint for which nav links to show (dashboard/logout vs.
   // login/register) — not a real auth check, so a plain localStorage read
   // is enough; CompanyAppLayout does the actual server-verified session
@@ -145,22 +152,26 @@ export function CompanyNavbar() {
                   >
                     วิธีการทำงาน
                   </a>
-                  <Link
-                    href="/company/login"
-                    className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
-                  >
-                    เข้าสู่ระบบ
-                  </Link>
+                  {!hideAuthLinks && (
+                    <Link
+                      href="/company/login"
+                      className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
+                    >
+                      เข้าสู่ระบบ
+                    </Link>
+                  )}
                   {/* Not straight to /company/register — someone landing on
                       this public HR page isn't necessarily committed to the
                       HR side yet, so the black-pill CTA offers both roles
                       via the same picker pattern as /login/select. */}
-                  <Link
-                    href="/register/select"
-                    className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
-                  >
-                    เริ่มใช้งานฟรี
-                  </Link>
+                  {!hideAuthLinks && (
+                    <Link
+                      href="/register/select"
+                      className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
+                    >
+                      เริ่มใช้งานฟรี
+                    </Link>
+                  )}
                 </>
               )}
             </div>
@@ -266,20 +277,24 @@ export function CompanyNavbar() {
                   >
                     วิธีการทำงาน
                   </a>
-                  <Link
-                    href="/company/login"
-                    onClick={closeMenu}
-                    className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
-                  >
-                    เข้าสู่ระบบ
-                  </Link>
-                  <Link
-                    href="/register/select"
-                    onClick={closeMenu}
-                    className="px-3 py-[10px] text-sm font-bold"
-                  >
-                    เริ่มใช้งานฟรี
-                  </Link>
+                  {!hideAuthLinks && (
+                    <Link
+                      href="/company/login"
+                      onClick={closeMenu}
+                      className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
+                    >
+                      เข้าสู่ระบบ
+                    </Link>
+                  )}
+                  {!hideAuthLinks && (
+                    <Link
+                      href="/register/select"
+                      onClick={closeMenu}
+                      className="px-3 py-[10px] text-sm font-bold"
+                    >
+                      เริ่มใช้งานฟรี
+                    </Link>
+                  )}
                 </>
               )}
             </motion.div>
