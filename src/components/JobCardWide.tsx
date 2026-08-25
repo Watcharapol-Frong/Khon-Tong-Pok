@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Check } from "lucide-react";
 import type { Job } from "@/lib/types";
 
 function fullSalaryLabel(job: Job) {
@@ -55,34 +54,17 @@ export function JobCardWide({
         </div>
       </div>
 
-      {/* Verified: show why this specific match happened (matches
-          MatchShowcase's "เพราะ: + reasons" pattern on the homepage) instead
-          of the job's generic requirement pills — more meaningful once
-          there's an actual personalized match to explain. Unverified: no
-          match to explain yet, so just show what the job is looking for. */}
-      {isVerified ? (
-        <div className="my-2 flex flex-col gap-1">
-          <div className="text-[10px] text-[#8A8A8A] sm:text-[11px]">เพราะ:</div>
-          {job.skillTags.slice(0, 3).map((tag) => (
-            <div key={tag.label} className="flex items-center gap-1.5 text-[11px] text-[#5C5C5C] sm:text-xs">
-              <Check className="h-3.5 w-3.5 flex-shrink-0 text-[#0f5c22]" strokeWidth={2.5} />
-              {tag.label.split(" ≥")[0]}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="my-2 flex flex-wrap gap-1.5">
-          {job.skillTags.map((tag) => (
-            <span
-              key={tag.label}
-              className="rounded-md px-2 py-[3px] text-[10px] font-bold sm:text-[11px]"
-              style={{ background: tag.bg, color: tag.color }}
-            >
-              {tag.label}
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="my-2 flex flex-wrap gap-1.5">
+        {job.skillTags.map((tag) => (
+          <span
+            key={tag.label}
+            className="rounded-md px-2 py-[3px] text-[10px] font-bold sm:text-[11px]"
+            style={{ background: tag.bg, color: tag.color }}
+          >
+            {tag.label}
+          </span>
+        ))}
+      </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-[rgba(15,15,15,0.06)] pt-2">
         <div className="min-w-0 truncate text-[10px] text-[#8A8A8A] sm:text-[11px]">
