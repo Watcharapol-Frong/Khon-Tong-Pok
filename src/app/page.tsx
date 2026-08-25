@@ -13,17 +13,25 @@ import { Trust } from "@/components/Trust";
 // General landing — serves both jobseeker and HR audiences, funneling each
 // toward their own dedicated experience (/game, /company) via
 // ChooseYourJourney rather than trying to fully pitch either one here.
+//
+// ChooseYourJourney is a navigation decision, not a conversion section —
+// each card is a hard link away from this page, not a same-page filter —
+// so it sits right after Hero, letting anyone who already knows why they're
+// here leave immediately instead of scrolling through content aimed at the
+// other audience first. Everything below it (JobMatching onward) is for
+// visitors still deciding, not a gate someone has to pass through to reach
+// the fork.
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
       <Navbar />
       <Hero />
+      <ChooseYourJourney />
       <JobMatching />
       <Problem />
       <Solution />
       <PlatformOverview />
       <ProcessOverview />
-      <ChooseYourJourney />
       <Trust />
       <ClosingCta
         title="พร้อมเริ่มต้นแล้วหรือยัง?"
