@@ -24,7 +24,7 @@ export function ClosingCta({
   title = "พร้อมพิสูจน์ตัวตนของคุณหรือยัง?",
   description = "ใช้เวลาไม่ถึง 10 นาที ไม่ต้องมีประสบการณ์ก็เริ่มได้ แล้วปลดล็อกตำแหน่งงานที่แมตช์กับตัวตนจริงของคุณ",
   primaryHref = "/game",
-  primaryLabel = "เริ่มหางาน เล่นเกมเลย →",
+  primaryLabel = "เริ่มเล่นเกมเพื่อประเมิน →",
   secondaryHref = "/company",
   secondaryLabel = "หา Candidate (HR)",
 }: ClosingCtaProps = {}) {

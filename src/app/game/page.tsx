@@ -73,7 +73,7 @@ export default function GamePage() {
               href="/login"
               className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white transition-all hover:opacity-90 active:scale-95"
             >
-              เริ่มเล่นเกมเลย →
+              เริ่มเล่นเกมเพื่อประเมิน →
             </Link>
             <Link
               href="/job"
@@ -131,7 +131,7 @@ export default function GamePage() {
       <ClosingCta
         title="พร้อมเล่นเกมแล้วหรือยัง?"
         primaryHref="/register"
-        primaryLabel="เริ่มเล่นเกมเลย →"
+        primaryLabel="เริ่มเล่นเกมเพื่อประเมิน →"
         secondaryHref="/job"
         secondaryLabel="เรียกดู Job Board"
       />

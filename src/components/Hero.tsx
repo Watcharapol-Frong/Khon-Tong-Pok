@@ -87,7 +87,7 @@ export function Hero() {
               href="/game"
               className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white"
             >
-              เริ่มหางาน เล่นเกมเลย
+              เริ่มเล่นเกมเพื่อประเมิน
             </Link>
             <Link
               href="/company"
