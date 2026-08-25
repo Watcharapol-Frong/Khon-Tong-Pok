@@ -126,14 +126,13 @@ export default function GamePage() {
           with it. */}
       <HowItWorks />
 
-      {/* Closing CTA — shared with the homepage; overridden copy/links since
-          the default primary CTA points at /game, which would self-link here. */}
+      {/* Closing CTA — shared with the homepage; title/primary overridden
+          since the default primary CTA points at /game, which would
+          self-link here. Secondary left at its default (Job Board). */}
       <ClosingCta
         title="พร้อมเล่นเกมแล้วหรือยัง?"
         primaryHref="/register"
         primaryLabel="เริ่มเล่นเกมเพื่อประเมิน →"
-        secondaryHref="/job"
-        secondaryLabel="เรียกดู Job Board"
       />
 
       <Footer />

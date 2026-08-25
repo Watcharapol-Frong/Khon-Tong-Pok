@@ -90,10 +90,10 @@ export function Hero() {
               เริ่มเล่นเกมเพื่อประเมิน
             </Link>
             <Link
-              href="/company"
+              href="/job"
               className="cursor-pointer rounded-full border-[1.5px] border-[#0F0F0F] bg-white px-7 py-[15px] text-[15px] font-bold text-[#0F0F0F]"
             >
-              หา Candidate (HR)
+              เรียกดู Job Board
             </Link>
           </div>
           <div className="flex items-center gap-1.5 text-[13px] text-[#8A8A8A]">

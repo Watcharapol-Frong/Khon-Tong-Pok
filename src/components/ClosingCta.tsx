@@ -11,6 +11,12 @@ import { Sparkle } from "lucide-react";
 // primary CTA points at /game — reused as-is on the homepage that's the
 // right next step, but on /game itself linking back to /game would be a
 // dead-end self-link.
+//
+// Secondary defaults to the Job Board, not the HR side (/company) — Home is
+// a Candidate Landing, not a general one shared with HR (see
+// ia_home_is_candidate_landing memory), so every CTA on it should stay
+// candidate-flavored. HR already has its own entry point via the navbar's
+// "สำหรับองค์กร" link.
 type ClosingCtaProps = {
   title?: string;
   description?: string;
@@ -25,8 +31,8 @@ export function ClosingCta({
   description = "ใช้เวลาไม่ถึง 10 นาที ไม่ต้องมีประสบการณ์ก็เริ่มได้ แล้วปลดล็อกตำแหน่งงานที่แมตช์กับตัวตนจริงของคุณ",
   primaryHref = "/game",
   primaryLabel = "เริ่มเล่นเกมเพื่อประเมิน →",
-  secondaryHref = "/company",
-  secondaryLabel = "หา Candidate (HR)",
+  secondaryHref = "/job",
+  secondaryLabel = "เรียกดู Job Board",
 }: ClosingCtaProps = {}) {
   return (
     <div className="mx-auto w-full max-w-[1240px] px-[clamp(20px,4vw,48px)] pb-[clamp(56px,7vw,80px)]">
