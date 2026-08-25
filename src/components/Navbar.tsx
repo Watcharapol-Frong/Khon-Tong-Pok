@@ -10,13 +10,16 @@ import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { getJobSeekerNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/actions/interview";
 import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
 
-// Mirrors the General Landing's own audience fork (Hero's "สำหรับผู้หางาน" /
-// "สำหรับองค์กร" CTAs) instead of a candidate-only "หางาน" link — the nav is
-// shared across every page, so it should read as general-audience
-// everywhere, not just on Home. All three are full navigations (not
-// same-page anchors), so unlike the old "วิธีใช้งาน" link, none of them need
-// to be hidden depending on which page you're already on.
+// "หางาน" (direct job browsing) alongside the General Landing's own
+// audience fork (Hero's "สำหรับผู้หางาน" / "สำหรับองค์กร" CTAs), instead of
+// only the fork — the nav is shared across every page, so it should read
+// as general-audience everywhere, not just on Home, but browsing jobs
+// directly is still a distinct, common enough action to keep its own link.
+// All four are full navigations (not same-page anchors), so unlike the old
+// "วิธีใช้งาน" link, none of them need to be hidden depending on which page
+// you're already on.
 const NAV_LINKS = [
+  { label: "หางาน", href: "/job" },
   { label: "สำหรับผู้สมัคร", href: "/game" },
   { label: "สำหรับองค์กร", href: "/company" },
   { label: "วิธีการทำงาน", href: "/game#how-it-works" },
