@@ -125,10 +125,14 @@ export function CompanyNavbar() {
                       (Navbar.tsx's หางาน/สำหรับองค์กร/วิธีการทำงาน, and this
                       component's own logged-in state below). These aren't
                       secondary actions like "เข้าสู่ระบบ"/"ออกจากระบบ". */}
+                  {/* /game, not / — that's the actual candidate-facing page
+                      (Navbar.tsx's own "สำหรับผู้สมัคร" points there too),
+                      not the neutral General Landing someone would just
+                      have to choose their role from again. */}
                   <Link
-                    href="/"
+                    href="/game"
                     className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
-                      isActive("/") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                      isActive("/game") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
                     }`}
                   >
                     สำหรับผู้หางาน
@@ -245,10 +249,10 @@ export function CompanyNavbar() {
               ) : (
                 <>
                   <Link
-                    href="/"
+                    href="/game"
                     onClick={closeMenu}
                     className={`px-3 py-[10px] text-sm font-bold ${
-                      isActive("/") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                      isActive("/game") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
                     }`}
                   >
                     สำหรับผู้หางาน
