@@ -1,30 +1,25 @@
-import Image from "next/image";
+import { ArrowRight } from "lucide-react";
 
-// Directly answers Problem — same "resume only shows the past, not how you
-// actually work" framing, but as the fix rather than the pain point.
+// Redesigned from a mascot + long-paragraph card into a single before/after
+// comparison — "one image, understood instantly" per content-pruning pass,
+// rather than explaining the mechanism in prose.
 export function Solution() {
   return (
-    <div className="mx-auto w-full max-w-[1240px] px-[clamp(20px,4vw,48px)] pb-[clamp(40px,6vw,64px)]">
-      <div className="flex flex-col items-center gap-8 rounded-[28px] bg-[#FAFAFA] p-[clamp(32px,5vw,52px)] text-center sm:flex-row sm:gap-12 sm:text-left">
-        <Image
-          src="/mascot/mascot-ai-thinking.png"
-          alt=""
-          width={180}
-          height={180}
-          className="h-[clamp(100px,16vw,160px)] w-[clamp(100px,16vw,160px)] flex-shrink-0 object-contain"
-        />
-        <div>
-          <div className="mb-2 text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
-            คนตรงปกแก้ปัญหานี้ยังไง
+    <div className="mx-auto w-full max-w-[820px] px-[clamp(20px,4vw,48px)] pb-[clamp(40px,6vw,56px)] text-center">
+      <div className="mb-6 text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
+        คนตรงปกแก้ปัญหานี้ยังไง
+      </div>
+      <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-6">
+        <div className="rounded-2xl border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] px-7 py-5">
+          <div className="mb-1 text-[11px] font-bold text-[#8A8A8A] uppercase">จากเดิม</div>
+          <div className="text-base font-bold text-[#8A8A8A] line-through decoration-[rgba(15,15,15,0.3)]">
+            Resume + Keyword
           </div>
-          <h2 className="mb-3 text-[clamp(22px,3vw,30px)] font-extrabold tracking-[-0.02em]">
-            ใช้มินิเกม + AI ดึงตัวตนจริงออกมา แทนการเดาจากกระดาษแผ่นเดียว
-          </h2>
-          <p className="max-w-[640px] text-sm leading-[1.7] text-[#5C5C5C]">
-            แทนที่จะให้ทั้งสองฝั่งเดาใจกันจากเรซูเม่หรือประกาศงาน คนตรงปกให้ผู้สมัครเล่นมินิเกมประสาทวิทยาศาสตร์สั้นๆ
-            แล้วให้น้องตรงปกวิเคราะห์ออกมาเป็นข้อมูลที่วัดผลได้จริง ก่อนจับคู่ทั้งสองฝั่งด้วยข้อมูลนั้น
-            ไม่ใช่คำโฆษณาตัวเองของใครฝ่ายใดฝ่ายหนึ่ง
-          </p>
+        </div>
+        <ArrowRight className="h-5 w-5 flex-shrink-0 rotate-90 text-[#8A8A8A] sm:rotate-0" strokeWidth={2} />
+        <div className="rounded-2xl bg-[#0F0F0F] px-7 py-5">
+          <div className="mb-1 text-[11px] font-bold text-[#9A9A9A] uppercase">เป็น</div>
+          <div className="text-base font-extrabold text-white">Behavior Data + AI Matching</div>
         </div>
       </div>
     </div>

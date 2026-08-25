@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { JobCard } from "@/components/JobCard";
+import { Check } from "lucide-react";
 import { JOBS } from "@/lib/data";
 
-// Deliberately lightweight — no search/filter/marquee, just proof that real
-// matching happens. The full filterable job board already lives at /job;
-// this only needs to prove the concept and hand off, not duplicate it.
-// One job per category keeps the 3 examples from looking dev-only.
+// Role changed from "job board preview" to "proof the matching mechanism
+// works" — no salary/company/hard-skill list, since nobody here is
+// choosing a job yet. Just title, an illustrative Match %, and the soft
+// skills behind it. One job per category keeps the 3 examples from
+// looking dev-only.
 const SHOWCASE_JOBS = (() => {
   const seen = new Set<string>();
   const picked = [];
@@ -18,28 +19,44 @@ const SHOWCASE_JOBS = (() => {
   return picked;
 })();
 
+const MATCH_RATES = [92, 88, 90];
+
 export function MatchShowcase() {
   return (
-    <div className="mx-auto w-full max-w-[1240px] border-t border-[rgba(15,15,15,0.08)] px-[clamp(20px,4vw,48px)] py-[clamp(40px,6vw,64px)]">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="mb-2 text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
-            Match Showcase
-          </div>
-          <h2 className="text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">
-            ตัวอย่างตำแหน่งงานที่ Match ด้วย Soft Skill จริง
-          </h2>
+    <div className="mx-auto w-full max-w-[1240px] px-[clamp(20px,4vw,48px)] py-[clamp(40px,6vw,56px)]">
+      <div className="mb-8 text-center">
+        <div className="mb-2 text-xs font-bold tracking-[0.08em] text-[#8A8A8A] uppercase">
+          Match Showcase
         </div>
-        <Link
-          href="/job"
-          className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 text-sm font-bold text-[#0F0F0F] transition-opacity hover:opacity-60"
-        >
-          ดูตำแหน่งงานทั้งหมด <span className="text-base">→</span>
-        </Link>
+        <h2 className="text-[clamp(22px,3vw,30px)] font-extrabold tracking-[-0.02em]">
+          ตัวอย่างการ Match จาก Soft Skill จริง
+        </h2>
       </div>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
-        {SHOWCASE_JOBS.map((job) => (
-          <JobCard key={job.id} job={job} />
+      <div className="mx-auto grid max-w-[900px] grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
+        {SHOWCASE_JOBS.map((job, i) => (
+          <Link
+            key={job.id}
+            href={`/job/${job.id}`}
+            className="cursor-pointer rounded-2xl border border-[rgba(15,15,15,0.1)] bg-white p-5 transition-colors hover:border-[rgba(15,15,15,0.3)]"
+          >
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="text-sm font-extrabold tracking-[-0.01em] text-[#0F0F0F]">
+                {job.title}
+              </div>
+              <span className="flex-shrink-0 rounded-md bg-[#3BF55C] px-2 py-0.5 text-[11px] font-extrabold whitespace-nowrap text-[#0F0F0F]">
+                Match {MATCH_RATES[i]}%
+              </span>
+            </div>
+            <div className="mb-1.5 text-xs text-[#8A8A8A]">เพราะ:</div>
+            <div className="flex flex-col gap-1">
+              {job.skillTags.slice(0, 3).map((tag) => (
+                <div key={tag.label} className="flex items-center gap-1.5 text-xs text-[#5C5C5C]">
+                  <Check className="h-3.5 w-3.5 flex-shrink-0 text-[#0f5c22]" strokeWidth={2.5} />
+                  {tag.label.split(" ≥")[0]}
+                </div>
+              ))}
+            </div>
+          </Link>
         ))}
       </div>
     </div>
