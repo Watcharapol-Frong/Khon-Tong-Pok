@@ -76,29 +76,22 @@ export function Hero() {
           <p
             className={`mb-8 max-w-[520px] text-[clamp(15px,1.6vw,18px)] leading-[1.7] text-[#4A4A4A] ${centerHero ? "mx-auto" : ""}`}
           >
-            ให้เรซูเม่ของคุณทรงพลังยิ่งขึ้น! รวมประวัติการทำงานของคุณ
-            เข้ากับการเล่นเกมสั้นสนุกๆของเรา
-            เพื่อดึงจุดเด่นและสไตล์การทำงานจริงที่คุณมี ให้ HR เห็นชัดเจนตั้งแต่วันแรก
+            แพลตฟอร์มที่ใช้มินิเกมประสาทวิทยาศาสตร์และ AI วิเคราะห์ตัวตนและสไตล์การทำงานจริง
+            เพื่อจับคู่คนกับงานที่ใช่ ทั้งฝั่งผู้หางานและ HR — ไม่ใช่แค่คำในเรซูเม่หรือประกาศงาน
           </p>
           <div
             className={`mb-[18px] flex flex-wrap gap-3 ${centerHero ? "justify-center" : ""}`}
           >
             <Link
-              href="/game"
+              href="#choose-your-journey"
               className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white"
             >
-              เริ่มเล่นเกมเพื่อประเมิน
-            </Link>
-            <Link
-              href="/job"
-              className="cursor-pointer rounded-full border-[1.5px] border-[#0F0F0F] bg-white px-7 py-[15px] text-[15px] font-bold text-[#0F0F0F]"
-            >
-              เรียกดู Job Board
+              เริ่มต้นใช้งาน
             </Link>
           </div>
           <div className="flex items-center gap-1.5 text-[13px] text-[#8A8A8A]">
             <Clock className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={2} />
-            ใช้เวลาไม่ถึง 10 นาที · ไม่ต้องมีประสบการณ์ก็เล่นได้
+            ใช้เวลาไม่ถึง 10 นาที ต่อการประเมินหนึ่งครั้ง
           </div>
         </div>
 
