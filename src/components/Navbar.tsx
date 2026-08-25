@@ -107,7 +107,12 @@ export function Navbar() {
               >
                 เริ่มเล่นเกมเพื่อประเมิน
               </Link>
-              {jobSeekerId && (
+              {/* Notifications belong to the logged-in candidate experience,
+                  not this public marketing shell — Home stays notification-
+                  free even if a session persists from an earlier login,
+                  same as the HR side only ever shows them inside the
+                  authenticated CompanyAppNavbar, never on the public one. */}
+              {jobSeekerId && pathname !== "/" && (
                 <NotificationBell
                   notifications={notifications}
                   onMarkRead={handleMarkRead}
@@ -119,7 +124,7 @@ export function Navbar() {
 
           {isTablet && (
             <div className="flex flex-shrink-0 items-center gap-2">
-              {jobSeekerId && (
+              {jobSeekerId && pathname !== "/" && (
                 <NotificationBell
                   notifications={notifications}
                   onMarkRead={handleMarkRead}
