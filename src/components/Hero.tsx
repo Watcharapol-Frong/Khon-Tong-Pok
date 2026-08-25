@@ -71,8 +71,7 @@ export function Hero() {
           {/* Leads with the platform's actual axis (matching people <-> orgs)
               rather than "come play a game" — that framing sells the
               jobseeker journey first and only reveals the HR side
-              afterward, which reads as jobseeker-first even once
-              ChooseYourJourney below explicitly branches into both. */}
+              afterward, even once the CTAs below branch into both. */}
           <h1
             className={`mb-[22px] max-w-[560px] text-[clamp(26px,4.2vw,42px)] leading-[1.25] font-extrabold tracking-[-0.02em] ${centerHero ? "mx-auto" : ""}`}
           >
@@ -84,14 +83,25 @@ export function Hero() {
             ใช้ข้อมูลพฤติกรรมจริงจากมินิเกมประสาทวิทยาศาสตร์และการวิเคราะห์ด้วย AI
             แทนการเดาใจกันจากเรซูเม่หรือประกาศงาน ให้ทั้งคนหางานและองค์กรเจอคนที่ใช่ได้เร็วขึ้น
           </p>
+          {/* The journey fork lives directly in Hero's CTAs, not a separate
+              ChooseYourJourney section below — it's a navigation decision
+              (each button is a hard link off this page), so it should be
+              answerable the instant someone reads the headline, not after a
+              scroll. */}
           <div
             className={`flex flex-wrap gap-3 ${centerHero ? "justify-center" : ""}`}
           >
             <Link
-              href="#choose-your-journey"
+              href="/game"
               className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white"
             >
-              เริ่มต้นใช้งาน
+              สำหรับผู้หางาน
+            </Link>
+            <Link
+              href="/company"
+              className="cursor-pointer rounded-full border-[1.5px] border-[#0F0F0F] bg-white px-7 py-[15px] text-[15px] font-bold text-[#0F0F0F]"
+            >
+              สำหรับองค์กร
             </Link>
           </div>
         </div>
