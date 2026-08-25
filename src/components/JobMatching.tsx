@@ -133,7 +133,7 @@ export function JobMatching() {
           บริษัทที่กำลังเปิดรับตำแหน่งงานผ่านคนตรงปก
         </div>
         <div
-          className="marquee-pause-on-hover relative overflow-hidden"
+          className="marquee-hover-to-scroll relative overflow-hidden"
           role="group"
           aria-label="บริษัทที่กำลังเปิดรับตำแหน่งงานผ่านคนตรงปก"
           style={{
