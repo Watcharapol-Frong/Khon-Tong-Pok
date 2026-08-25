@@ -1,39 +1,52 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import { Clock, Sparkle, Users } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
+
+// Same card shell as AuthCard (login/register) — this page sits in the
+// same candidate auth/onboarding flow (right after register), so it should
+// read as one continuous flow with those screens rather than switching to
+// the separate marketing-page visual language (Hero.tsx, HowItWorks) partway
+// through. Sparkle positions/opacity copied from AuthCard's own CARD_SPARKLES.
+const CARD_SPARKLES = [
+  { top: "2%", left: "-18px", size: 26, color: "#F5D949", rotate: -18, opacity: 0.65 },
+  { top: "10%", right: "-18px", size: 20, color: "#B14DFF", rotate: 15, opacity: 0.6 },
+  { bottom: "14%", left: "-20px", size: 18, color: "#4D7CFF", rotate: 20, opacity: 0.6 },
+  { bottom: "4%", right: "-14px", size: 22, color: "#FF5CA8", rotate: -12, opacity: 0.6 },
+];
+// Candidate-side accent — same green AuthCard's login/register pages use
+// (accentColor="#3BF55C"), HR pages use blue instead.
+const CANDIDATE_ACCENT = "#3BF55C";
 
 const ROLE_GROUPS = [
   {
     id: "student",
     title: "นักศึกษา / เด็กจบใหม่",
     desc: "เพิ่งจบการศึกษา หรือกำลังศึกษาอยู่ ไม่มีประสบการณ์ทำงานประจำ เน้นวัดศักยภาพและ Soft Skills แฝง",
-    icon: "🎓",
-    badgeColor: "#3BF55C",
+    mascotSrc: "/mascot/mascot-role-fresh-grad.png",
   },
   {
     id: "early_career",
     title: "Early Career (ประสบการณ์ 1 - 3 ปี)",
     desc: "เริ่มทำงานแล้ว กำลังค้นหาตำแหน่งงานที่ตอบโจทย์ตัวตนจริงและความก้าวหน้าในสายอาชีพ",
-    icon: "🚀",
-    badgeColor: "#4D7CFF",
+    mascotSrc: "/mascot/mascot-role-early-career.png",
   },
   {
     id: "career_switcher",
     title: "Career Switcher (ย้ายสายงาน)",
     desc: "ต้องการเปลี่ยนสายงานใหม่ โดยใช้ทักษะที่ถ่ายทอดได้ (Transferable Skills) และการเรียนรู้ไวเป็นหลัก",
-    icon: "🔄",
-    badgeColor: "#FF6E5C",
+    mascotSrc: "/mascot/mascot-role-career-switcher.png",
   },
   {
     id: "upskiller",
     title: "Upskiller (พัฒนาทักษะเพิ่มเติม)",
     desc: "มีประสบการณ์สูง ต้องการประเมินศักยภาพรอบด้านและอัปเดตโปรไฟล์ทักษะยุคใหม่",
-    icon: "📈",
-    badgeColor: "#F5D949",
+    mascotSrc: "/mascot/mascot-role-upskiller.png",
   },
 ];
 
@@ -59,15 +72,38 @@ export default function OnboardingPage() {
         />
 
         <div className="relative w-full max-w-[780px]">
+          {CARD_SPARKLES.map((s, i) => (
+            <Sparkle
+              key={i}
+              className="pointer-events-none absolute"
+              style={{
+                top: s.top,
+                bottom: s.bottom,
+                left: s.left,
+                right: s.right,
+                opacity: s.opacity,
+                transform: `rotate(${s.rotate}deg)`,
+              }}
+              width={s.size}
+              height={s.size}
+              fill={s.color}
+              color={s.color}
+              strokeWidth={1}
+            />
+          ))}
+
           {/* Card Container */}
-          <div className="relative rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[clamp(24px,5vw,44px)] shadow-[0_20px_50px_rgba(15,15,15,0.05)]">
-            <div className="absolute -top-3 -left-3 -z-10 h-12 w-12 rounded-2xl bg-[#3BF55C]" />
+          <div className="relative rounded-2xl bg-[#F5F5F5] p-[clamp(24px,5vw,40px)]">
+            <div
+              className="absolute -top-3 -left-3 -z-10 h-12 w-12 rounded-2xl"
+              style={{ backgroundColor: CANDIDATE_ACCENT }}
+            />
 
             {/* Header */}
             <div className="mb-8 text-center">
-              <div className="mb-2.5 inline-flex items-center gap-2 rounded-full border border-[rgba(15,15,15,0.08)] bg-white px-3.5 py-1 text-xs font-bold text-[#5C5C5C]">
-                <span className="h-2 w-2 rounded-full bg-[#3BF55C]" />
-                Role Selection (สถานะปัจจุบันของคุณ)
+              <div className="mb-2.5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
+                <Users className="h-3.5 w-3.5" strokeWidth={2} />
+                <span>Role Selection</span>
               </div>
               <h1 className="text-[clamp(24px,4vw,32px)] font-extrabold tracking-[-0.03em]">
                 เลือกสถานะผู้สมัครของคุณ
@@ -92,11 +128,13 @@ export default function OnboardingPage() {
                           : "border-[rgba(15,15,15,0.1)] bg-white opacity-75 hover:border-[rgba(15,15,15,0.3)] hover:opacity-100"
                       }`}
                     >
-                      <div className="mb-2.5 flex items-center justify-between">
-                        <span className="text-2xl">{group.icon}</span>
-                        <div
-                          className="h-3 w-3 rounded-full"
-                          style={{ background: group.badgeColor }}
+                      <div className="mb-2 flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-[#FAFAFA]">
+                        <Image
+                          src={group.mascotSrc}
+                          alt=""
+                          width={96}
+                          height={96}
+                          className="h-12 w-auto object-contain"
                         />
                       </div>
                       <div className="text-sm font-extrabold text-[#0F0F0F]">{group.title}</div>
@@ -115,8 +153,9 @@ export default function OnboardingPage() {
               >
                 เริ่มเล่นมินิเกม
               </Link>
-              <div className="text-center text-[11px] text-[#8A8A8A]">
-                ⏱ ไม่ต้องมีเรซูเม่ก่อนก็เริ่มได้ · เล่นจบระบบช่วยสร้างหรืออัปโหลดเรซูเม่เพื่อยื่นสมัครได้เลย
+              <div className="flex items-center justify-center gap-1.5 text-center text-[11px] text-[#8A8A8A]">
+                <Clock className="h-3 w-3 flex-shrink-0" strokeWidth={2} />
+                ไม่ต้องมีเรซูเม่ก่อนก็เริ่มได้ · เล่นจบระบบช่วยสร้างหรืออัปโหลดเรซูเม่เพื่อยื่นสมัครได้เลย
               </div>
             </div>
           </div>

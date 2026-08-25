@@ -2,12 +2,18 @@ export type RadarAxisDatum = { axis: string; value: number };
 
 export type SkillTag = { label: string; bg: string; color: string };
 
-export type JobCategory = "dev" | "marketing" | "design";
+// A general recruiting platform spans far more than tech/marketing/design —
+// matches the broad category families standard on Thai/international job
+// boards (JobThai, LinkedIn Jobs), so the filter reads as a real multi-
+// industry platform rather than a narrow tech-company careers page.
+export type JobCategory = "dev" | "marketing" | "design" | "sales" | "finance" | "hr" | "ops";
 export type WorkType = "hybrid" | "remote" | "onsite";
 export type JobLevel = "entry" | "mid-senior" | "senior";
 export type City = "bangkok" | "upcountry";
 
 export type Job = {
+  /** Stable slug used for /job/[id] — must be unique across JOBS. */
+  id: string;
   title: string;
   company: string;
   salary: string;
@@ -41,6 +47,89 @@ export type GameStage = {
   title: string;
   subtitle: string;
   desc: string;
-  icon: string;
+  iconKey: "risk" | "flexibility" | "focus" | "collaboration";
   color: string;
+};
+
+/** Same 0-100 scale as RadarAxisDatum/AxisChip.value — the same 6-axis Smart Profile system shown on /profile (RADAR_DATA/AXIS_CHIPS in data.ts), reused here as the single soft-skill taxonomy for both candidates and position requirements. */
+export type PositionSoftSkillRequirements = {
+  learningAgility?: number;
+  resilienceAndAdaptability?: number;
+  criticalThinking?: number;
+  decisionMakingUnderPressure?: number;
+  riskTolerance?: number;
+  collaborationMindset?: number;
+};
+
+/** A job seeker's actual scores on the same 4 dimensions — compared against a Position's requirements to compute a match. */
+export type SoftSkillScores = PositionSoftSkillRequirements;
+
+export type Position = {
+  id: string;
+  companyId: string;
+  title: string;
+  /** Must be values from onetSkills.hardSkills (src/data/onet_skills_dictionary_full.json) — same dictionary the resume scanner matches against. */
+  requiredHardSkills: string[];
+  requiredSoftSkills: PositionSoftSkillRequirements;
+  /** Closed positions are kept (for match history) but excluded from the open-positions count/list. */
+  open: boolean;
+};
+
+export type MatchStatus = "pending" | "contacted";
+
+export type Match = {
+  positionId: string;
+  jobSeekerId: string;
+  matchScore: number;
+  status: MatchStatus;
+};
+
+export type HardSkillStatus = "verified" | "partial" | "unclear";
+
+export type JobSeekerHardSkill = { skill: string; status: HardSkillStatus };
+
+/** Withheld in the UI under the same Blind Review condition as `realName` — see JobSeeker's docstring. */
+export type JobSeekerContactInfo = {
+  email: string;
+  phone: string;
+  location: string;
+};
+
+/**
+ * Candidate profile for the HR-facing match/report views. No JobSeeker
+ * account/login system exists yet — these are read-only records the
+ * matching function scores Positions against. `realName`, `currentRole`,
+ * `yearsOfExperience`, and `contact` are all withheld (Blind Review) until a
+ * Match's status is "contacted" — gated in the UI, not stripped from the
+ * data itself (same pattern as `realName` already used).
+ */
+export type JobSeeker = {
+  id: string;
+  realName: string;
+  /** Candidate's current job title/employer, e.g. "Frontend Developer ที่ StartUp Hub" — distinct from the position they're applying to here. */
+  currentRole: string;
+  yearsOfExperience: number;
+  contact: JobSeekerContactInfo;
+  /** Same Blind Review gate as realName — only rendered once nameRevealed is true; see the blind-state mascot image used before that. */
+  photoUrl: string;
+  hardSkills: JobSeekerHardSkill[];
+  softSkills: SoftSkillScores;
+  aiSummary: string;
+};
+
+export type InterviewSlotStatus = "pending" | "confirmed" | "declined";
+
+/**
+ * HR-side-only for now: created when HR sends an interview invite with
+ * proposed times. The job-seeker-facing accept/decline flow, real
+ * notifications, and auto-transition to "confirmed" are backlog — status
+ * stays "pending" indefinitely until that's built.
+ */
+export type InterviewSlot = {
+  /** `${positionId}::${jobSeekerId}` — Match has no id of its own (it's keyed by that pair), so this derives one rather than adding a redundant field to Match. */
+  matchId: string;
+  /** Date-time strings, e.g. "2026-08-25 14:00" — 1 to 3 proposed slots. */
+  proposedTimes: string[];
+  status: InterviewSlotStatus;
+  confirmedTime?: string;
 };

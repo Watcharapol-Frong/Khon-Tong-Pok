@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Job } from "@/lib/types";
 
 function fullSalaryLabel(job: Job) {
@@ -15,20 +16,21 @@ export function JobCardWide({
   matchRate?: number;
 }) {
   return (
-    <div className="flex cursor-pointer flex-col rounded-xl border border-[rgba(15,15,15,0.1)] bg-white p-3 transition-all hover:border-[rgba(15,15,15,0.3)] shadow-xs sm:p-3.5">
+    <Link
+      href={`/job/${job.id}`}
+      className="flex cursor-pointer flex-col rounded-xl border border-[rgba(15,15,15,0.1)] bg-white p-3 transition-all hover:border-[rgba(15,15,15,0.3)] shadow-xs sm:p-3.5"
+    >
       <div className="mb-1 flex items-start justify-between gap-2">
         <div className="min-w-0 truncate">
           <div className="mb-1 flex items-center gap-2">
-            {isVerified ? (
+            {/* No match % shown until the candidate has actually played the
+                assessment — a placeholder "xx%" here has no real number
+                behind it, so it read as a fake stat rather than a locked
+                one. The page-level CTA already covers "log in to unlock
+                Match Rate", so this isn't the only place that's said. */}
+            {isVerified && (
               <span className="rounded-md bg-[#3BF55C] px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold text-[#0F0F0F] whitespace-nowrap">
                 <span className="hidden sm:inline">Match </span>{matchRate}%
-              </span>
-            ) : (
-              <span
-                className="inline-flex items-center gap-1 rounded-md bg-[#FAFAFA] border border-[rgba(15,15,15,0.12)] px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold text-[#8A8A8A] whitespace-nowrap"
-                title="เข้าสู่ระบบหรือทำมินิเกมเพื่อปลดล็อก Match Rate จริง"
-              >
-                <span className="hidden sm:inline">Match </span>xx%
               </span>
             )}
             <h3 className="min-w-0 truncate text-sm font-extrabold tracking-[-0.01em] text-[#0F0F0F] sm:text-base">
@@ -72,6 +74,6 @@ export function JobCardWide({
           ดูรายละเอียด <span className="text-xs sm:text-[13px]">→</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

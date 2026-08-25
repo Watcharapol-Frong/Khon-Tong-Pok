@@ -6,7 +6,7 @@ interface StepItem {
   step: Step;
   title: string;
   href: string;
-  icon: (active: boolean, done: boolean) => React.ReactNode;
+  icon: (className: string) => React.ReactNode;
 }
 
 const STEPS: StepItem[] = [
@@ -14,16 +14,8 @@ const STEPS: StepItem[] = [
     step: 1,
     title: "Role Selection",
     href: "/onboarding",
-    icon: (active, done) => (
-      <svg
-        className={`h-6 w-6 sm:h-7 sm:w-7 transition-colors ${
-          active ? "text-[#0F0F0F]" : done ? "text-[#3BF55C]" : "text-[#8A8A8A]"
-        }`}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={active ? 2.5 : 2}
-      >
+    icon: (className) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -36,16 +28,8 @@ const STEPS: StepItem[] = [
     step: 2,
     title: "Mini-Games",
     href: "/play",
-    icon: (active, done) => (
-      <svg
-        className={`h-6 w-6 sm:h-7 sm:w-7 transition-colors ${
-          active ? "text-[#0F0F0F]" : done ? "text-[#3BF55C]" : "text-[#8A8A8A]"
-        }`}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={active ? 2.5 : 2}
-      >
+    icon: (className) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <rect x="2" y="6" width="20" height="12" rx="4" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h4m-2-2v4m7-2h.01M17 10h.01" />
       </svg>
@@ -55,16 +39,8 @@ const STEPS: StepItem[] = [
     step: 3,
     title: "น้องตรงปก",
     href: "/decoder",
-    icon: (active, done) => (
-      <svg
-        className={`h-6 w-6 sm:h-7 sm:w-7 transition-colors ${
-          active ? "text-[#0F0F0F]" : done ? "text-[#3BF55C]" : "text-[#8A8A8A]"
-        }`}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={active ? 2.5 : 2}
-      >
+    icon: (className) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -77,16 +53,8 @@ const STEPS: StepItem[] = [
     step: 4,
     title: "Smart Profile",
     href: "/profile",
-    icon: (active, done) => (
-      <svg
-        className={`h-6 w-6 sm:h-7 sm:w-7 transition-colors ${
-          active ? "text-[#0F0F0F]" : done ? "text-[#3BF55C]" : "text-[#8A8A8A]"
-        }`}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={active ? 2.5 : 2}
-      >
+    icon: (className) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <circle cx="12" cy="12" r="9" />
         <circle cx="12" cy="12" r="5" />
         <circle cx="12" cy="12" r="1.5" fill="currentColor" />
@@ -97,73 +65,69 @@ const STEPS: StepItem[] = [
 
 export function AssessmentStepBar({ currentStep }: { currentStep: Step }) {
   return (
-    <div className="mx-auto w-full max-w-[700px] px-4 pt-5 pb-3">
-      {/* 100% Balanced Stepper Container */}
-      <div className="relative flex items-start justify-between">
+    <div className="mx-auto w-full max-w-[760px] px-4 pt-5 pb-3">
+      {/* Same soft-fill, no-border pill treatment as the navbar itself.
+          Monochrome + one accent (green = done, matching "Verified"
+          elsewhere in the app) instead of a different pastel per step —
+          four unrelated colors read as noisy against the rest of the
+          site's restrained palette. */}
+      <div className="relative flex items-start justify-between px-4 py-5 sm:px-6">
         {STEPS.map((item, idx) => {
           const isDone = currentStep > item.step;
           const isActive = currentStep === item.step;
 
           return (
             <div key={item.step} className="relative z-10 flex flex-1 flex-col items-center">
-              {/* Circle Wrapper with identical 52px / 60px dimensions for all 4 steps */}
               <div className="relative flex items-center justify-center">
                 <div
-                  className={`relative flex h-13 w-13 items-center justify-center rounded-full transition-all duration-300 sm:h-15 sm:w-15 ${
+                  className={`relative flex h-12 w-12 items-center justify-center rounded-full transition-all duration-300 sm:h-14 sm:w-14 ${
                     isActive
-                      ? "border-[2.5px] border-[#0F0F0F] bg-white shadow-lg ring-4 ring-[rgba(15,15,15,0.06)]"
+                      ? "bg-[#0F0F0F]"
                       : isDone
-                        ? "border-2 border-[#3BF55C] bg-[#3BF55C]/10"
-                        : "border-2 border-[rgba(15,15,15,0.18)] bg-white"
+                        ? "bg-[rgba(59,245,92,0.15)]"
+                        : "bg-white"
                   }`}
                 >
-                  {/* Top-Right Status Dot */}
                   {isDone && (
-                    <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#3BF55C] text-[9px] font-extrabold text-[#0F0F0F] shadow-xs">
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#3BF55C] text-[9px] font-extrabold text-[#0F0F0F]">
                       ✓
                     </span>
                   )}
                   {isActive && (
-                    <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#4D7CFF] ring-2 ring-white shadow-xs" />
+                    <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-white ring-2 ring-[#FAFAFA]" />
                   )}
 
-                  {/* Uniform Vector Icon */}
-                  {item.icon(isActive, isDone)}
+                  <div
+                    className={isActive ? "text-white" : isDone ? "text-[#0f5c22]" : "text-[#B5B5B5]"}
+                  >
+                    {item.icon("h-5 w-5 sm:h-6 sm:w-6 transition-colors")}
+                  </div>
                 </div>
               </div>
 
-              {/* Step Label Centered on Exact Same Baseline */}
               <span
                 className={`mt-2.5 text-center text-xs tracking-tight transition-colors ${
                   isActive
                     ? "font-extrabold text-[#0F0F0F]"
                     : isDone
                       ? "font-bold text-[#0F0F0F]"
-                      : "font-semibold text-[#8A8A8A]"
+                      : "font-semibold text-[#B5B5B5]"
                 }`}
               >
                 {item.title}
               </span>
 
-              {/* Dotted Line Connector Centered Vertically Behind Circles */}
               {idx < STEPS.length - 1 && (
-                <div className="absolute top-[26px] left-[50%] right-[-50%] -z-10 flex -translate-y-1/2 items-center justify-center px-4 sm:top-[30px]">
-                  <div className="flex items-center gap-1.5 opacity-40">
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        currentStep > item.step ? "bg-[#3BF55C]" : "bg-[rgba(15,15,15,0.4)]"
-                      }`}
-                    />
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        currentStep > item.step ? "bg-[#3BF55C]" : "bg-[rgba(15,15,15,0.4)]"
-                      }`}
-                    />
-                    <span
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        currentStep > item.step ? "bg-[#3BF55C]" : "bg-[rgba(15,15,15,0.4)]"
-                      }`}
-                    />
+                <div className="absolute top-[24px] left-[50%] right-[-50%] -z-10 flex -translate-y-1/2 items-center justify-center px-4 sm:top-[28px]">
+                  <div className="flex items-center gap-1.5">
+                    {[0, 1, 2].map((dot) => (
+                      <span
+                        key={dot}
+                        className={`h-1.5 w-1.5 rounded-full transition-colors ${
+                          currentStep > item.step ? "bg-[#3BF55C]" : "bg-[#E5E5E5]"
+                        }`}
+                      />
+                    ))}
                   </div>
                 </div>
               )}

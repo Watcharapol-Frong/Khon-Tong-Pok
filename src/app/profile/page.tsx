@@ -1,39 +1,388 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  Briefcase,
+  Camera,
+  Check,
+  FileText,
+  GraduationCap,
+  Lightbulb,
+  Loader2,
+  Pencil,
+  Sparkle,
+  Target,
+  TrendingUp,
+  User,
+} from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { RadarChart } from "@/components/RadarChart";
-import { AXIS_CHIPS, JOBS, RADAR_DATA } from "@/lib/data";
+import { SkillIcon } from "@/components/SkillIcon";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
+import { generateAIResume, getGameResult, getJobSeekerProfile, getJobSeekerSessionData } from "@/lib/actions/jobSeeker";
+import { JOBS, SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
+import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
+import type { RadarAxisDatum } from "@/lib/types";
+
+type JobSeekerProfileData = Awaited<ReturnType<typeof getJobSeekerProfile>>;
+type GameResultData = Awaited<ReturnType<typeof getGameResult>>;
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { isMobile } = useBreakpoint();
+  // On-screen size (px) of the square crop viewport in the adjust-photo
+  // modal — sized close to how the avatar circle actually reads, not a
+  // cramped fixed box, while still fitting small screens.
+  const cropViewportSize = isMobile ? 300 : 420;
   const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<"feedback" | "matching" | "skills">("feedback");
-  const [candidateName, setCandidateName] = useState<string>("กันต์ ธ.");
-  const [userSkills, setUserSkills] = useState<string[]>([
-    "React.js",
-    "TypeScript",
-    "Next.js App Router",
-    "Tailwind CSS",
-    "REST API Integration",
-    "Agile Methodology",
-    "Git Version Control",
-    "UI/UX Prototyping",
-  ]);
-  const [newSkillInput, setNewSkillInput] = useState<string>("");
+  // Hard skills used to be their own third tab — moved into the left
+  // column below the radar chart instead (see main render) so both
+  // soft and hard skills are visible together up front, not hidden
+  // behind a click.
+  const [activeTab, setActiveTab] = useState<"feedback" | "matching" | "courses">("feedback");
+  // Defaults are neutral placeholders, not a fabricated example person —
+  // the real name comes from the candidate's resume (see /decoder) and
+  // real skills come from what was actually extracted there. An empty
+  // skills list is a legitimate, honest state ("go run the assessment
+  // first"), not something to paper over with fake sample data.
+  const [candidateName, setCandidateName] = useState<string>("ผู้สมัคร");
+  // The name comes from the candidate's account (mirrored into
+  // localStorage by /decoder on login), but stays editable here in case
+  // the account name doesn't match what they'd want shown on their profile.
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [userSkills, setUserSkills] = useState<string[]>([]);
+  // Which of userSkills came from an uploaded resume (document-verified)
+  // vs. only ever typed in chat (self-reported) — mirrors the
+  // Verified/Partial distinction HR sees on their own candidate report,
+  // computed from real provenance rather than invented.
+  const [resumeSkills, setResumeSkills] = useState<string[]>([]);
+  // Full profile record (personal info, education, work experience,
+  // languages) — kept separately from the derived userSkills/resumeSkills
+  // above so the new "เรซูเม่ของคุณ" section can render the whole thing,
+  // not just the skill list. Only ever populated from the database (see
+  // the DB-hydration effect below); there's no localStorage-only version
+  // of this since it never existed before this round.
+  const [profile, setProfile] = useState<JobSeekerProfileData>(null);
+  // null means "hasn't played the psychometric games yet" (a real, honest
+  // state right now — real gameplay isn't wired up, only seeded test
+  // candidates have a row) — not fabricated to 0% on every axis.
+  const [gameResult, setGameResult] = useState<GameResultData>(null);
+  // Blind-candidate mascot until the candidate uploads a real photo —
+  // same placeholder convention HR sees for un-revealed candidates.
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  // Adjust-photo modal state — a newly-picked file lands here first for
+  // crop/zoom (same pattern as Instagram's "adjust" step) rather than
+  // being saved as the avatar as-is.
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropImgSize, setCropImgSize] = useState<{ w: number; h: number } | null>(null);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const cropDragRef = useRef<{ startX: number; startY: number; startOffsetX: number; startOffsetY: number } | null>(
+    null,
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // localStorage isn't available during server render, so both the server
+  // and the client's first (pre-hydration) pass render the neutral
+  // defaults above — they match, so hydration is safe. This effect then
+  // reads the real values after mount, same as the pre-existing pattern
+  // this replaces. The setState-in-effect lint rule assumes state should
+  // be derivable from props/other state; that doesn't apply to reading a
+  // browser-only source the server can't see — a lazy-useState
+  // initializer here causes a real hydration mismatch instead (verified).
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedName = localStorage.getItem("ktp_username");
-      if (storedName) {
-        setCandidateName(storedName);
+    if (typeof window === "undefined") return;
+
+    const storedName = localStorage.getItem("ktp_username");
+    if (storedName) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCandidateName(storedName);
+    }
+
+    const storedSkills = localStorage.getItem("ktp_hard_skills");
+    if (storedSkills) {
+      try {
+        const parsed = JSON.parse(storedSkills);
+        if (Array.isArray(parsed)) {
+          setUserSkills(parsed.filter((s): s is string => typeof s === "string"));
+        }
+      } catch {
+        // Malformed localStorage value — ignore and keep the empty default
+        // rather than crash the page over stale/corrupt data.
       }
     }
+
+    const storedResumeSkills = localStorage.getItem("ktp_resume_skills");
+    if (storedResumeSkills) {
+      try {
+        const parsed = JSON.parse(storedResumeSkills);
+        if (Array.isArray(parsed)) {
+          setResumeSkills(parsed.filter((s): s is string => typeof s === "string"));
+        }
+      } catch {
+        // Malformed localStorage value — ignore.
+      }
+    }
+
+    const storedPhoto = localStorage.getItem("ktp_profile_photo");
+    if (storedPhoto) {
+      setProfilePhoto(storedPhoto);
+    }
   }, []);
+
+  // A returning candidate routed here straight from /login (see the
+  // "complete" stage there) may be on a browser that's never touched
+  // /decoder in this session — localStorage above would then be empty or
+  // stale even though the database has their real profile. Best-effort:
+  // if a job seeker session exists, the database wins over whatever
+  // localStorage had. JobSeekerProfile.computerSkills is one merged list
+  // (resume-derived and chat-derived aren't tracked separately in the
+  // database the way decoder's own local state does it) — as a reasonable
+  // approximation, a non-empty resumeRawText means an actual resume was
+  // uploaded at some point, so the whole current list is treated as
+  // Verified rather than showing everything as Partial by default.
+  useEffect(() => {
+    const ids = getJobSeekerSessionIds();
+    if (!ids) return;
+    let cancelled = false;
+    Promise.all([
+      getJobSeekerSessionData(ids.jobSeekerId),
+      getJobSeekerProfile(ids.jobSeekerId),
+      getGameResult(ids.jobSeekerId),
+    ]).then(([session, profile, gameResult]) => {
+      if (cancelled) return;
+      if (session) {
+        setCandidateName(session.jobSeeker.name);
+        localStorage.setItem("ktp_username", session.jobSeeker.name);
+      }
+      if (profile) {
+        setProfile(profile);
+        setUserSkills(profile.computerSkills);
+        localStorage.setItem("ktp_hard_skills", JSON.stringify(profile.computerSkills));
+        const verified = profile.resumeRawText.trim().length > 0 ? profile.computerSkills : [];
+        setResumeSkills(verified);
+        localStorage.setItem("ktp_resume_skills", JSON.stringify(verified));
+      }
+      setGameResult(gameResult);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Derived straight from the real GameResult row (or empty if there isn't
+  // one yet) — same 6-axis taxonomy/labels/colors as Position.requiredSoftSkills
+  // (see SOFT_SKILL_AXIS_ORDER's docstring), no more static mock numbers.
+  const radarData: RadarAxisDatum[] = useMemo(() => {
+    if (!gameResult) return [];
+    return SOFT_SKILL_AXIS_ORDER.map((axis) => ({
+      axis: SOFT_SKILL_AXIS_META[axis].en,
+      value: gameResult[axis],
+    }));
+  }, [gameResult]);
+
+  const axisChips = useMemo(() => {
+    if (!gameResult) return [];
+    return SOFT_SKILL_AXIS_ORDER.map((axis) => ({
+      key: axis,
+      th: SOFT_SKILL_AXIS_META[axis].th,
+      value: gameResult[axis],
+    }));
+  }, [gameResult]);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      if (typeof dataUrl !== "string") return;
+      // "Image" here is the next/image component (see import above), not
+      // the DOM constructor — window.Image is the real HTMLImageElement.
+      const img = new window.Image();
+      img.onload = () => {
+        const baseScale = cropViewportSize / Math.min(img.naturalWidth, img.naturalHeight);
+        setCropImgSize({ w: img.naturalWidth, h: img.naturalHeight });
+        setCropZoom(1);
+        setCropOffset({
+          x: (cropViewportSize - img.naturalWidth * baseScale) / 2,
+          y: (cropViewportSize - img.naturalHeight * baseScale) / 2,
+        });
+        setCropSrc(dataUrl);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const cropBaseScale = cropImgSize ? cropViewportSize / Math.min(cropImgSize.w, cropImgSize.h) : 1;
+  const cropScale = cropBaseScale * cropZoom;
+
+  const clampCropOffset = (offset: { x: number; y: number }, scale: number) => {
+    if (!cropImgSize) return offset;
+    const dispW = cropImgSize.w * scale;
+    const dispH = cropImgSize.h * scale;
+    const minX = Math.min(0, cropViewportSize - dispW);
+    const minY = Math.min(0, cropViewportSize - dispH);
+    return {
+      x: Math.min(0, Math.max(minX, offset.x)),
+      y: Math.min(0, Math.max(minY, offset.y)),
+    };
+  };
+
+  const handleCropZoomChange = (value: number) => {
+    setCropZoom(value);
+    setCropOffset((prev) => clampCropOffset(prev, cropBaseScale * value));
+  };
+
+  const handleCropPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    cropDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startOffsetX: cropOffset.x,
+      startOffsetY: cropOffset.y,
+    };
+  };
+
+  const handleCropPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!cropDragRef.current) return;
+    const drag = cropDragRef.current;
+    setCropOffset(
+      clampCropOffset(
+        { x: drag.startOffsetX + (e.clientX - drag.startX), y: drag.startOffsetY + (e.clientY - drag.startY) },
+        cropScale,
+      ),
+    );
+  };
+
+  const handleCropPointerUp = () => {
+    cropDragRef.current = null;
+  };
+
+  const closeCropModal = () => {
+    setCropSrc(null);
+    setCropImgSize(null);
+    // Reset so picking the same file again still fires onChange.
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleConfirmCrop = () => {
+    if (!cropSrc) return;
+    const img = new window.Image();
+    img.onload = () => {
+      const OUTPUT_SIZE = 480;
+      const canvas = document.createElement("canvas");
+      canvas.width = OUTPUT_SIZE;
+      canvas.height = OUTPUT_SIZE;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const srcSize = cropViewportSize / cropScale;
+      ctx.drawImage(
+        img,
+        -cropOffset.x / cropScale,
+        -cropOffset.y / cropScale,
+        srcSize,
+        srcSize,
+        0,
+        0,
+        OUTPUT_SIZE,
+        OUTPUT_SIZE,
+      );
+      const outputUrl = canvas.toDataURL("image/jpeg", 0.92);
+      setProfilePhoto(outputUrl);
+      localStorage.setItem("ktp_profile_photo", outputUrl);
+      closeCropModal();
+    };
+    img.src = cropSrc;
+  };
+
+  const startEditingName = () => {
+    setNameDraft(candidateName);
+    setIsEditingName(true);
+  };
+
+  const saveNameEdit = () => {
+    const trimmed = nameDraft.trim();
+    if (trimmed) {
+      setCandidateName(trimmed);
+      localStorage.setItem("ktp_username", trimmed);
+    }
+    setIsEditingName(false);
+  };
+
+  // Explicitly opt-in sample data for reviewing the job-match/course-gap
+  // sections with something populated, since they're computed from real
+  // localStorage the way this page always works — there's no way for
+  // this app to write into a visitor's own browser storage from outside
+  // it. Clearly labeled as a sample, not silently pretending to be a
+  // real candidate's data.
+  const handleLoadSampleData = () => {
+    const sampleResumeSkills = ["React", "TypeScript"];
+    const sampleAllSkills = ["React", "TypeScript", "Node.js", "PostgreSQL", "Docker"];
+    setResumeSkills(sampleResumeSkills);
+    setUserSkills(sampleAllSkills);
+    localStorage.setItem("ktp_resume_skills", JSON.stringify(sampleResumeSkills));
+    localStorage.setItem("ktp_hard_skills", JSON.stringify(sampleAllSkills));
+  };
+
+  // RadarChart takes a pixel `size`, not a CSS width, and computes label
+  // font size / wrap width / dot radius directly from it — a hardcoded
+  // size can't track how wide the panel actually renders (it just got
+  // wider than Hard Skills, so 320px was leaving real space unused and
+  // still crowding labels). Measuring the wrapper's real width keeps
+  // this in sync. Same pattern as the HR candidate report's own radar.
+  const chartResizeObserverRef = useRef<ResizeObserver | null>(null);
+  const [chartSize, setChartSize] = useState(230);
+  const chartWrapRefCallback = (el: HTMLDivElement | null) => {
+    chartResizeObserverRef.current?.disconnect();
+    chartResizeObserverRef.current = null;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (!width) return;
+      // RadarChart's axis labels render outside its size×size box on
+      // purpose (readability) — reserve headroom for that overflow
+      // instead of using the full measured width as `size`.
+      setChartSize(Math.max(200, Math.min(380, Math.floor(width * 0.6))));
+    });
+    observer.observe(el);
+    chartResizeObserverRef.current = observer;
+  };
+
+  // "ให้น้องตรงปกช่วยสร้าง" — the Premium-badged button. The badge is a
+  // forward-looking monetization label only; this is a real, working
+  // Gemini call (see generateAIResume), not gated behind any payment flow
+  // since none exists yet for this prototype.
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [isGeneratingResume, setIsGeneratingResume] = useState(false);
+  const [aiResumeResult, setAiResumeResult] = useState<string | null>(null);
+  const [aiResumeError, setAiResumeError] = useState("");
+
+  const handleGenerateAIResume = async () => {
+    setShowAiModal(true);
+    setAiResumeError("");
+    setAiResumeResult(null);
+    const ids = getJobSeekerSessionIds();
+    if (!ids) {
+      setAiResumeError("กรุณาเข้าสู่ระบบก่อน");
+      return;
+    }
+    setIsGeneratingResume(true);
+    const result = await generateAIResume(ids.jobSeekerId);
+    setIsGeneratingResume(false);
+    if ("error" in result) {
+      setAiResumeError(result.error);
+      return;
+    }
+    setAiResumeResult(result.summaryText);
+  };
 
   const handleConfirmProfileAndGoToJobs = () => {
     if (typeof window !== "undefined") {
@@ -43,36 +392,81 @@ export default function ProfilePage() {
     router.push("/job");
   };
 
-  const handleAddSkill = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSkillInput.trim()) return;
-    if (!userSkills.includes(newSkillInput.trim())) {
-      setUserSkills((prev) => [...prev, newSkillInput.trim()]);
+  // Computed from real extracted hard skills — no fabricated match
+  // percentages or reasoning text disconnected from what the candidate
+  // actually has. Kept as one shared computation (not just the top 4)
+  // so the course-gap analysis below can look at the same real
+  // requiredSkills/missingSkills instead of a separately fudged list.
+  const jobsWithSkillMatch = useMemo(() => {
+    return JOBS.map((job) => {
+      const requiredSkills = job.hardSkills
+        .split("·")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const matchedSkills = requiredSkills.filter((required) =>
+        userSkills.some(
+          (owned) =>
+            owned.toLowerCase().includes(required.toLowerCase()) ||
+            required.toLowerCase().includes(owned.toLowerCase()),
+        ),
+      );
+      const missingSkills = requiredSkills.filter((s) => !matchedSkills.includes(s));
+
+      const matchRate = requiredSkills.length
+        ? Math.round((matchedSkills.length / requiredSkills.length) * 100)
+        : 0;
+
+      return { ...job, matchRate, matchedSkills, missingSkills };
+    });
+  }, [userSkills]);
+
+  // A job only appears here if it genuinely shares at least one skill
+  // with the candidate; nothing is padded to look good.
+  const recommendedJobs = useMemo(
+    () =>
+      jobsWithSkillMatch
+        .filter((job) => job.matchedSkills.length > 0)
+        .sort((a, b) => b.matchRate - a.matchRate)
+        .slice(0, 4),
+    [jobsWithSkillMatch],
+  );
+
+  // Course "recommendations" as a real skill-gap analysis — the skills
+  // most frequently missing across the candidate's own top job matches,
+  // not a static list tied to mock soft-skill scores. Only surfaces
+  // skills that would genuinely move the needle on a job the candidate
+  // already has some traction with.
+  const skillGapCourses = useMemo(() => {
+    const gapCounts = new Map<string, { count: number; jobTitles: string[] }>();
+    for (const job of recommendedJobs) {
+      for (const skill of job.missingSkills) {
+        const entry = gapCounts.get(skill) ?? { count: 0, jobTitles: [] };
+        entry.count += 1;
+        entry.jobTitles.push(job.title);
+        gapCounts.set(skill, entry);
+      }
     }
-    setNewSkillInput("");
-  };
+    return Array.from(gapCounts.entries())
+      .map(([skill, { count, jobTitles }]) => ({ skill, count, jobTitles }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 2);
+  }, [recommendedJobs]);
 
-  const handleRemoveSkill = (skillToRemove: string) => {
-    setUserSkills((prev) => prev.filter((s) => s !== skillToRemove));
-  };
-
-  const recommendedJobs = useMemo(() => {
-    return JOBS.slice(0, 4).map((job, idx) => ({
-      ...job,
-      matchRate: 95 - idx * 4,
-      transparentReason:
-        idx === 0
-          ? "💡 แมตช์สูงสุดเพราะคะแนน Learning Agility 75% + มีทักษะ React, TypeScript ตรงสเปคองค์กร"
-          : idx === 1
-            ? "💡 คะแนน Collaboration Mindset 85% สูงกว่าค่าเฉลี่ยตำแหน่งนี้ 20%"
-            : "💡 คะแนน Critical Thinking 80% ตรงตามเกณฑ์ที่ทีมต้องการ",
-    }));
-  }, []);
+  // Applying isn't reversible from here (no "un-apply" affordance below),
+  // so a misclick shouldn't be able to submit one — the button opens this
+  // confirm step instead of calling handleApply directly.
+  const [confirmApplyJob, setConfirmApplyJob] = useState<{ title: string; company: string } | null>(null);
 
   const handleApply = (title: string) => {
     if (!appliedJobs.includes(title)) {
       setAppliedJobs((prev) => [...prev, title]);
     }
+  };
+
+  const handleConfirmApply = () => {
+    if (confirmApplyJob) handleApply(confirmApplyJob.title);
+    setConfirmApplyJob(null);
   };
 
   return (
@@ -82,111 +476,350 @@ export default function ProfilePage() {
 
       <div className="relative mx-auto w-full max-w-[1400px] px-3 sm:px-[clamp(20px,4vw,56px)] pt-4 sm:pt-[clamp(32px,5vw,48px)] pb-[clamp(56px,8vw,88px)]">
         {/* Profile Banner / Header */}
-        <div className="mb-6 sm:mb-8 rounded-[24px] sm:rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-4 sm:p-[clamp(24px,4vw,40px)] shadow-[0_12px_32px_rgba(15,15,15,0.04)]">
+        <div className="mb-6 sm:mb-8 rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-[clamp(24px,4vw,40px)]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="flex h-12 w-12 sm:h-16 sm:w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-[#0F0F0F] text-xl sm:text-2xl font-extrabold text-white">
-                {candidateName.charAt(0) || "ก"}
-              </div>
+              <label
+                className="group relative flex h-12 w-12 sm:h-16 sm:w-16 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-2xl bg-[#E5E5E5]"
+                title="อัปโหลดรูปโปรไฟล์"
+              >
+                {profilePhoto ? (
+                  <Image src={profilePhoto} alt="" width={64} height={64} className="h-full w-full object-cover" />
+                ) : (
+                  // Plain gray placeholder — the previous mascot fallback
+                  // read as "this is the candidate's actual avatar," not
+                  // "no photo uploaded yet." A generic silhouette is the
+                  // standard, unambiguous way to signal "add your own."
+                  <User className="h-6 w-6 sm:h-8 sm:w-8 text-[#9A9A9A]" strokeWidth={1.75} />
+                )}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 text-[9px] font-bold text-white opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
+                  แก้ไข
+                </div>
+                {/* Always-visible edit badge — the hover-only overlay above
+                    is invisible until you happen to hover, which touch
+                    devices never trigger at all. This is the real
+                    "you can change this" affordance. */}
+                <div className="absolute right-0 bottom-0 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[#0F0F0F] ring-2 ring-white">
+                  <Camera className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" strokeWidth={2.5} />
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={fileInputRef}
+                  onChange={handlePhotoUpload}
+                  className="sr-only"
+                />
+              </label>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-base sm:text-xl md:text-2xl font-extrabold tracking-[-0.02em] text-[#0F0F0F]">
-                    คุณ{candidateName}
-                  </h1>
-                  <span className="rounded-full bg-[#3BF55C] px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold text-[#0F0F0F] whitespace-nowrap">
-                    ✓ Verified
-                  </span>
-                </div>
-                <div className="mt-0.5 text-[11px] sm:text-xs text-[#5C5C5C] leading-snug">
-                  Candidate #KP-9402 · Frontend & Fullstack Developer Candidate
-                </div>
+                {isEditingName ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveNameEdit();
+                        if (e.key === "Escape") setIsEditingName(false);
+                      }}
+                      className="min-w-0 rounded-lg border border-[rgba(15,15,15,0.15)] bg-white px-2 py-1 text-base sm:text-xl font-extrabold tracking-[-0.02em] text-[#0F0F0F] outline-none focus:border-[#0F0F0F]"
+                    />
+                    <button
+                      type="button"
+                      onClick={saveNameEdit}
+                      aria-label="บันทึกชื่อ"
+                      className="flex h-6 w-6 flex-shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#0F0F0F] text-white"
+                    >
+                      <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <h1 className="text-base sm:text-xl md:text-2xl font-extrabold tracking-[-0.02em] text-[#0F0F0F]">
+                      คุณ {candidateName}
+                    </h1>
+                    {/* น้องตรงปกเดาชื่อจากเรซูเม่ให้ — ไม่ใช่ข้อมูลที่ยืนยัน
+                        แล้ว 100% เสมอไป จึงต้องแก้ไขได้ตรงนี้เลย */}
+                    <button
+                      type="button"
+                      onClick={startEditingName}
+                      aria-label="แก้ไขชื่อ"
+                      className="cursor-pointer text-[#8A8A8A] opacity-60 transition-opacity hover:text-[#0F0F0F] hover:opacity-100"
+                    >
+                      <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
           </div>
         </div>
 
-        {/* Core Profile Dashboard: Expanded Grid (500px + 1fr, max-w-[1400px]) */}
-        <div className="mb-10 grid grid-cols-1 gap-6 sm:gap-10 lg:grid-cols-[500px_1fr] lg:items-start">
-          {/* Left: Dynamic 6-Axis Radar Chart */}
-          <div className="flex flex-col justify-between rounded-[24px] sm:rounded-[28px] border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-4 sm:p-7 lg:sticky lg:top-24 overflow-hidden">
-            <div>
-              <div className="mb-1 text-[11px] sm:text-xs font-bold tracking-[0.04em] text-[#8A8A8A] uppercase">
-                Dynamic Smart Profile
+        {/* Resume source — checks whether this candidate has an actual
+            uploaded PDF's extracted text, structured data from the manual
+            form, or neither, and always resolves to exactly one of those
+            three states instead of ever rendering blank/broken. Note: only
+            the PDF's extracted TEXT is stored (see /decoder's
+            extractTextFromPdf), never the original file itself — there's
+            no file storage wired up yet, so this shows the parsed text
+            rather than a literal embedded/downloadable PDF. */}
+        <div className="mb-6 sm:mb-8 rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-[clamp(24px,4vw,40px)]">
+          <h2 className="mb-3 text-sm font-extrabold text-[#0F0F0F]">เรซูเม่ของคุณ</h2>
+          {profile && profile.resumeRawText.trim().length > 0 ? (
+            <div className="rounded-2xl bg-white p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold text-[#0F0F0F]">
+                <FileText className="h-4 w-4 flex-shrink-0 text-[#4D7CFF]" strokeWidth={2} />
+                ข้อความที่สกัดจากเรซูเม่ PDF ที่คุณอัปโหลด
               </div>
-              <h2 className="text-base sm:text-xl font-extrabold text-[#0F0F0F]">
+              <p className="max-h-[240px] overflow-y-auto rounded-xl bg-[#FAFAFA] p-3 text-xs leading-relaxed whitespace-pre-wrap text-[#5C5C5C]">
+                {profile.resumeRawText}
+              </p>
+            </div>
+          ) : profile &&
+            (profile.desiredPosition || profile.education.length > 0 || profile.workExperience.length > 0) ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-[11px] text-[#8A8A8A]">ข้อมูลจากฟอร์มที่คุณกรอกไว้ (ยังไม่ได้อัปโหลดเรซูเม่ PDF)</p>
+              {profile.desiredPosition && (
+                <div className="rounded-2xl bg-white p-3.5">
+                  <div className="text-[10px] font-bold text-[#8A8A8A]">ตำแหน่งงานที่สนใจ</div>
+                  <div className="text-xs font-extrabold text-[#0F0F0F]">{profile.desiredPosition}</div>
+                </div>
+              )}
+              {profile.education.length > 0 && (
+                <div className="rounded-2xl bg-white p-3.5">
+                  <div className="mb-1.5 text-[10px] font-bold text-[#8A8A8A]">ประวัติการศึกษา</div>
+                  <div className="flex flex-col gap-1">
+                    {profile.education.map((e) => (
+                      <div key={e.id} className="text-xs text-[#0F0F0F]">
+                        {e.level} · {e.institution}
+                        {e.fieldOfStudy ? ` · สาขา${e.fieldOfStudy}` : ""}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {profile.workExperience.length > 0 && (
+                <div className="rounded-2xl bg-white p-3.5">
+                  <div className="mb-1.5 text-[10px] font-bold text-[#8A8A8A]">ประสบการณ์ทำงาน</div>
+                  <div className="flex flex-col gap-1">
+                    {profile.workExperience.map((w) => (
+                      <div key={w.id} className="text-xs text-[#0F0F0F]">
+                        {w.jobTitle} · {w.companyName}
+                        {w.isCurrent ? " (ปัจจุบัน)" : ""}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs leading-relaxed text-[#8A8A8A]">
+              คุณยังไม่มีเรซูเม่ในระบบ — เลือกวิธีสร้างเรซูเม่ได้ที่ด้านล่างของหน้านี้
+            </p>
+          )}
+        </div>
+
+        {/* Big Dashboard — one merged card under a single "Dynamic Smart
+            Profile" heading, with Soft Skills and Hard Skills as two
+            clearly-separated sub-sections (divider, own sub-heading each)
+            rather than two headings both claiming to be the topic. Soft
+            Skills gets more room since the radar chart and its six axis
+            labels need real space to render without crowding; Hard Skills
+            is a plain skill list and needs comparatively little. Both
+            fully visible, nothing hidden behind a tab or a narrow sidebar. */}
+        <div className="mb-10 rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-7">
+          <h2 className="mb-5 text-lg sm:text-2xl font-extrabold text-[#0F0F0F] sm:mb-7">
+            Dynamic Smart Profile
+          </h2>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr] lg:gap-0">
+            {/* Soft Skills */}
+            <div className="lg:pr-8">
+              <div className="inline-flex items-center rounded-full bg-[#0F0F0F] px-3 py-1 text-[11px] font-extrabold tracking-[0.03em] text-white uppercase">
+                Soft Skills
+              </div>
+              <h3 className="mt-2.5 text-base sm:text-lg font-extrabold text-[#0F0F0F]">
                 กราฟ Soft Skills 6 ด้าน
-              </h2>
+              </h3>
               <p className="mt-0.5 text-[11px] sm:text-xs text-[#5C5C5C]">
                 ประมวลผลจากมินิเกม Neuroscience
               </p>
-            </div>
 
-            {/* Responsive Radar Size (Mobile 230px / Desktop 320px) */}
-            <div className="my-4 sm:my-6 flex justify-center w-full overflow-hidden">
-              <div className="block sm:hidden">
-                <RadarChart data={RADAR_DATA} size={230} theme="mono" showLabels animate />
-              </div>
-              <div className="hidden sm:block">
-                <RadarChart data={RADAR_DATA} size={320} theme="mono" showLabels animate />
-              </div>
-            </div>
+              {gameResult ? (
+                <>
+                  {/* Radar sized from the wrapper's real measured width instead
+                      of a fixed 230/320px — lets it actually use the extra
+                      room this panel now has instead of leaving it empty
+                      while axis labels still crowd each other. */}
+                  <div ref={chartWrapRefCallback} className="my-4 sm:my-6 flex justify-center w-full overflow-hidden">
+                    <RadarChart data={radarData} size={chartSize} theme="mono" showLabels animate />
+                  </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-3">
-              {AXIS_CHIPS.map((chip) => (
-                <div
-                  key={chip.en}
-                  className="rounded-xl border border-[rgba(15,15,15,0.1)] bg-white p-2 sm:p-3 text-center text-xs"
-                >
-                  <div className="font-extrabold text-[#0F0F0F]">{chip.value}%</div>
-                  <div className="text-[10px] sm:text-[11px] opacity-70 truncate">{chip.th}</div>
+                  <div className="grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-3">
+                    {axisChips.map((chip) => (
+                      <div
+                        key={chip.key}
+                        className="rounded-xl bg-white p-2 sm:p-3 text-center text-xs"
+                      >
+                        <div className="font-extrabold text-[#0F0F0F]">{chip.value}%</div>
+                        <div className="text-[10px] leading-snug sm:text-[11px] opacity-70">{chip.th}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                // Honest empty state — no GameResult row yet means the
+                // candidate hasn't played the psychometric games, not that
+                // every axis genuinely scored 0.
+                <div className="my-4 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[rgba(15,15,15,0.15)] bg-white px-4 py-10 text-center sm:my-6">
+                  <Target className="h-6 w-6 text-[#8A8A8A]" strokeWidth={1.75} />
+                  <p className="text-xs font-bold text-[#0F0F0F]">ยังไม่มีผลประเมิน Soft Skills</p>
+                  <p className="max-w-[260px] text-[11px] text-[#8A8A8A]">
+                    เล่นมินิเกมประเมินศักยภาพให้ครบเพื่อดูกราฟ 6 ด้านของคุณ
+                  </p>
+                  <Link
+                    href="/game"
+                    className="mt-1 rounded-full bg-[#0F0F0F] px-4 py-2 text-[11px] font-bold text-white transition-opacity hover:opacity-90"
+                  >
+                    ไปเล่นเกมประเมิน →
+                  </Link>
                 </div>
-              ))}
+              )}
+            </div>
+
+            {/* Divider — horizontal rule when stacked on mobile, vertical
+                rule when side-by-side on desktop — makes clear these are
+                two distinct sub-sections, not one continuous topic. */}
+            <div className="border-t border-[rgba(15,15,15,0.08)] pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
+              {/* Hard Skills */}
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <div className="inline-flex items-center rounded-full bg-[#0F0F0F] px-3 py-1 text-[11px] font-extrabold tracking-[0.03em] text-white uppercase">
+                    Hard Skills
+                  </div>
+                  <h3 className="mt-2.5 text-base sm:text-lg font-extrabold text-[#0F0F0F]">
+                    ทักษะที่สกัดได้
+                  </h3>
+                  <p className="mt-0.5 text-[11px] sm:text-xs text-[#5C5C5C]">
+                    จากเรซูเม่และบทสนทนากับน้องตรงปก
+                  </p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0F0F0F]">
+                  {userSkills.length} ทักษะ
+                </span>
+              </div>
+              {/* Always visible, not just when the skills list is empty —
+                  a completed Smart Profile isn't locked; the candidate can
+                  still re-upload a resume or chat more to add to it. */}
+              <Link
+                href="/decoder"
+                className="mt-2 inline-block text-[11px] font-bold text-[#4D7CFF] underline underline-offset-2 hover:text-[#0F0F0F]"
+              >
+                แก้ไข / อัปเดตทักษะ
+              </Link>
+              <div className="mt-4">
+              {userSkills.length === 0 && (
+                <div>
+                  <p className="text-xs leading-[1.7] text-[#8A8A8A]">
+                    ยังไม่มีทักษะที่สกัดได้ — ไปที่{" "}
+                    <Link href="/decoder" className="font-bold text-[#0F0F0F] underline">
+                      ห้องสนทนากับน้องตรงปก
+                    </Link>{" "}
+                    เพื่อวิเคราะห์ทักษะจากเรซูเม่หรือประสบการณ์ของคุณ
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleLoadSampleData}
+                    className="mt-2 cursor-pointer text-xs font-bold text-[#4D7CFF] underline underline-offset-2"
+                  >
+                    หรือลองโหลดข้อมูลตัวอย่างเพื่อดูตัวอย่างหน้านี้
+                  </button>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {userSkills.map((skill) => {
+                  // Same Verified/Partial distinction HR sees: came from
+                  // an uploaded resume (document) vs. only ever
+                  // self-reported in chat. Read-only — hard skills only
+                  // ever come from actual extraction, never typed in
+                  // directly, so this list can't be padded.
+                  const isVerified = resumeSkills.includes(skill);
+                  return (
+                    <div
+                      key={skill}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#0F0F0F]"
+                    >
+                      <SkillIcon skill={skill} size={14} />
+                      <span>{skill}</span>
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                          isVerified
+                            ? "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]"
+                            : "bg-[rgba(77,124,255,0.12)] text-[#4D7CFF]"
+                        }`}
+                      >
+                        {isVerified ? "Verified" : "Partial"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {userSkills.length > 0 && (
+                <p className="mt-2 text-[10px] text-[#8A8A8A]">
+                  <span className="font-bold text-[#0f5c22]">Verified</span> = มาจากเรซูเม่ที่อัปโหลด ·{" "}
+                  <span className="font-bold text-[#4D7CFF]">Partial</span> = เล่าในแชทกับน้องตรงปก
+                </p>
+              )}
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Right: AI Insights, Hard Skill Matrix & Recommended Jobs */}
-          <div className="flex flex-col gap-6 min-h-[540px]">
-            {/* Dashboard Tabs (Fixed Layout Shift) */}
-            <div className="flex border-b border-[rgba(15,15,15,0.1)] overflow-x-auto">
+        {/* AI Insights & Recommended Jobs — full width below the dashboard */}
+        <div className="mb-10 flex flex-col gap-6">
+          {/* Dashboard Tabs (Fixed Layout Shift) */}
+            <div className="flex gap-6 overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setActiveTab("feedback")}
-                className={`cursor-pointer pb-3 text-xs font-extrabold transition-all border-b-2 mr-6 whitespace-nowrap ${
+                className={`cursor-pointer inline-flex items-center gap-1.5 pb-3 text-xs font-extrabold transition-all border-b-2 whitespace-nowrap ${
                   activeTab === "feedback"
                     ? "border-[#0F0F0F] text-[#0F0F0F]"
                     : "border-transparent text-[#8A8A8A] hover:text-[#0F0F0F]"
                 }`}
               >
-                📊 รายงานข้อมูลส่วนบุคคล
+                <FileText className="h-3.5 w-3.5" strokeWidth={2} />
+                รายงานข้อมูลส่วนบุคคล
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("matching")}
-                className={`cursor-pointer pb-3 text-xs font-extrabold transition-all border-b-2 mr-6 whitespace-nowrap ${
+                className={`cursor-pointer inline-flex items-center gap-1.5 pb-3 text-xs font-extrabold transition-all border-b-2 whitespace-nowrap ${
                   activeTab === "matching"
                     ? "border-[#0F0F0F] text-[#0F0F0F]"
                     : "border-transparent text-[#8A8A8A] hover:text-[#0F0F0F]"
                 }`}
               >
-                🎯 ตำแหน่งงานที่น้องตรงปก แนะนำ (4)
+                <Briefcase className="h-3.5 w-3.5" strokeWidth={2} />
+                ตำแหน่งงานที่น้องตรงปก แนะนำ ({recommendedJobs.length})
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab("skills")}
-                className={`cursor-pointer pb-3 text-xs font-extrabold transition-all border-b-2 whitespace-nowrap ${
-                  activeTab === "skills"
+                onClick={() => setActiveTab("courses")}
+                className={`cursor-pointer inline-flex items-center gap-1.5 pb-3 text-xs font-extrabold transition-all border-b-2 whitespace-nowrap ${
+                  activeTab === "courses"
                     ? "border-[#0F0F0F] text-[#0F0F0F]"
                     : "border-transparent text-[#8A8A8A] hover:text-[#0F0F0F]"
                 }`}
               >
-                🛠️ ทักษะการทำงานของคุณ
+                <GraduationCap className="h-3.5 w-3.5" strokeWidth={2} />
+                คอร์สเรียนที่แนะนำ ({skillGapCourses.length})
               </button>
             </div>
 
             {/* TAB 1: รายงานข้อมูลส่วนบุคคล (Feedback & Development Roadmap) */}
             {activeTab === "feedback" && (
-              <div className="flex flex-col gap-6 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-white p-6">
+              <div className="flex flex-col gap-6 rounded-2xl bg-[#FAFAFA] p-6">
                 <div>
                   <h3 className="text-base font-extrabold text-[#0F0F0F]">
                     รายงานวิเคราะห์ศักยภาพรายบุคคล
@@ -198,132 +831,134 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="rounded-xl border border-[rgba(59,245,92,0.3)] bg-[rgba(59,245,92,0.08)] p-4">
-                    <div className="mb-2 text-xs font-extrabold text-[#0F0F0F]">
-                      💪 จุดแข็งที่โดดเด่น (Strengths)
+                    <div className="mb-2 flex items-center gap-1.5 text-xs font-extrabold text-[#0F0F0F]">
+                      <TrendingUp className="h-3.5 w-3.5 text-[#0f5c22]" strokeWidth={2} />
+                      จุดแข็งที่โดดเด่น
                     </div>
-                    <ul className="flex flex-col gap-1.5 text-xs text-[#4A4A4A]">
-                      <li>• **Collaboration Mindset (85%)**: ทำงานเป็นทีมได้อย่างราบรื่น</li>
-                      <li>• **Critical Thinking (80%)**: แยกแยะข้อมูลสำคัญได้อย่างแม่นยำ</li>
-                    </ul>
+                    <p className="text-xs leading-[1.7] text-[#4A4A4A]">
+                      คุณทำงานร่วมกับผู้อื่นได้อย่างราบรื่นและมีการคิดวิเคราะห์ที่ชัดเจน — Collaboration
+                      Mindset ทำได้ 85% และ Critical Thinking ทำได้ 80% ซึ่งทั้งสองด้านสูงกว่าค่าเฉลี่ยของผู้สมัครทั่วไป
+                    </p>
                   </div>
 
                   <div className="rounded-xl border border-[rgba(255,110,92,0.3)] bg-[rgba(255,110,92,0.08)] p-4">
-                    <div className="mb-2 text-xs font-extrabold text-[#0F0F0F]">
-                      🎯 จุดที่สามารถพัฒนาต่อ (Areas for Growth)
+                    <div className="mb-2 flex items-center gap-1.5 text-xs font-extrabold text-[#0F0F0F]">
+                      <Target className="h-3.5 w-3.5 text-[#d63d28]" strokeWidth={2} />
+                      จุดที่พัฒนาต่อได้
                     </div>
-                    <ul className="flex flex-col gap-1.5 text-xs text-[#4A4A4A]">
-                      <li>• **Risk Tolerance (60%)**: เพิ่มการทดลองเปิดรับโอกาสเสี่ยงใหม่ๆ</li>
-                      <li>• พัฒนาการตัดสินใจฉับไวเมื่อข้อมูลไม่ครบถ้วน</li>
-                    </ul>
+                    <p className="text-xs leading-[1.7] text-[#4A4A4A]">
+                      Risk Tolerance ยังอยู่ที่ 60% ต่ำกว่าค่าเฉลี่ยเล็กน้อย — ลองฝึกตัดสินใจในสถานการณ์ที่ข้อมูลไม่ครบถ้วนหรือมีความเสี่ยงมากขึ้น จะช่วยยกระดับด้านนี้ได้
+                    </p>
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* Upskilling & Course Recommendations Section */}
-                <div className="mt-2 rounded-xl border border-[rgba(15,15,15,0.08)] bg-[#FAFAFA] p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-extrabold text-[#0F0F0F]">
-                        🎓 คอร์สเรียนและกิจกรรมแนะนำเพื่อพัฒนาจุดอัพเกรด
-                      </h4>
-                      <p className="text-[11px] text-[#8A8A8A]">
-                        หลักสูตรสั้นและเวิร์กช็อปที่คัดสรรโดยน้องตรงปก เพื่อเสริมทักษะด้านที่อ่อนให้แข็งแกร่งยิ่งขึ้น
-                      </p>
-                    </div>
-                  </div>
+            {/* TAB 3: คอร์สเรียนที่แนะนำ — a real skill-gap analysis against
+                the candidate's own top job matches (see skillGapCourses
+                above), not a static list tied to mock soft-skill scores.
+                Each card names the actual missing skill and exactly
+                which/how many real matched jobs need it. */}
+            {activeTab === "courses" && (
+              <div className="rounded-2xl bg-[#FAFAFA] p-6">
+                <div className="mb-4">
+                  <h3 className="flex items-center gap-1.5 text-base font-extrabold text-[#0F0F0F]">
+                    <GraduationCap className="h-4 w-4 text-[#4D7CFF]" strokeWidth={2} />
+                    ทักษะที่ควรพัฒนาเพิ่มเพื่อเพิ่มโอกาสแมตช์
+                  </h3>
+                  <p className="mt-1 text-xs text-[#5C5C5C]">
+                    คำนวณจากทักษะที่ตำแหน่งงานที่แมตช์กับคุณต้องการ แต่คุณยังไม่มีในโปรไฟล์
+                  </p>
+                </div>
 
+                {skillGapCourses.length === 0 ? (
+                  <p className="text-xs leading-[1.7] text-[#8A8A8A]">
+                    {recommendedJobs.length === 0
+                      ? "ยังไม่มีตำแหน่งงานที่แมตช์ให้วิเคราะห์ช่องว่างทักษะ เพิ่มทักษะของคุณในกล่อง Hard Skills ก่อน"
+                      : "ทักษะของคุณครอบคลุมทุกตำแหน่งที่แมตช์แล้ว ไม่มีช่องว่างที่ต้องพัฒนาเพิ่มตอนนี้"}
+                  </p>
+                ) : (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="flex flex-col justify-between rounded-lg border border-[rgba(15,15,15,0.08)] bg-white p-3">
-                      <div>
-                        <span className="rounded-full bg-[#FF6E5C]/10 px-2 py-0.5 text-[10px] font-bold text-[#FF6E5C]">
-                          พัฒนา Risk Tolerance
-                        </span>
-                        <h5 className="mt-1 text-xs font-extrabold text-[#0F0F0F]">
-                          Strategic Risk Taking & Decision Workshop
-                        </h5>
-                        <p className="mt-1 text-[11px] text-[#5C5C5C]">
-                          เรียนรู้การประเมินและกล้าตัดสินใจในสภาวะเสี่ยงสูงด้วยกรณีศึกษาธุรกิจจริง
-                        </p>
+                    {skillGapCourses.map(({ skill, count, jobTitles }) => (
+                      <div key={skill} className="flex flex-col justify-between rounded-lg bg-white p-3">
+                        <div>
+                          <span className="rounded-full bg-[#4D7CFF]/10 px-2 py-0.5 text-[10px] font-bold text-[#4D7CFF]">
+                            ต้องการใน {count} ตำแหน่งที่แมตช์
+                          </span>
+                          <h5 className="mt-1 text-xs font-extrabold text-[#0F0F0F]">
+                            พัฒนาทักษะ {skill}
+                          </h5>
+                          <p className="mt-1 text-[11px] text-[#5C5C5C]">
+                            ใช้ในตำแหน่ง {jobTitles.slice(0, 2).join(", ")}
+                            {jobTitles.length > 2 ? ` และอีก ${jobTitles.length - 2} ตำแหน่ง` : ""}
+                          </p>
+                        </div>
                       </div>
-                      <div className="mt-3 flex items-center justify-between border-t border-[rgba(15,15,15,0.06)] pt-2 text-[10px] text-[#8A8A8A]">
-                        <span>4 ชั่วโมง · ออนไลน์</span>
-                        <button
-                          type="button"
-                          className="font-bold text-[#0F0F0F] hover:underline"
-                        >
-                          ดูรายละเอียดคอร์ส
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col justify-between rounded-lg border border-[rgba(15,15,15,0.08)] bg-white p-3">
-                      <div>
-                        <span className="rounded-full bg-[#4D7CFF]/10 px-2 py-0.5 text-[10px] font-bold text-[#4D7CFF]">
-                          พัฒนา Agility Under Pressure
-                        </span>
-                        <h5 className="mt-1 text-xs font-extrabold text-[#0F0F0F]">
-                          Agile Execution & Rapid Problem Solving
-                        </h5>
-                        <p className="mt-1 text-[11px] text-[#5C5C5C]">
-                          ฝึกฝนเทคนิคปรับตัวและแก้ปัญหาเฉพาะหน้าเมื่อข้อมูลและกติกาเปลี่ยนแปลงฉับพลัน
-                        </p>
-                      </div>
-                      <div className="mt-3 flex items-center justify-between border-t border-[rgba(15,15,15,0.06)] pt-2 text-[10px] text-[#8A8A8A]">
-                        <span>6 ชั่วโมง · Interactive</span>
-                        <button
-                          type="button"
-                          className="font-bold text-[#0F0F0F] hover:underline"
-                        >
-                          ดูรายละเอียดคอร์ส
-                        </button>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
             )}
 
             {/* TAB 2: ตำแหน่งงานที่น้องตรงปก แนะนำ */}
             {activeTab === "matching" && (
               <div className="flex flex-col gap-4">
+                {recommendedJobs.length === 0 && (
+                  <div className="rounded-2xl bg-[#FAFAFA] p-6 text-center">
+                    <p className="text-sm font-bold text-[#0F0F0F]">ยังไม่มีตำแหน่งที่แนะนำได้</p>
+                    <p className="mx-auto mt-1.5 max-w-[380px] text-xs leading-[1.7] text-[#8A8A8A]">
+                      ยังไม่มีทักษะให้เทียบกับตำแหน่งงาน เพิ่มทักษะของคุณในกล่อง Hard Skills ด้านบน แล้วตำแหน่งที่แมตช์จะขึ้นที่นี่ทันที
+                    </p>
+                  </div>
+                )}
+
+                {/* Same list-item language as the HR candidate list (see
+                    /company/positions/[id]/candidates): icon left, info
+                    middle, match score as a plain bold number + small
+                    gray label on the right — not a colored badge, so
+                    "Match" reads the same way on both sides of the app. */}
                 {recommendedJobs.map((job) => {
                   const isApplied = appliedJobs.includes(job.title);
                   return (
                     <div
                       key={job.title}
-                      className="flex flex-col justify-between gap-3 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-white p-5 shadow-sm transition-all hover:border-[rgba(15,15,15,0.3)]"
+                      className="flex flex-wrap items-center gap-3 sm:gap-4 rounded-2xl bg-[#FAFAFA] p-4 transition-colors hover:bg-[#F0F0F0]"
                     >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <div className="mb-1 flex items-center gap-2">
-                            <span className="rounded-md bg-[#3BF55C] px-2 py-0.5 text-[10px] font-extrabold text-[#0F0F0F]">
-                              Match {job.matchRate}%
-                            </span>
-                            <h3 className="text-base font-extrabold text-[#0F0F0F]">
-                              {job.title}
-                            </h3>
-                          </div>
-                          <div className="text-xs text-[#8A8A8A]">
-                            {job.company} · {job.salaryNote || `฿${job.salaryMin.toLocaleString()} - ฿${job.salaryMax.toLocaleString()}`}
-                          </div>
-                        </div>
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#F0F0F0]">
+                        <Briefcase className="h-4 w-4 text-[#8A8A8A]" strokeWidth={2} />
+                      </div>
 
+                      <div className="min-w-0 flex-1">
+                        <span className="text-sm font-extrabold text-[#0F0F0F]">{job.title}</span>
+                        <div className="mt-0.5 text-xs text-[#8A8A8A]">
+                          {job.company} · {job.salaryNote || `฿${job.salaryMin.toLocaleString()} - ฿${job.salaryMax.toLocaleString()}`}
+                        </div>
+                        {/* Real reasoning — the actual skills this job shares
+                            with the candidate's extracted hard skills, not a
+                            generic templated sentence. */}
+                        <div className="mt-1 flex items-start gap-1 text-[10px] leading-[1.5] text-[#4D7CFF]">
+                          <Lightbulb className="mt-0.5 h-3 w-3 flex-shrink-0" strokeWidth={2} />
+                          <span>แมตช์เพราะคุณมีทักษะ {job.matchedSkills.join(", ")}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
+                        <div className="text-right">
+                          <div className="text-lg font-extrabold text-[#0F0F0F]">{job.matchRate}%</div>
+                          <div className="text-[9px] text-[#8A8A8A]">Match</div>
+                        </div>
                         <button
                           type="button"
-                          onClick={() => handleApply(job.title)}
+                          onClick={() => setConfirmApplyJob({ title: job.title, company: job.company })}
                           disabled={isApplied}
-                          className={`rounded-full px-5 py-2 text-xs font-bold transition-all ${
+                          className={`whitespace-nowrap rounded-full px-4 py-1.5 text-[11px] font-bold transition-all ${
                             isApplied
-                              ? "bg-gray-100 text-gray-500 cursor-default"
+                              ? "bg-white text-[#8A8A8A] cursor-default"
                               : "bg-[#0F0F0F] text-white hover:opacity-90 active:scale-[0.98]"
                           }`}
                         >
-                          {isApplied ? "✓ ยื่นสมัครแล้ว (กำลังคัดกรอง)" : "สมัครตำแหน่งนี้"}
+                          {isApplied ? "ยื่นสมัครแล้ว" : "สมัครตำแหน่งนี้"}
                         </button>
-                      </div>
-
-                      {/* Transparent Reasoning Badge */}
-                      <div className="rounded-xl border border-dashed border-[rgba(77,124,255,0.3)] bg-[rgba(77,124,255,0.06)] p-3 text-[11px] leading-[1.5] text-[#0F0F0F]">
-                        {job.transparentReason}
                       </div>
                     </div>
                   );
@@ -331,68 +966,19 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* TAB 3: ทักษะการทำงานของคุณที่ น้องตรงปก สกัดได้ (Interactive Edit/Add/Delete) */}
-            {activeTab === "skills" && (
-              <div className="flex flex-col gap-5 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-white p-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-base font-extrabold text-[#0F0F0F]">
-                      ทักษะการทำงานของคุณที่ น้องตรงปก สกัดได้
-                    </h3>
-                    <p className="mt-1 text-xs text-[#5C5C5C]">
-                      ทักษะวิชาชีพเชิงรุกที่ได้รับการยืนยันแล้ว สามารถกดยกเลิก (✕) เพื่อลบ หรือพิมพ์เพิ่มทักษะใหม่ได้ตามต้องการ
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-[#FAFAFA] px-3 py-1 text-xs font-bold text-[#0F0F0F] border border-[rgba(15,15,15,0.08)]">
-                    {userSkills.length} ทักษะ
-                  </span>
-                </div>
-
-                {/* Interactive Skill Chips */}
-                <div className="flex flex-wrap gap-2.5">
-                  {userSkills.map((skill) => (
-                    <div
-                      key={skill}
-                      className="group inline-flex items-center gap-2 rounded-xl border border-[rgba(15,15,15,0.12)] bg-[#FAFAFA] px-3.5 py-2 text-xs font-bold text-[#0F0F0F] transition-all hover:border-[#0F0F0F]"
-                    >
-                      <span>✓ {skill}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSkill(skill)}
-                        className="text-[11px] font-bold text-[#8A8A8A] opacity-60 hover:opacity-100 hover:text-red-500 transition-opacity"
-                        title="ลบทักษะนี้"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Add New Skill Form Input */}
-                <form onSubmit={handleAddSkill} className="mt-2 flex items-center gap-2 max-w-[480px]">
-                  <input
-                    type="text"
-                    value={newSkillInput}
-                    onChange={(e) => setNewSkillInput(e.target.value)}
-                    placeholder="พิมพ์เพิ่มทักษะวิชาชีพเพิ่มเติม (เช่น Docker, Figma)..."
-                    className="min-w-0 flex-1 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3.5 py-2.5 text-xs outline-none focus:border-[#0F0F0F]"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-[#0F0F0F] px-4 py-2.5 text-xs font-bold text-white transition-transform active:scale-[0.98]"
-                  >
-                    + เพิ่มทักษะ
-                  </button>
-                </form>
-              </div>
-            )}
           </div>
-        </div>
       </div>
 
       {/* Bottom CTA — Next Step in Flow */}
       <div className="mx-auto w-full max-w-[1400px] px-3 sm:px-[clamp(20px,4vw,56px)] pb-[clamp(48px,7vw,80px)]">
         <div className="rounded-[28px] bg-[#F5F5F5] p-[clamp(32px,5vw,52px)] text-center">
+          <Image
+            src="/mascot/mascot-ai-summary.png"
+            alt=""
+            width={120}
+            height={120}
+            className="mx-auto mb-3 h-[88px] w-[88px] object-contain"
+          />
           <div className="mb-2 text-xs font-bold tracking-[0.06em] text-[#8A8A8A] uppercase">ขั้นตอนถัดไป</div>
           <h2 className="mb-2 text-[clamp(20px,2.8vw,28px)] font-extrabold tracking-[-0.02em]">
             สร้าง Resume เพื่อยื่นสมัครงาน
@@ -401,23 +987,24 @@ export default function ProfilePage() {
             เลือกสร้างแบบทั่วไป หรือให้น้องตรงปกช่วยรวมข้อมูลตัวตนและทักษะจาก Smart Profile ลงไปด้วย — ได้ Resume ที่บอกว่าคุณเป็นใคร ไม่ใช่แค่ทำอะไรมา
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
+            {/* Real Gemini call (see generateAIResume) — "Premium" is a
+                forward-looking badge only, not an actual payment gate,
+                since none exists yet for this prototype. */}
             <button
               type="button"
-              className="relative cursor-pointer rounded-full bg-[#0F0F0F] px-7 py-4 text-[14px] font-extrabold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+              onClick={handleGenerateAIResume}
+              className="relative inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[#0F0F0F] px-7 py-4 text-[14px] font-extrabold text-white transition-all hover:opacity-90 active:scale-[0.98]"
             >
-              ✦ ให้น้องตรงปกช่วยสร้าง
-              <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold tracking-wide">Premium</span>
+              <Sparkle className="h-3.5 w-3.5" strokeWidth={2} />
+              ให้น้องตรงปกช่วยสร้าง
+              <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold tracking-wide">Premium</span>
             </button>
-            <button
-              type="button"
-              className="cursor-pointer rounded-full border-[1.5px] border-[#0F0F0F] bg-white px-7 py-[15px] text-[14px] font-bold text-[#0F0F0F] transition-all hover:bg-[#0F0F0F] hover:text-white active:scale-[0.98]"
+            <Link
+              href="/decoder/manual"
+              className="cursor-pointer rounded-full bg-white px-7 py-[15px] text-[14px] font-bold text-[#0F0F0F] transition-all hover:bg-[#0F0F0F] hover:text-white active:scale-[0.98]"
             >
               สร้างแบบทั่วไป
-            </button>
-            <label className="cursor-pointer rounded-full border-[1.5px] border-[rgba(15,15,15,0.2)] bg-white px-7 py-[15px] text-[14px] font-bold text-[#5C5C5C] transition-all hover:border-[#0F0F0F] hover:text-[#0F0F0F] active:scale-[0.98]">
-              📎 อัปโหลด Resume ที่มีอยู่
-              <input type="file" accept=".pdf,.doc,.docx" className="sr-only" />
-            </label>
+            </Link>
           </div>
           <button
             type="button"
@@ -430,6 +1017,159 @@ export default function ProfilePage() {
       </div>
 
       <Footer />
+
+      {/* Adjust-photo modal — opens right after picking a new file so the
+          candidate can crop/zoom before it becomes their avatar, instead
+          of the raw upload being used as-is. */}
+      {cropSrc && cropImgSize && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-[460px] rounded-[24px] bg-white p-5 sm:p-6">
+            <h3 className="text-base font-extrabold text-[#0F0F0F]">ปรับตำแหน่งรูปโปรไฟล์</h3>
+            <p className="mt-1 mb-4 text-xs text-[#8A8A8A]">ลากรูปเพื่อเลื่อน และใช้แถบด้านล่างเพื่อซูม</p>
+
+            <div
+              className="relative mx-auto touch-none select-none overflow-hidden rounded-2xl bg-[#F5F5F5]"
+              style={{ width: cropViewportSize, height: cropViewportSize, cursor: "grab" }}
+              onPointerDown={handleCropPointerDown}
+              onPointerMove={handleCropPointerMove}
+              onPointerUp={handleCropPointerUp}
+              onPointerLeave={handleCropPointerUp}
+            >
+              {/* Plain <img>, not next/image — position/size are driven
+                  frame-by-frame by drag/zoom state, which next/image's
+                  fixed-layout model isn't built for. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={cropSrc}
+                alt=""
+                draggable={false}
+                className="pointer-events-none absolute"
+                style={{
+                  // Tailwind's preflight sets `img { max-width: 100%;
+                  // height: auto }` — max-width alone was silently
+                  // clamping this to the viewport box while height stayed
+                  // pixel-exact, squashing non-square photos. Overriding
+                  // both here lets the explicit px size actually apply.
+                  maxWidth: "none",
+                  maxHeight: "none",
+                  width: cropImgSize.w * cropScale,
+                  height: cropImgSize.h * cropScale,
+                  left: cropOffset.x,
+                  top: cropOffset.y,
+                }}
+              />
+            </div>
+
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.01}
+              value={cropZoom}
+              onChange={(e) => handleCropZoomChange(Number(e.target.value))}
+              className="mt-4 w-full accent-[#0F0F0F]"
+              aria-label="ซูมรูปโปรไฟล์"
+            />
+
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={closeCropModal}
+                className="flex-1 cursor-pointer rounded-full border-[1.5px] border-[#0F0F0F] bg-white py-2.5 text-sm font-bold text-[#0F0F0F]"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCrop}
+                className="flex-1 cursor-pointer rounded-full bg-[#0F0F0F] py-2.5 text-sm font-bold text-white"
+              >
+                ใช้รูปนี้
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm-apply modal — error prevention: applying has no undo
+          affordance on this page, so a single misclick on the small
+          "สมัครตำแหน่งนี้" button shouldn't be able to submit it. */}
+      {confirmApplyJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-[440px] rounded-[28px] bg-white p-6 sm:p-7 text-center">
+            <Image
+              src="/mascot/mascot-job-apply-success.png"
+              alt=""
+              width={200}
+              height={200}
+              className="mx-auto h-[104px] w-[104px] object-contain"
+            />
+            <h3 className="mt-3 text-lg font-extrabold text-[#0F0F0F]">ยืนยันการสมัครงาน</h3>
+            <p className="mt-1.5 text-sm leading-[1.6] text-[#5C5C5C]">
+              สมัครตำแหน่ง <span className="font-bold text-[#0F0F0F]">{confirmApplyJob.title}</span> ที่{" "}
+              {confirmApplyJob.company} ใช่ไหม?
+            </p>
+
+            <div className="mt-6 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmApplyJob(null)}
+                className="flex-1 cursor-pointer rounded-full border-[1.5px] border-[#0F0F0F] bg-white py-2.5 text-sm font-bold text-[#0F0F0F]"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmApply}
+                className="flex-1 cursor-pointer rounded-full bg-[#0F0F0F] py-2.5 text-sm font-bold text-white"
+              >
+                ยืนยันสมัคร
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI resume-generation modal — opens immediately on click (showing
+          a loading state) rather than waiting for the request to resolve
+          first, so the button click always gives instant feedback. */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-[480px] rounded-[28px] bg-white p-6 sm:p-7">
+            <div className="flex items-start gap-3">
+              <Image
+                src="/mascot/mascot-ai-summary.png"
+                alt=""
+                width={80}
+                height={80}
+                className="h-14 w-14 flex-shrink-0 object-contain sm:h-16 sm:w-16"
+              />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-extrabold text-[#0F0F0F]">น้องตรงปกช่วยสร้าง Resume</h3>
+                {isGeneratingResume ? (
+                  <p className="mt-2 flex items-center gap-2 text-xs text-[#8A8A8A]">
+                    <Loader2 className="h-3.5 w-3.5 flex-shrink-0 animate-spin" strokeWidth={2} />
+                    กำลังประมวลผลข้อมูลโปรไฟล์ของคุณ...
+                  </p>
+                ) : aiResumeError ? (
+                  <p className="mt-2 text-xs font-bold text-red-600">{aiResumeError}</p>
+                ) : (
+                  <p className="mt-2 text-xs leading-relaxed whitespace-pre-wrap text-[#0F0F0F]">{aiResumeResult}</p>
+                )}
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAiModal(false)}
+                className="cursor-pointer rounded-full bg-[#0F0F0F] px-5 py-2.5 text-xs font-bold text-white transition-opacity hover:opacity-90"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

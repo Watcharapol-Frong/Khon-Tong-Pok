@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { RotateCcw, Search, Sparkle, SlidersHorizontal } from "lucide-react";
 import { MultiSelectDropdown } from "@/components/MultiSelectDropdown";
 import type { JobFilters } from "@/hooks/useJobFilters";
 import { BIZ_LABELS, CATEGORY_TABS, LEVEL_LABELS, LOCATION_LABELS, WORK_TYPE_LABELS } from "@/lib/data";
@@ -8,6 +9,18 @@ import type { JobCategory } from "@/lib/types";
 
 const SALARY_MIN_OPTIONS = [0, 20000, 40000, 60000, 80000, 100000];
 const SALARY_MAX_OPTIONS: (number | "all")[] = [40000, 60000, 80000, 100000, "all"];
+
+// Sparkle-corner accent borrowed from AuthCard (login/register) to tie this
+// bar into the same visual language. The flat accent square that also
+// lives on AuthCard was tried here too, but on a small functional toolbar
+// embedded in a busy page it just read as an unexplained stray box rather
+// than a deliberate accent — dropped, keeping only the subtler sparkles.
+const FILTER_BAR_SPARKLES = [
+  { top: "2%", left: "-18px", size: 20, color: "#F5D949", rotate: -18, opacity: 0.65 },
+  { top: "12%", right: "-20px", size: 16, color: "#B14DFF", rotate: 15, opacity: 0.6 },
+  { bottom: "16%", left: "-22px", size: 15, color: "#4D7CFF", rotate: 20, opacity: 0.6 },
+  { bottom: "4%", right: "-16px", size: 18, color: "#FF5CA8", rotate: -12, opacity: 0.6 },
+];
 
 export function JobFilterBar({ filters }: { filters: JobFilters }) {
   const {
@@ -36,53 +49,97 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
     categoryDropdownOpen,
     toggleCategoryDropdown,
     resetFilters,
-    hasActiveFilters,
     locationSummary,
     levelSummary,
     categorySummary,
   } = filters;
 
+  // A count reads as more useful than the old plain dot — "3 ตัวกรอง"
+  // tells you something before you even open the panel. Grouped by filter
+  // *type* (5 groups) rather than total selections, so picking 3 locations
+  // still reads as "1 filter active", not "3".
+  const activeFilterCount =
+    (workTypes.length > 0 ? 1 : 0) +
+    (salaryMin > 0 || salaryMax !== "all" ? 1 : 0) +
+    (locations.length > 0 ? 1 : 0) +
+    (levels.length > 0 ? 1 : 0) +
+    (categories.length > 0 ? 1 : 0);
+
   return (
-    <div className="mb-5 rounded-2xl border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-[10px]">
+    <div className="relative mb-5">
+      {FILTER_BAR_SPARKLES.map((s, i) => (
+        <Sparkle
+          key={i}
+          className="pointer-events-none absolute hidden sm:block"
+          style={{
+            top: s.top,
+            bottom: s.bottom,
+            left: s.left,
+            right: s.right,
+            opacity: s.opacity,
+            transform: `rotate(${s.rotate}deg)`,
+          }}
+          width={s.size}
+          height={s.size}
+          fill={s.color}
+          color={s.color}
+          strokeWidth={1}
+        />
+      ))}
+
+      <div className="relative rounded-2xl bg-[#F5F5F5] p-[10px]">
       <div className="flex max-w-full flex-wrap items-center gap-[10px]">
         <div className="relative min-w-[200px] flex-[1_1_260px]">
+          <Search
+            className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-[#8A8A8A]"
+            strokeWidth={2}
+          />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="✨ ค้นหางานด้วย AI หรือทักษะ..."
-            className="w-full rounded-xl border border-[rgba(15,15,15,0.1)] bg-white py-[11px] pr-[76px] pl-4 font-sans text-[13px] text-[#0F0F0F] outline-none"
+            placeholder="ค้นหางานด้วย AI หรือทักษะ..."
+            className="w-full rounded-full border border-[rgba(15,15,15,0.1)] bg-white py-[11px] pr-4 pl-10 font-sans text-[13px] text-[#0F0F0F] outline-none transition-colors focus:border-[#0F0F0F]"
           />
-          <span className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer rounded-lg bg-[#0F0F0F] px-[14px] py-[7px] text-xs font-extrabold text-white">
-            ค้นหา
-          </span>
         </div>
 
         <div className="flex min-w-0 flex-[1_1_auto] items-center gap-1.5">
-          <span
+          <button
+            type="button"
             onClick={() => setFilterPanelOpen((v) => !v)}
-            className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-[10px] bg-[#0F0F0F] px-[14px] py-[9px] text-xs font-extrabold whitespace-nowrap text-white"
+            className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-[#0F0F0F] px-[14px] py-[9px] text-xs font-extrabold whitespace-nowrap text-white transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-[#0F0F0F] focus-visible:ring-offset-2"
           >
-            🎛️ กรองผลลัพธ์
-            {hasActiveFilters && <span className="h-[7px] w-[7px] rounded-full bg-[#3BF55C]" />}
-          </span>
+            <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={2} /> กรองผลลัพธ์
+            {activeFilterCount > 0 && (
+              <span className="flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#3BF55C] px-1 text-[10px] font-extrabold text-[#0F0F0F]">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
           <div className="h-4 w-px flex-shrink-0 bg-[rgba(15,15,15,0.1)]" />
           <div className="no-scrollbar flex min-w-0 items-center gap-1.5 overflow-x-auto">
             {CATEGORY_TABS.map((tab) => {
               const active = category === tab.key;
               return (
-                <span
+                <button
                   key={tab.key}
+                  type="button"
                   onClick={() => setCategory(tab.key)}
-                  className="flex-shrink-0 cursor-pointer rounded-[10px] px-[14px] py-[9px] text-xs font-bold whitespace-nowrap"
+                  className="flex-shrink-0 cursor-pointer rounded-full px-[14px] py-[9px] text-xs font-bold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-[#0F0F0F] focus-visible:ring-offset-2"
                   style={{
                     background: active ? "#0F0F0F" : "#FFFFFF",
                     color: active ? "#FFFFFF" : "#5C5C5C",
                     border: active ? "none" : "1px solid rgba(15,15,15,0.1)",
                   }}
+                  onMouseEnter={(e) => {
+                    if (!active) e.currentTarget.style.background = "rgba(15,15,15,0.04)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) e.currentTarget.style.background = "#FFFFFF";
+                  }}
                 >
                   {tab.label}
-                </span>
+                </button>
               );
             })}
           </div>
@@ -93,20 +150,23 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
         {filterPanelOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto", transitionEnd: { overflow: "visible" } }}
+            exit={{ opacity: 0, height: 0, overflow: "hidden" }}
             transition={{ duration: 0.15 }}
-            className="mt-[10px] overflow-hidden rounded-2xl border border-[rgba(15,15,15,0.08)] bg-[#F5F5F5]"
+            style={{ overflow: "hidden" }}
+            className="mt-[10px] rounded-2xl border border-[rgba(15,15,15,0.08)] bg-[#F5F5F5]"
           >
             <div className="p-[18px]">
             <div className="mb-[14px] flex items-center justify-between border-b border-[rgba(15,15,15,0.1)] pb-3">
               <div className="text-[13px] font-extrabold">ตัวกรองการค้นหาอย่างละเอียด</div>
-              <span
+              <button
+                type="button"
+                aria-label="ปิดตัวกรอง"
                 onClick={() => setFilterPanelOpen(false)}
-                className="cursor-pointer text-[13px] font-bold text-[#8A8A8A]"
+                className="cursor-pointer rounded-full p-1 text-[13px] font-bold text-[#8A8A8A] transition-colors hover:bg-[rgba(15,15,15,0.06)] hover:text-[#0F0F0F] focus-visible:ring-2 focus-visible:ring-[#0F0F0F]"
               >
                 ✕
-              </span>
+              </button>
             </div>
 
             <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3.5">
@@ -187,7 +247,7 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
               <MultiSelectDropdown
                 label="ประเภทธุรกิจ"
                 summary={categorySummary}
-                options={["dev", "marketing", "design"].map((v) => ({
+                options={["dev", "marketing", "design", "sales", "finance", "hr", "ops"].map((v) => ({
                   value: v,
                   label: BIZ_LABELS[v],
                 }))}
@@ -199,20 +259,26 @@ export function JobFilterBar({ filters }: { filters: JobFilters }) {
             </div>
 
             <div className="mt-3.5 flex items-center justify-between border-t border-[rgba(15,15,15,0.1)] pt-3.5">
-              <span onClick={resetFilters} className="cursor-pointer text-xs font-bold text-[#5C5C5C]">
-                ↺ ล้างตัวกรองทั้งหมด
-              </span>
-              <span
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold text-[#5C5C5C] transition-colors hover:bg-[rgba(15,15,15,0.06)] hover:text-[#0F0F0F] focus-visible:ring-2 focus-visible:ring-[#0F0F0F]"
+              >
+                <RotateCcw className="h-3 w-3" strokeWidth={2} /> ล้างตัวกรองทั้งหมด
+              </button>
+              <button
+                type="button"
                 onClick={() => setFilterPanelOpen(false)}
-                className="cursor-pointer rounded-[10px] bg-[#0F0F0F] px-4 py-[9px] text-xs font-extrabold text-white"
+                className="cursor-pointer rounded-full bg-[#0F0F0F] px-4 py-[9px] text-xs font-extrabold text-white transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-[#0F0F0F] focus-visible:ring-offset-2"
               >
                 ตกลง
-              </span>
+              </button>
             </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }

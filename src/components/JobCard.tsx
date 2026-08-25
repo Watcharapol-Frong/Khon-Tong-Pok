@@ -1,8 +1,13 @@
+import Link from "next/link";
 import type { Job } from "@/lib/types";
 
-export function JobCard({ job }: { job: Job }) {
+export function JobCard({ job, tabIndex }: { job: Job; tabIndex?: number }) {
   return (
-    <div className="flex h-full cursor-pointer flex-col justify-between rounded-2xl border border-[rgba(15,15,15,0.1)] bg-white p-5 transition-colors hover:border-[rgba(15,15,15,0.3)]">
+    <Link
+      href={`/job/${job.id}`}
+      tabIndex={tabIndex}
+      className="flex h-full cursor-pointer flex-col justify-between rounded-2xl border border-[rgba(15,15,15,0.1)] bg-white p-5 transition-colors hover:border-[rgba(15,15,15,0.3)]"
+    >
       <div>
         <div className="mb-1 flex items-start justify-between gap-2.5">
           <div className="text-base font-extrabold tracking-[-0.01em]">{job.title}</div>
@@ -13,7 +18,7 @@ export function JobCard({ job }: { job: Job }) {
           {job.skillTags.map((tag) => (
             <span
               key={tag.label}
-              className="rounded-lg px-2.5 py-1 text-[11px] font-bold"
+              className="rounded-full px-2.5 py-1 text-[11px] font-bold"
               style={{ background: tag.bg, color: tag.color }}
             >
               {tag.label}
@@ -25,6 +30,6 @@ export function JobCard({ job }: { job: Job }) {
       <div className="flex items-center gap-1 text-xs font-bold text-[#0F0F0F]">
         ดูรายละเอียด <span className="text-[13px]">→</span>
       </div>
-    </div>
+    </Link>
   );
 }
