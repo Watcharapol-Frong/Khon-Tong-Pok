@@ -47,23 +47,27 @@ export function Navbar() {
   // (หางาน, สำหรับองค์กร, วิธีการทำงาน, the pill) would either compete with
   // or short-circuit the one choice these pages exist to walk someone
   // through.
+  // On candidate pages, "เข้าสู่ระบบ" now sits as a normal nav link instead
+  // of living in the black pill — the pill itself leads with signup
+  // ("เริ่มต้นใช้งาน" -> /register directly, no /select needed since the
+  // candidate context already resolves the role) to match Home's pill
+  // always being the signup action.
   const navLinks = isLoginSelect
     ? [{ label: "สมัครใช้งานฟรี", href: "/register/select" }]
     : isRegisterSelect
       ? [{ label: "เข้าสู่ระบบ", href: "/login/select" }]
       : isGeneralLanding
         ? NAV_LINKS.filter((l) => l.label !== "วิธีการทำงาน")
-        : NAV_LINKS.filter((l) => l.label !== "สำหรับผู้สมัคร");
+        : [...NAV_LINKS.filter((l) => l.label !== "สำหรับผู้สมัคร"), { label: "เข้าสู่ระบบ", href: "/login" }];
 
   // On Home, the pill leads with signup ("เริ่มต้นใช้งานฟรี" -> /register/
-  // select) instead of login — a first-time visitor with unknown context
-  // is more likely to be starting than returning, matching CompanyNavbar's
-  // own "เริ่มใช้งานฟรี" pill pattern. Every candidate page still shows
-  // "เข้าสู่ระบบ" -> /login directly, since a returning user wanting to log
-  // in is the more likely intent once they're already looking at candidate
-  // content specifically.
-  const pillLabel = isGeneralLanding ? "เริ่มต้นใช้งานฟรี" : "เข้าสู่ระบบ";
-  const pillHref = isGeneralLanding ? "/register/select" : "/login";
+  // select) since a first-time visitor with unknown context is more likely
+  // to be starting than returning, matching CompanyNavbar's own
+  // "เริ่มใช้งานฟรี" pill pattern. Candidate pages also lead with signup now
+  // ("เริ่มต้นใช้งาน" -> /register), just skipping /select since the role is
+  // already known there.
+  const pillLabel = isGeneralLanding ? "เริ่มต้นใช้งานฟรี" : "เริ่มต้นใช้งาน";
+  const pillHref = isGeneralLanding ? "/register/select" : "/register";
 
   const hidePill = isLoginSelect || isRegisterSelect;
 
