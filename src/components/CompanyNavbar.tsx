@@ -34,7 +34,7 @@ export function CompanyNavbar() {
 
   // Both auth form pages already carry their own reciprocal in-page link
   // (/company/login -> "สมัครเลย" to /company/register, and vice versa), so
-  // repeating "เข้าสู่ระบบ"/"เริ่มใช้งานฟรี" in the navbar there is just
+  // repeating "เข้าสู่ระบบ"/"เริ่มต้นใช้งาน" in the navbar there is just
   // noise — same reasoning already applied to /login/select and
   // /register/select.
   const hideAuthLinks = pathname === "/company/login" || pathname === "/company/register";
@@ -169,7 +169,7 @@ export function CompanyNavbar() {
                       href="/register/select"
                       className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
                     >
-                      เริ่มใช้งานฟรี
+                      เริ่มต้นใช้งาน
                     </Link>
                   )}
                 </>
@@ -292,7 +292,7 @@ export function CompanyNavbar() {
                       onClick={closeMenu}
                       className="px-3 py-[10px] text-sm font-bold"
                     >
-                      เริ่มใช้งานฟรี
+                      เริ่มต้นใช้งาน
                     </Link>
                   )}
                 </>
