@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Globe, Mail, RefreshCw } from "lucide-react";
+import { AlertCircle, Mail, RefreshCw } from "lucide-react";
 import { Footer } from "@/components/Footer";
+import { GoogleIcon } from "@/components/GoogleIcon";
 import { Navbar } from "@/components/Navbar";
 import { registerJobSeeker } from "@/lib/actions/jobSeeker";
 import { setJobSeekerSessionIds } from "@/lib/jobSeekerSession";
@@ -214,7 +215,7 @@ export default function RegisterCandidatePage() {
                     }}
                     className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white py-3 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]"
                   >
-                    <Globe className="h-3.5 w-3.5" strokeWidth={2} /> สมัครสมาชิกด่วนด้วย Google
+                    <GoogleIcon className="h-3.5 w-3.5" /> สมัครสมาชิกด่วนด้วย Google
                   </button>
                 </div>
 

@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Globe } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
 import { Footer } from "@/components/Footer";
+import { GoogleIcon } from "@/components/GoogleIcon";
 import { Navbar } from "@/components/Navbar";
 import { getJobSeekerReturnState, loginJobSeeker } from "@/lib/actions/jobSeeker";
 import { setJobSeekerSessionIds } from "@/lib/jobSeekerSession";
@@ -200,7 +201,7 @@ export default function LoginPage() {
               }}
               className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#F0F0F0]"
             >
-              <Globe className="h-3.5 w-3.5" strokeWidth={2} /> เข้าสู่ระบบด้วย Google
+              <GoogleIcon className="h-3.5 w-3.5" /> เข้าสู่ระบบด้วย Google
             </button>
 
             {/* No "สำหรับองค์กร / HR? เข้าสู่ระบบที่นี่" fallback here anymore
