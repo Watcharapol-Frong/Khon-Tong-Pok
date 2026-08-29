@@ -1,0 +1,35 @@
+# ---- ความลับ ----
+# ครอบทุกแบบ เพราะ Windows ชอบเติมนามสกุลให้เอง
+# ตอนแรกมีแค่ ".env" แล้วไฟล์จริงชื่อ ".env.txt" (Notepad เติม .txt ให้ตอน Save As)
+# ซึ่งหลุดตะแกรงไปเลย ถ้า commit ตอนนั้นรหัสผ่าน DB ขึ้น GitHub ทันที
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- ของที่สร้างใหม่ได้ ----
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+
+# ---- โมเดลและข้อมูล (ใหญ่เกินกว่าจะเข้า git) ----
+# น้ำหนักโมเดลอยู่ที่ HuggingFace เหตุผลเต็มอยู่ใน models/README.md
+#
+# ใช้ "models/*" ไม่ใช่ "models/" เพราะ git ไม่ยอมให้ re-include ไฟล์
+# ที่อยู่ในโฟลเดอร์ซึ่งถูก exclude ไปแล้ว ถ้าเขียน "models/" บรรทัด ! ข้างล่าง
+# จะไม่มีผลเลยสักบรรทัด
+models/*
+!models/*.json
+!models/README.md
+!models/nong-trongpok-lora-pre-optimized-V2/
+models/nong-trongpok-lora-pre-optimized-V2/*
+!models/nong-trongpok-lora-pre-optimized-V2/*.json
+!models/nong-trongpok-lora-pre-optimized-V2/README.md
+*-ckpt/
+data/raw/
+data/corpus/
+data/augmented/
+data/interview/
+data/labeled/*.jsonl

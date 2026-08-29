@@ -1,0 +1,55 @@
+# --- API ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.0
+python-multipart==0.0.20
+
+# --- LLM (ชั้น C: ปากที่คุยสัมภาษณ์) ---
+# Typhoon API เป็น OpenAI-compatible จึงใช้ client ตัวนี้ได้เลย
+openai==1.59.6
+httpx==0.28.1
+
+# --- WangchanBERTa (ชั้น A: สมองอ่าน/ให้คะแนน) ---
+torch==2.5.1
+transformers==4.56.0
+sentencepiece==0.2.0
+datasets==3.2.0
+seqeval==1.2.2
+accelerate==1.14.0
+
+# --- PDF / OCR ---
+# Typhoon OCR เรียกผ่าน HTTP (ใช้ httpx ข้างบน) และเรนเดอร์หน้าเป็นภาพด้วย pymupdf
+# จงใจไม่ใช้แพ็กเกจ typhoon-ocr เพราะมันต้องมี poppler ติดตั้งในเครื่องด้วย
+# ซึ่งบน Windows ต้องโหลด binary มาวางเองแล้วตั้ง PATH — ทั้งทีมใช้ Windows
+pymupdf==1.25.1
+pytesseract==0.3.13
+pillow==11.1.0
+
+# --- ถอดเสียง (ไม่จำเป็น) ---
+# หน้าเว็บใช้ Web Speech API ของเบราว์เซอร์เป็นหลัก ซึ่งไม่ต้องลงอะไรเลย
+# ลงตัวนี้ต่อเมื่อต้องรองรับ Firefox/Safari แล้วตั้ง ASR_PROVIDER=local_whisper
+# faster-whisper==1.1.1
+
+# --- DB ---
+psycopg[binary]==3.2.3
+pgvector==0.3.6
+python-dotenv==1.0.1
+
+# --- fine-tune ตัวคุย (ชั้น C) ---
+peft==0.14.0
+bitsandbytes==0.50.1
+
+# --- อ่านไฟล์ .docx ตอน ingest (ไม่จำเป็น ข้ามได้) ---
+python-docx==1.1.2
+
+# --- scoring / stats ---
+numpy==2.2.1
+scipy==1.15.0
+
+# --- dev ---
+pytest==8.3.4
+
+# --- llama-cpp-python (ชั้น C: ปากที่คุยสัมภาษณ์) ---
+--extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+llama-cpp-python==0.3.19

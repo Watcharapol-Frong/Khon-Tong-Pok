@@ -1,0 +1,12 @@
+# ZeroGPU ต้องมี spaces เพื่อขอ GPU ตอนฟังก์ชันทำงาน
+spaces
+torch
+
+# **ต้อง pin** — เคยเขียน >=4.47 แล้ว Space ลงตัวใหม่กว่าเครื่อง dev
+# ซึ่ง apply_chat_template เปลี่ยนไปคืน BatchEncoding แทน Tensor
+# ทำให้ generate() พังด้วย AttributeError ทั้งที่ทดสอบในเครื่องผ่าน
+transformers==4.57.6
+peft==0.17.1
+accelerate
+sentencepiece
+gradio>=5

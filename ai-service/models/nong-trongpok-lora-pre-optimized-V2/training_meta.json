@@ -1,0 +1,25 @@
+{
+  "base_model": "scb10x/typhoon2.5-qwen3-4b",
+  "data": "1200-seed42-20260825-021357",
+  "n_train": 590,
+  "n_dev": 76,
+  "n_test": 69,
+  "epochs": 9,
+  "early_stopping_patience": 3,
+  "best_checkpoint": "models/nong-trongpok-lora-pre-optimized-V2-ckpt\\checkpoint-296",
+  "best_eval_accuracy": 0.9880765610291811,
+  "test_metrics": {
+    "loss": 0.022748451679944992,
+    "accuracy": 0.9877584138855571,
+    "precision": 0.9877584138855571,
+    "recall": 0.9877584138855571,
+    "f1": 0.9877584138855571,
+    "runtime": 85.0297,
+    "samples_per_second": 0.811,
+    "steps_per_second": 0.811,
+    "perplexity": 1.0230091709399034
+  },
+  "lora_rank": 8,
+  "max_seq": 768,
+  "quantized_4bit": true
+}
