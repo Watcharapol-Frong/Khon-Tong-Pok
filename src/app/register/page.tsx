@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Mail, RefreshCw } from "lucide-react";
+import { AlertCircle, Loader2, Mail, RefreshCw } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { GoogleIcon } from "@/components/GoogleIcon";
 import { Navbar } from "@/components/Navbar";
-import { registerJobSeeker } from "@/lib/actions/jobSeeker";
+import { createGuestJobSeeker, registerJobSeeker } from "@/lib/actions/jobSeeker";
 import { setJobSeekerSessionIds } from "@/lib/jobSeekerSession";
 
 export default function RegisterCandidatePage() {
@@ -24,6 +24,23 @@ export default function RegisterCandidatePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isGuestLoading, setIsGuestLoading] = useState(false);
+
+  // "กดข้ามได้เลย ไม่ต้องกรอกข้อมูล" — same fresh-guest-per-click approach
+  // as /login's own version (see createGuestJobSeeker), skipping this
+  // page's name/email/OTP form entirely.
+  const handleGuestSkip = async () => {
+    setErrorMsg("");
+    setIsGuestLoading(true);
+    const result = await createGuestJobSeeker();
+    if ("error" in result) {
+      setIsGuestLoading(false);
+      setErrorMsg(result.error);
+      return;
+    }
+    setJobSeekerSessionIds({ jobSeekerId: result.jobSeeker.id });
+    router.push("/onboarding");
+  };
 
   // OTP 6 digits state
   const [otp, setOtp] = useState<string[]>(["8", "4", "9", "2", "0", "1"]);
@@ -339,6 +356,19 @@ export default function RegisterCandidatePage() {
                     เข้าสู่ระบบที่นี่
                   </Link>
                 </div>
+
+                {/* Public, real users — fresh guest account per click, no
+                    form/OTP required. See handleGuestSkip / login's own
+                    identical version for the concurrency reasoning. */}
+                <button
+                  type="button"
+                  disabled={isGuestLoading}
+                  onClick={handleGuestSkip}
+                  className="mt-1 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-[#F0F0F0] py-2.5 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#E5E5E5] disabled:opacity-60"
+                >
+                  {isGuestLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />}
+                  กดข้ามได้เลย ไม่ต้องกรอกข้อมูล →
+                </button>
               </form>
             ) : (
               /* STEP 2 FORM: 6-Digit Email OTP Verification */

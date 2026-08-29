@@ -579,21 +579,21 @@ function DecoderContent() {
                   </Link>
                 </div>
 
-                {/* Dev-only: skips picking a real file for testing — runs
-                    the bundled sample PDF through the exact same
-                    processResumeFile path as a real upload. Gated out of
-                    production the same way as /login's quick-login. */}
-                {process.env.NODE_ENV !== "production" && (
-                  <button
-                    type="button"
-                    onClick={handleUseSampleResume}
-                    disabled={isParsingResume}
-                    className="mx-auto mt-3 flex cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-[rgba(15,15,15,0.2)] px-3.5 py-2 text-[11px] font-bold text-[#5C5C5C] transition-colors hover:bg-[#F5F5F5] disabled:opacity-60"
-                  >
-                    <Sparkle className="h-3 w-3" strokeWidth={2} />
-                    [Dev] ใช้เรซูเม่ตัวอย่าง (Daniel Gan)
-                  </button>
-                )}
+                {/* Public — not gated to dev/localhost. Lets a visitor
+                    (especially one who came in through the "กดข้ามได้เลย"
+                    guest shortcut on /login or /register) see the whole
+                    upload → skill-extraction → Smart Profile journey
+                    without needing a real resume on hand, via the exact
+                    same processResumeFile path a real upload uses. */}
+                <button
+                  type="button"
+                  onClick={handleUseSampleResume}
+                  disabled={isParsingResume}
+                  className="mx-auto mt-3 flex cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-[rgba(15,15,15,0.2)] px-3.5 py-2 text-[11px] font-bold text-[#5C5C5C] transition-colors hover:bg-[#F5F5F5] disabled:opacity-60"
+                >
+                  <Sparkle className="h-3 w-3" strokeWidth={2} />
+                  ยังไม่มีเรซูเม่ตอนนี้? ลองด้วยเรซูเม่ตัวอย่าง
+                </button>
               </div>
             ) : (
               <>

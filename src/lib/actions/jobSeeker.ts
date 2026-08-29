@@ -1,6 +1,6 @@
 "use server";
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { JobSeekerSession, SafeJobSeeker } from "@/lib/jobSeekerSessionContext";
@@ -47,6 +47,33 @@ export async function registerJobSeeker(
       return { error: "อีเมลนี้ถูกใช้งานแล้ว" };
     }
     console.error("registerJobSeeker failed:", err);
+    return { error: "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง" };
+  }
+}
+
+/**
+ * "กดข้ามได้เลย ไม่ต้องกรอกข้อมูล" on /login and /register — creates a
+ * fresh, real JobSeeker row per click (unique @guest.local email +
+ * unguessable random password) rather than logging every visitor into one
+ * shared account, so concurrent visitors don't see or overwrite each
+ * other's data. Genuinely disposable: nothing here is ever shown to the
+ * visitor, and there's no path back into this exact account later since
+ * they never see the generated credentials — same tradeoff the app's
+ * existing plaintext-password prototype auth already accepts.
+ */
+export async function createGuestJobSeeker(): Promise<JobSeekerSession | { error: string }> {
+  const id = randomUUID();
+  try {
+    const jobSeeker = await prisma.jobSeeker.create({
+      data: {
+        name: "ผู้เยี่ยมชม",
+        email: `guest-${id}@guest.local`,
+        password: randomUUID(),
+      },
+    });
+    return { jobSeeker: stripPassword(jobSeeker) };
+  } catch (err) {
+    console.error("createGuestJobSeeker failed:", err);
     return { error: "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง" };
   }
 }
@@ -653,4 +680,46 @@ ${resumeText}${skillsSection ? `\n\n${skillsSection}` : ""}`;
     console.error("generateResumeGapAnalysis failed:", err);
     return { error: "น้องตรงปกวิเคราะห์ไม่สำเร็จในขณะนี้ กรุณาลองใหม่อีกครั้ง" };
   }
+}
+
+/** The fixed email of the fully-populated reference candidate (see prisma/seedCompleteCandidate.ts) — the one and only account /demo is allowed to show. */
+const DEMO_CANDIDATE_EMAIL = "complete.demo@example.com";
+
+/**
+ * Read-only snapshot of the reference candidate for the public /demo page —
+ * lets a visitor see what a finished Smart Profile looks like before they
+ * register, without granting real login access to that (shared) account.
+ * Unlike every other getter in this file, this one is deliberately NOT
+ * parameterized by jobSeekerId: it always resolves the same fixed
+ * DEMO_CANDIDATE_EMAIL, so it can't be pointed at a real candidate's data.
+ * Returns null if that seed candidate doesn't exist yet in this environment
+ * (e.g. a fresh DB before `npm run db:seed:complete-demo` has ever run).
+ */
+export async function getDemoCandidateSnapshot() {
+  const jobSeeker = await prisma.jobSeeker.findUnique({ where: { email: DEMO_CANDIDATE_EMAIL } });
+  if (!jobSeeker) return null;
+
+  const [profile, gameResult, chatVerifications, aiSummary, gapAnalysis] = await Promise.all([
+    getJobSeekerProfile(jobSeeker.id),
+    prisma.gameResult.findUnique({ where: { jobSeekerId: jobSeeker.id } }),
+    prisma.chatVerification.findMany({ where: { jobSeekerId: jobSeeker.id } }),
+    prisma.aISummary.findUnique({ where: { jobSeekerId: jobSeeker.id } }),
+    prisma.resumeGapAnalysis.findUnique({ where: { jobSeekerId: jobSeeker.id } }),
+  ]);
+
+  return {
+    name: jobSeeker.name,
+    desiredPosition: profile?.desiredPosition ?? null,
+    computerSkills: profile?.computerSkills ?? [],
+    verifiedSkillNames: chatVerifications.filter((v) => v.status === "verified").map((v) => v.skill),
+    education: profile?.education ?? [],
+    workExperience: profile?.workExperience ?? [],
+    axisScores: gameResult
+      ? SOFT_SKILL_AXIS_ORDER.map((axis) => ({ key: axis, th: SOFT_SKILL_AXIS_META[axis].th, value: gameResult[axis] }))
+      : [],
+    aiSummaryText: aiSummary?.summaryText ?? null,
+    gapAnalysis: gapAnalysis
+      ? { missingTitle: gapAnalysis.missingTitle, missingDetail: gapAnalysis.missingDetail, nextSteps: gapAnalysis.nextSteps }
+      : null,
+  };
 }
