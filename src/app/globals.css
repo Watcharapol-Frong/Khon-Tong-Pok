@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f0f0f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-plex-thai), var(--font-inter), sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-plex-thai), var(--font-inter), sans-serif;
+}
+
+a {
+  text-decoration: none;
+}
+
+@keyframes marqueeScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marqueeScroll 26s linear infinite;
+}
+
+/* Same loop, slower — the job-card row carries much heavier content
+   (full cards, not small pills), so it needs more dwell time per item to
+   stay readable while scrolling past. */
+.animate-marquee-slow {
+  animation: marqueeScroll 70s linear infinite;
+}
+
+/* Two marquee rows stacked directly on top of each other, drifting the
+   same direction at different speeds, reads as an unintentional parallax
+   glitch rather than two separate pieces of content — reversing the
+   second row turns it into a deliberate opposing rhythm instead. Idle by
+   default (paused) — only scrolls once the cursor is actually over it, so
+   the section doesn't compete with the auto-scrolling job row above it
+   for attention until someone shows interest in it specifically. */
+.animate-marquee-reverse {
+  animation: marqueeScroll 26s linear infinite reverse;
+  animation-play-state: paused;
+}
+
+/* Tailwind's group-hover:[animation-play-state:paused] arbitrary-property
+   variant doesn't compile in this project's Tailwind v4 setup (silently
+   produces no rule) — using a plain scoped selector instead, which does. */
+.marquee-pause-on-hover:hover .animate-marquee,
+.marquee-pause-on-hover:hover .animate-marquee-slow {
+  animation-play-state: paused;
+}
+
+/* Opposite of marquee-pause-on-hover: starts paused, only runs while
+   hovered. Skipped entirely under prefers-reduced-motion so hovering can't
+   start motion someone has explicitly opted out of. */
+@media (prefers-reduced-motion: no-preference) {
+  .marquee-hover-to-scroll:hover .animate-marquee-reverse {
+    animation-play-state: running;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-marquee-slow,
+  .animate-marquee-reverse {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes radarGrow {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.animate-radar-grow {
+  animation: radarGrow 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) 50ms both;
+}
+
+/* hide scrollbar for the category-tabs row while keeping it scrollable */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* thin, subtle scrollbar for internally-scrolling panes (e.g. the job board's locked-layout card list) */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(15, 15, 15, 0.18) transparent;
+}
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(15, 15, 15, 0.18);
+  border-radius: 999px;
+}

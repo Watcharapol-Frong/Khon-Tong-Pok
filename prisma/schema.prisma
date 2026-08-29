@@ -1,0 +1,266 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// url connects through Supabase's pgbouncer transaction pooler (port 6543)
+// for normal app queries; directUrl bypasses the pooler (port 5432) for
+// Prisma Migrate, which needs a real session for advisory locks that
+// pgbouncer's transaction mode doesn't support.
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Company {
+  id       String    @id @default(cuid())
+  name     String
+  domain   String    @unique
+  hrUsers  HRUser[]
+  positions Position[]
+}
+
+model HRUser {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  /// Prototype only — plaintext, no hashing. Never returned from a Server
+  /// Action to the client (see SafeHRUser in src/lib/companySession.tsx).
+  /// Needs real hashing (bcrypt/argon2) before this touches production.
+  password      String
+  companyId     String
+  company       Company        @relation(fields: [companyId], references: [id])
+  notifications Notification[]
+}
+
+/// Recipient is exactly one of hrUserId/jobSeekerId — enforced at the
+/// Server Action layer (see src/lib/actions/interview.ts), not a DB CHECK
+/// constraint, consistent with this prototype's other soft-enforced rules.
+/// HR-side notifications go to every HRUser at a company (Position has no
+/// single "owner" HR account — companies staff positions as a team here).
+model Notification {
+  id          String     @id @default(cuid())
+  hrUserId    String?
+  hrUser      HRUser?    @relation(fields: [hrUserId], references: [id])
+  jobSeekerId String?
+  jobSeeker   JobSeeker? @relation(fields: [jobSeekerId], references: [id])
+  type        String
+  message     String
+  linkUrl     String?
+  isRead      Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+}
+
+model Position {
+  id                  String   @id @default(cuid())
+  companyId           String
+  company             Company  @relation(fields: [companyId], references: [id])
+  title               String
+  requiredHardSkills  String[]
+  requiredSoftSkills  Json
+  status              String   @default("open")
+  matches             Match[]
+}
+
+model Match {
+  id            String        @id @default(cuid())
+  positionId    String
+  position      Position      @relation(fields: [positionId], references: [id])
+  jobSeekerId   String
+  jobSeeker     JobSeeker     @relation(fields: [jobSeekerId], references: [id])
+  matchScore    Int
+  isStandout    Boolean       @default(false)
+  status        String        @default("pending")
+  interviewSlot InterviewSlot?
+}
+
+model InterviewSlot {
+  id             String   @id @default(cuid())
+  matchId        String   @unique
+  match          Match    @relation(fields: [matchId], references: [id])
+  proposedTimes  String[]
+  status         String   @default("pending")
+  confirmedTime  String?
+}
+
+model JobSeeker {
+  id                String            @id @default(cuid())
+  name              String
+  email             String            @unique
+  /// Prototype only — plaintext, no hashing. Never returned from a Server
+  /// Action to the client (see SafeJobSeeker in src/lib/jobSeekerSessionContext.tsx).
+  /// Needs real hashing (bcrypt/argon2) before this touches production.
+  password          String
+  profile           JobSeekerProfile?
+  chatVerifications ChatVerification[]
+  gameResult        GameResult?
+  aiSummary         AISummary?
+  gapAnalysis       ResumeGapAnalysis?
+  matches           Match[]
+  notifications     Notification[]
+  createdAt         DateTime          @default(now())
+}
+
+/// The candidate's structured profile, modeled on JobThai's own resume-form
+/// sections — normalized (not one JSON blob) so a future resume-template
+/// renderer can query/iterate each section directly instead of parsing an
+/// opaque structure. Replaces the old ResumeExtraction model: computerSkills
+/// and resumeRawText below are that model's hardSkills/rawText fields, now
+/// living alongside the rest of the profile instead of split out on their
+/// own — one source of truth for "does this candidate have any skills yet"
+/// (the /decoder gate) regardless of whether they came from a parsed PDF or
+/// the manual multi-step form.
+model JobSeekerProfile {
+  id               String    @id @default(cuid())
+  jobSeekerId      String    @unique
+  jobSeeker        JobSeeker @relation(fields: [jobSeekerId], references: [id])
+
+  // ข้อมูลส่วนบุคคล (personal information)
+  firstNameTh      String?
+  lastNameTh       String?
+  firstNameEn      String?
+  lastNameEn       String?
+  birthDate        DateTime?
+  gender           String?
+  nationality      String?
+  religion         String?
+  maritalStatus    String?
+  address          String?
+  province         String?
+  postalCode       String?
+  phone            String?
+  militaryStatus   String?
+
+  // ลักษณะงานที่ต้องการ (desired job)
+  desiredPosition  String?
+  desiredSalaryMin Int?
+  desiredSalaryMax Int?
+  desiredJobType   String?
+  desiredProvince  String?
+  availableDate    DateTime?
+
+  education        EducationEntry[]
+  workExperience   WorkExperienceEntry[]
+  languageSkills   LanguageSkillEntry[]
+  certificates     CertificateEntry[]
+
+  /// Validated against the O*NET dictionary via the same SkillAutocomplete
+  /// component Position's own hard-skills field uses.
+  computerSkills   String[]
+  /// Parsed text of the most recently uploaded resume PDF, if any —
+  /// defaults to "" for a candidate who only ever used the manual form.
+  resumeRawText    String    @default("")
+  /// Vercel Blob URL (private access) of the resume PDF HR sees on
+  /// /company/candidates/[id] once Blind Review unblinds — the candidate's
+  /// own uploaded file if they used /decoder, otherwise a PDF generated
+  /// server-side from this profile's structured fields (see
+  /// generateResumePdfFromProfile in src/lib/actions/resumeFile.ts). Null
+  /// until either of those has run at least once.
+  resumeFileUrl    String?
+
+  updatedAt        DateTime  @updatedAt
+}
+
+model EducationEntry {
+  id           String           @id @default(cuid())
+  profileId    String
+  profile      JobSeekerProfile @relation(fields: [profileId], references: [id])
+  level        String
+  institution  String
+  fieldOfStudy String?
+  gpa          Float?
+  startYear    Int?
+  endYear      Int?
+  sortOrder    Int              @default(0)
+}
+
+model WorkExperienceEntry {
+  id               String           @id @default(cuid())
+  profileId        String
+  profile          JobSeekerProfile @relation(fields: [profileId], references: [id])
+  companyName      String
+  jobTitle         String
+  responsibilities String?
+  salary           Int?
+  startDate        DateTime?
+  endDate          DateTime?
+  isCurrent        Boolean          @default(false)
+  sortOrder        Int              @default(0)
+}
+
+model LanguageSkillEntry {
+  id        String           @id @default(cuid())
+  profileId String
+  profile   JobSeekerProfile @relation(fields: [profileId], references: [id])
+  language  String
+  speaking  String?
+  reading   String?
+  writing   String?
+}
+
+model CertificateEntry {
+  id        String           @id @default(cuid())
+  profileId String
+  profile   JobSeekerProfile @relation(fields: [profileId], references: [id])
+  title     String
+  issuer    String?
+  issueDate DateTime?
+  fileUrl   String?
+}
+
+model ChatVerification {
+  id               String    @id @default(cuid())
+  jobSeekerId      String
+  jobSeeker        JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  skill            String
+  status           String
+  conversationLog  Json
+  updatedAt        DateTime  @updatedAt
+}
+
+/// 6-axis taxonomy matches the psychometric games' radarProfile.axes output
+/// 1:1 (see src/lib/data.ts SOFT_SKILL_AXIS_ORDER, the same taxonomy used for
+/// Position.requiredSoftSkills) — overallIndex is a display-only average of
+/// the 6 axes, not consumed by matching (src/lib/matching.ts).
+model GameResult {
+  id                           String    @id @default(cuid())
+  jobSeekerId                  String    @unique
+  jobSeeker                    JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  riskTolerance                Int
+  learningAgility              Int
+  criticalThinking             Int
+  decisionMakingUnderPressure  Int
+  collaborationMindset         Int
+  resilienceAndAdaptability    Int
+  overallIndex                 Int
+  updatedAt                    DateTime  @updatedAt
+}
+
+model AISummary {
+  id           String    @id @default(cuid())
+  jobSeekerId  String    @unique
+  jobSeeker    JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  summaryText  String
+  generatedAt  DateTime  @default(now())
+  sourceHash   String
+}
+
+/// "ผลจากแบบทดสอบที่ 2" on /profile — a real Gemini comparison of the
+/// candidate's actual resumeRawText against their real GameResult soft-skill
+/// strengths, surfacing what the resume doesn't yet say about them and 3
+/// concrete next steps. Distinct from AISummary (a resume narrative) — this
+/// is coaching feedback, a different kind of content. See
+/// generateResumeGapAnalysis in src/lib/actions/jobSeeker.ts.
+model ResumeGapAnalysis {
+  id            String    @id @default(cuid())
+  jobSeekerId   String    @unique
+  jobSeeker     JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  missingTitle  String
+  missingDetail String
+  nextSteps     String[]
+  generatedAt   DateTime  @default(now())
+  sourceHash    String
+}
