@@ -32,11 +32,11 @@ type CompanyAppNavbarProps = {
  * on desktop) so HR always gets a top bar.
  */
 export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
-  const { isMobile } = useBreakpoint();
+  const { isTablet } = useBreakpoint();
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const open = isMobile && menuOpen;
+  const open = isTablet && menuOpen;
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
@@ -74,7 +74,9 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
     <div className="sticky top-0 z-40 bg-white px-4 pt-[26px] pb-3 sm:px-6 md:px-8">
       <div className="relative mx-auto max-w-[1200px]">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-full bg-[#F5F5F5] py-[10px] pr-5 pl-[22px]">
-          <Link href="/company/dashboard" className="flex flex-shrink-0 items-center gap-[10px]">
+          {/* Logo always returns to the General Landing (/), same as every
+              other navbar on the site — not back into the HR app context. */}
+          <Link href="/" className="flex flex-shrink-0 items-center gap-[10px]">
             <Image
               src="/mascot/mascot-navbar-icon.png"
               alt=""
@@ -87,7 +89,7 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
             </div>
           </Link>
 
-          {!isMobile && (
+          {!isTablet && (
             <div className="flex flex-1 items-center justify-between gap-4 pl-4">
               <nav className="flex items-center gap-1">
                 {NAV_ITEMS.map((item) => {
@@ -129,7 +131,7 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
             </div>
           )}
 
-          {isMobile && (
+          {isTablet && (
             <div className="flex flex-shrink-0 items-center gap-2">
               <NotificationBell
                 notifications={notifications}

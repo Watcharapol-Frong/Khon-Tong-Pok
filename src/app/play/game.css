@@ -1,0 +1,86 @@
+/* Only the handful of things Tailwind utility classes can't express for the
+   real game engine mounted at #ktp-game-root (src/lib/games/runtime.ts).
+   Everything else is inline Tailwind classes in that file's template
+   strings, matching the rest of the site's design system. Scoped under the
+   mount id so nothing leaks into other routes. */
+
+#ktp-game-root .ktp-fade-up {
+  animation: ktpFadeUp 0.3s ease both;
+}
+@keyframes ktpFadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#ktp-game-root .ktp-shake {
+  animation: ktpShake 0.55s ease-in-out;
+}
+@keyframes ktpShake {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  15%       { transform: translateX(-7px) rotate(-0.8deg); }
+  30%       { transform: translateX(7px) rotate(0.8deg); }
+  45%       { transform: translateX(-5px) rotate(-0.5deg); }
+  60%       { transform: translateX(5px) rotate(0.5deg); }
+  75%       { transform: translateX(-3px) rotate(-0.2deg); }
+  90%       { transform: translateX(3px) rotate(0.2deg); }
+}
+
+#ktp-game-root .ktp-glow-correct {
+  animation: ktpGlowCorrect 0.5s ease-out forwards;
+}
+@keyframes ktpGlowCorrect {
+  0%   { box-shadow: 0 0 0 0 rgba(59, 245, 92, 0.5); }
+  40%  { box-shadow: 0 0 0 12px rgba(59, 245, 92, 0.2); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 245, 92, 0); }
+}
+
+#ktp-game-root .ktp-shake-wrong {
+  animation: ktpShakeWrong 0.4s ease-out;
+}
+@keyframes ktpShakeWrong {
+  0%,100% { transform: translateX(0); }
+  15%     { transform: translateX(-8px); }
+  35%     { transform: translateX(8px); }
+  55%     { transform: translateX(-5px); }
+  75%     { transform: translateX(4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #ktp-game-root .ktp-fade-up,
+  #ktp-game-root .ktp-shake,
+  #ktp-game-root .ktp-glow-correct,
+  #ktp-game-root .ktp-shake-wrong {
+    animation: none;
+  }
+}
+
+/* Native range input (PGG contribution slider) — thumb styling needs real
+   pseudo-elements, Tailwind arbitrary values can't reach ::-webkit/-moz. */
+#ktp-game-root .ktp-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(15,15,15,0.08);
+  outline: none;
+}
+#ktp-game-root .ktp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #0F0F0F;
+  border: 3px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(15,15,15,0.25);
+  cursor: pointer;
+}
+#ktp-game-root .ktp-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #0F0F0F;
+  border: 3px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(15,15,15,0.25);
+  cursor: pointer;
+}

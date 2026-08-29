@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { clearHRSessionIds, getHRSessionIds } from "@/lib/hrSession";
 
@@ -16,10 +16,28 @@ import { clearHRSessionIds, getHRSessionIds } from "@/lib/hrSession";
  * affect the other.
  */
 export function CompanyNavbar() {
-  const { isMobile } = useBreakpoint();
+  const { isTablet } = useBreakpoint();
+  const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const open = isMobile && menuOpen;
+  const open = isTablet && menuOpen;
+
+  // Gray by default, black once it's the page you're actually on — same
+  // convention as Navbar.tsx and CompanyAppNavbar's isActive, but exact-
+  // match only (no prefix matching): /company/login, /company/register,
+  // /company/dashboard etc. are sibling pages under /company, not pages
+  // nested under it. Anchor links (#...) never count as active either —
+  // "วิธีการทำงาน" points at /company#how-it-works, but it's a section
+  // within /company, not its own destination, so just being on /company
+  // shouldn't light it up as if it had been navigated to specifically.
+  const isActive = (href: string) => !href.includes("#") && pathname === href.split("?")[0];
+
+  // Both auth form pages already carry their own reciprocal in-page link
+  // (/company/login -> "สมัครเลย" to /company/register, and vice versa), so
+  // repeating "เข้าสู่ระบบ"/"เริ่มต้นใช้งาน" in the navbar there is just
+  // noise — same reasoning already applied to /login/select and
+  // /register/select.
+  const hideAuthLinks = pathname === "/company/login" || pathname === "/company/register";
 
   // Just a display hint for which nav links to show (dashboard/logout vs.
   // login/register) — not a real auth check, so a plain localStorage read
@@ -37,8 +55,6 @@ export function CompanyNavbar() {
     setSession(getHRSessionIds() !== null);
   }, []);
 
-  const logoHref = session ? "/company/dashboard" : "/company";
-
   const closeMenu = () => setMenuOpen(false);
 
   const handleLogout = () => {
@@ -51,7 +67,10 @@ export function CompanyNavbar() {
     <div className="sticky top-0 z-40 bg-white px-4 pt-[26px] pb-3 sm:px-6 md:px-8">
       <div className="relative mx-auto max-w-[900px]">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-full bg-[#F5F5F5] py-[10px] pr-5 pl-[22px]">
-          <Link href={logoHref} className="flex flex-shrink-0 items-center gap-[10px]">
+          {/* Logo always returns to the General Landing (/), same as every
+              other navbar on the site — not back into the HR app context,
+              regardless of session state. */}
+          <Link href="/" className="flex flex-shrink-0 items-center gap-[10px]">
             <Image
               src="/mascot/mascot-navbar-icon.png"
               alt=""
@@ -64,25 +83,31 @@ export function CompanyNavbar() {
             </div>
           </Link>
 
-          {!isMobile && (
+          {!isTablet && (
             <div className="flex flex-wrap items-center gap-[clamp(10px,2vw,24px)]">
               {session ? (
                 <>
                   <Link
                     href="/company/dashboard"
-                    className="cursor-pointer whitespace-nowrap text-sm font-bold"
+                    className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                      isActive("/company/dashboard") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     แดชบอร์ด
                   </Link>
                   <Link
                     href="/company/positions"
-                    className="cursor-pointer whitespace-nowrap text-sm font-bold"
+                    className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                      isActive("/company/positions") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     ตำแหน่งงาน
                   </Link>
                   <Link
                     href="/company/interviews"
-                    className="cursor-pointer whitespace-nowrap text-sm font-bold"
+                    className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                      isActive("/company/interviews") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     นัดสัมภาษณ์
                   </Link>
@@ -102,30 +127,57 @@ export function CompanyNavbar() {
                 </>
               ) : (
                 <>
+                  {/* text-sm font-bold, no gray — matches the primary
+                      nav-link style used everywhere else on the site
+                      (Navbar.tsx's หางาน/สำหรับองค์กร/วิธีการทำงาน, and this
+                      component's own logged-in state below). These aren't
+                      secondary actions like "เข้าสู่ระบบ"/"ออกจากระบบ". */}
+                  {/* /game, not / — that's the actual candidate-facing page
+                      (Navbar.tsx's own "สำหรับผู้สมัคร" points there too),
+                      not the neutral General Landing someone would just
+                      have to choose their role from again. */}
                   <Link
-                    href="/"
-                    className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
+                    href="/game"
+                    className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                      isActive("/game") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     สำหรับผู้หางาน
                   </Link>
-                  <Link
-                    href="/company/login"
-                    className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
+                  <a
+                    href="/company#how-it-works"
+                    className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                      isActive("/company#how-it-works") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
-                    เข้าสู่ระบบ
-                  </Link>
-                  <Link
-                    href="/company/register"
-                    className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
-                  >
-                    เริ่มใช้งานฟรี
-                  </Link>
+                    วิธีการทำงาน
+                  </a>
+                  {!hideAuthLinks && (
+                    <Link
+                      href="/company/login"
+                      className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
+                    >
+                      เข้าสู่ระบบ
+                    </Link>
+                  )}
+                  {/* Not straight to /company/register — someone landing on
+                      this public HR page isn't necessarily committed to the
+                      HR side yet, so the black-pill CTA offers both roles
+                      via the same picker pattern as /login/select. */}
+                  {!hideAuthLinks && (
+                    <Link
+                      href="/register/select"
+                      className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
+                    >
+                      เริ่มต้นใช้งาน
+                    </Link>
+                  )}
                 </>
               )}
             </div>
           )}
 
-          {isMobile && (
+          {isTablet && (
             <button
               aria-label="เปิดเมนู"
               onClick={() => setMenuOpen((v) => !v)}
@@ -166,21 +218,27 @@ export function CompanyNavbar() {
                   <Link
                     href="/company/dashboard"
                     onClick={closeMenu}
-                    className="rounded-lg px-3 py-[10px] text-sm font-bold"
+                    className={`rounded-lg px-3 py-[10px] text-sm font-bold ${
+                      isActive("/company/dashboard") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     แดชบอร์ด
                   </Link>
                   <Link
                     href="/company/positions"
                     onClick={closeMenu}
-                    className="rounded-lg px-3 py-[10px] text-sm font-bold"
+                    className={`rounded-lg px-3 py-[10px] text-sm font-bold ${
+                      isActive("/company/positions") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     ตำแหน่งงาน
                   </Link>
                   <Link
                     href="/company/interviews"
                     onClick={closeMenu}
-                    className="rounded-lg px-3 py-[10px] text-sm font-bold"
+                    className={`rounded-lg px-3 py-[10px] text-sm font-bold ${
+                      isActive("/company/interviews") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     นัดสัมภาษณ์
                   </Link>
@@ -202,26 +260,41 @@ export function CompanyNavbar() {
               ) : (
                 <>
                   <Link
-                    href="/"
+                    href="/game"
                     onClick={closeMenu}
-                    className="px-3 py-[10px] text-sm font-bold"
+                    className={`px-3 py-[10px] text-sm font-bold ${
+                      isActive("/game") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
                     สำหรับผู้หางาน
                   </Link>
-                  <Link
-                    href="/company/login"
+                  <a
+                    href="/company#how-it-works"
                     onClick={closeMenu}
-                    className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
+                    className={`cursor-pointer px-3 py-[10px] text-sm font-bold ${
+                      isActive("/company#how-it-works") ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                    }`}
                   >
-                    เข้าสู่ระบบ
-                  </Link>
-                  <Link
-                    href="/company/register"
-                    onClick={closeMenu}
-                    className="px-3 py-[10px] text-sm font-bold"
-                  >
-                    เริ่มใช้งานฟรี
-                  </Link>
+                    วิธีการทำงาน
+                  </a>
+                  {!hideAuthLinks && (
+                    <Link
+                      href="/company/login"
+                      onClick={closeMenu}
+                      className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
+                    >
+                      เข้าสู่ระบบ
+                    </Link>
+                  )}
+                  {!hideAuthLinks && (
+                    <Link
+                      href="/register/select"
+                      onClick={closeMenu}
+                      className="px-3 py-[10px] text-sm font-bold"
+                    >
+                      เริ่มต้นใช้งาน
+                    </Link>
+                  )}
                 </>
               )}
             </motion.div>

@@ -8,11 +8,16 @@ import {
   Briefcase,
   Camera,
   Check,
+  ChevronDown,
   FileText,
+  Gauge,
   GraduationCap,
+  Handshake,
   Lightbulb,
   Loader2,
+  MessageCircle,
   Pencil,
+  Shuffle,
   Sparkle,
   Target,
   TrendingUp,
@@ -22,15 +27,82 @@ import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { RadarChart } from "@/components/RadarChart";
+import { ResumePreviewModal } from "@/components/ResumePreviewModal";
 import { SkillIcon } from "@/components/SkillIcon";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
-import { generateAIResume, getGameResult, getJobSeekerProfile, getJobSeekerSessionData } from "@/lib/actions/jobSeeker";
-import { JOBS, SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
+import {
+  generateAIResume,
+  generateResumeGapAnalysis,
+  getChatVerifications,
+  getGameResult,
+  getJobSeekerProfile,
+  getJobSeekerSessionData,
+  getResumeGapAnalysis,
+} from "@/lib/actions/jobSeeker";
+import { GAME_STAGES, JOBS, SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
 import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
-import type { RadarAxisDatum } from "@/lib/types";
+import type { RadarAxisDatum, SoftSkillScores } from "@/lib/types";
 
 type JobSeekerProfileData = Awaited<ReturnType<typeof getJobSeekerProfile>>;
 type GameResultData = Awaited<ReturnType<typeof getGameResult>>;
+type ChatVerificationsData = Awaited<ReturnType<typeof getChatVerifications>>;
+type GapAnalysisData = Awaited<ReturnType<typeof getResumeGapAnalysis>>;
+
+const GAME_ICONS: Record<"risk" | "flexibility" | "focus" | "collaboration", typeof Gauge> = {
+  risk: Gauge,
+  flexibility: Shuffle,
+  focus: Target,
+  collaboration: Handshake,
+};
+
+/**
+ * Each game's dominant axis per the real scoring formula (ai/scoring/radar.py
+ * on main — every axis is actually a weighted blend of multiple games, but
+ * this picks the one each game contributes to most, for a simple 1-game →
+ * 1-headline-axis accordion instead of showing all six weighted fractions):
+ * BART → riskTolerance (70% of its own formula), WCST → learningAgility
+ * (100%), Flanker → criticalThinking (85%, ahead of decisionMakingUnderPressure's
+ * 70%), PGG → collaborationMindset (100%, ahead of resilienceAndAdaptability's 70%).
+ */
+const GAME_ID_TO_AXIS: Record<number, keyof SoftSkillScores> = {
+  1: "riskTolerance",
+  2: "learningAgility",
+  3: "criticalThinking",
+  4: "collaborationMindset",
+};
+
+function tierLabel(score: number): "จุดแข็ง" | "ตามเกณฑ์" | "ควรพัฒนา" {
+  if (score >= 75) return "จุดแข็ง";
+  if (score >= 50) return "ตามเกณฑ์";
+  return "ควรพัฒนา";
+}
+
+const AXIS_ADVICE: Record<keyof SoftSkillScores, { high: string; low: string }> = {
+  riskTolerance: {
+    high: "รับความเสี่ยงที่คำนวณมาแล้วได้ดี เหมาะกับงานที่ต้องตัดสินใจเร็วภายใต้ความไม่แน่นอน",
+    low: "ลองฝึกตัดสินใจในสถานการณ์ที่ข้อมูลไม่ครบถ้วนหรือมีความเสี่ยงมากขึ้น จะช่วยยกระดับด้านนี้ได้",
+  },
+  learningAgility: {
+    high: "เรียนรู้กฎใหม่และปรับกลยุทธ์ได้ไว เหมาะกับงานที่เทคโนโลยีหรือกติกาเปลี่ยนบ่อย",
+    low: "ลองฝึกปรับวิธีทำงานให้เร็วขึ้นเมื่อได้ฟีดแบ็กใหม่ แทนที่จะยึดวิธีเดิมนานเกินไป",
+  },
+  criticalThinking: {
+    high: "โฟกัสและกรองสิ่งรบกวนได้ดี เหมาะกับงานที่ต้องใช้สมาธิและวิเคราะห์ต่อเนื่อง",
+    low: "ลองฝึกวิเคราะห์ทีละขั้นก่อนตัดสินใจ โดยเฉพาะเมื่อมีสิ่งรบกวนเยอะรอบตัว",
+  },
+  decisionMakingUnderPressure: {
+    high: "ตัดสินใจได้ดีแม้ภายใต้แรงกดดันหรือเวลาจำกัด เหมาะกับงานที่ต้อง react เร็ว",
+    low: "ลองฝึกตัดสินใจภายใต้เวลาจำกัดบ่อยๆ จะช่วยลดความลังเลเมื่อเจอสถานการณ์กดดันจริง",
+  },
+  collaborationMindset: {
+    high: "ทำงานร่วมกับผู้อื่นได้ราบรื่นและไว้ใจทีม เหมาะกับงานที่ต้องประสานงานเยอะ",
+    low: "ลองฝึกทำงานในสถานการณ์ที่ผลลัพธ์ขึ้นกับความร่วมมือของทีมมากขึ้น จะช่วยพัฒนาด้านนี้ได้",
+  },
+  resilienceAndAdaptability: {
+    high: "ปรับตัวและรับมือกับการเปลี่ยนแปลงกะทันหันได้ดี เหมาะกับสภาพแวดล้อมที่ไม่แน่นอน",
+    low: "ลองฝึกรับมือกับการเปลี่ยนแปลงกะทันหันให้บ่อยขึ้น จะช่วยเพิ่มความยืดหยุ่นได้",
+  },
+};
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -57,14 +129,9 @@ export default function ProfilePage() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
   const [userSkills, setUserSkills] = useState<string[]>([]);
-  // Which of userSkills came from an uploaded resume (document-verified)
-  // vs. only ever typed in chat (self-reported) — mirrors the
-  // Verified/Partial distinction HR sees on their own candidate report,
-  // computed from real provenance rather than invented.
-  const [resumeSkills, setResumeSkills] = useState<string[]>([]);
   // Full profile record (personal info, education, work experience,
-  // languages) — kept separately from the derived userSkills/resumeSkills
-  // above so the new "เรซูเม่ของคุณ" section can render the whole thing,
+  // languages) — kept separately from the derived userSkills above so
+  // the "เรซูเม่ของคุณ" section can render the whole thing,
   // not just the skill list. Only ever populated from the database (see
   // the DB-hydration effect below); there's no localStorage-only version
   // of this since it never existed before this round.
@@ -73,6 +140,13 @@ export default function ProfilePage() {
   // state right now — real gameplay isn't wired up, only seeded test
   // candidates have a row) — not fabricated to 0% on every axis.
   const [gameResult, setGameResult] = useState<GameResultData>(null);
+  const [chatVerifications, setChatVerifications] = useState<ChatVerificationsData>([]);
+  // "ผลจากแบบทดสอบที่ 2" — null until generateResumeGapAnalysis has run at
+  // least once (see the manual "วิเคราะห์ให้หน่อย" trigger below); a real
+  // Gemini call, so this isn't auto-generated on every page view.
+  const [gapAnalysis, setGapAnalysis] = useState<GapAnalysisData>(null);
+  const [isGeneratingGapAnalysis, setIsGeneratingGapAnalysis] = useState(false);
+  const [gapAnalysisError, setGapAnalysisError] = useState("");
   // Blind-candidate mascot until the candidate uploads a real photo —
   // same placeholder convention HR sees for un-revealed candidates.
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -118,18 +192,6 @@ export default function ProfilePage() {
       }
     }
 
-    const storedResumeSkills = localStorage.getItem("ktp_resume_skills");
-    if (storedResumeSkills) {
-      try {
-        const parsed = JSON.parse(storedResumeSkills);
-        if (Array.isArray(parsed)) {
-          setResumeSkills(parsed.filter((s): s is string => typeof s === "string"));
-        }
-      } catch {
-        // Malformed localStorage value — ignore.
-      }
-    }
-
     const storedPhoto = localStorage.getItem("ktp_profile_photo");
     if (storedPhoto) {
       setProfilePhoto(storedPhoto);
@@ -141,12 +203,7 @@ export default function ProfilePage() {
   // /decoder in this session — localStorage above would then be empty or
   // stale even though the database has their real profile. Best-effort:
   // if a job seeker session exists, the database wins over whatever
-  // localStorage had. JobSeekerProfile.computerSkills is one merged list
-  // (resume-derived and chat-derived aren't tracked separately in the
-  // database the way decoder's own local state does it) — as a reasonable
-  // approximation, a non-empty resumeRawText means an actual resume was
-  // uploaded at some point, so the whole current list is treated as
-  // Verified rather than showing everything as Partial by default.
+  // localStorage had.
   useEffect(() => {
     const ids = getJobSeekerSessionIds();
     if (!ids) return;
@@ -155,7 +212,9 @@ export default function ProfilePage() {
       getJobSeekerSessionData(ids.jobSeekerId),
       getJobSeekerProfile(ids.jobSeekerId),
       getGameResult(ids.jobSeekerId),
-    ]).then(([session, profile, gameResult]) => {
+      getChatVerifications(ids.jobSeekerId),
+      getResumeGapAnalysis(ids.jobSeekerId),
+    ]).then(([session, profile, gameResult, chatVerifications, gapAnalysis]) => {
       if (cancelled) return;
       if (session) {
         setCandidateName(session.jobSeeker.name);
@@ -165,11 +224,10 @@ export default function ProfilePage() {
         setProfile(profile);
         setUserSkills(profile.computerSkills);
         localStorage.setItem("ktp_hard_skills", JSON.stringify(profile.computerSkills));
-        const verified = profile.resumeRawText.trim().length > 0 ? profile.computerSkills : [];
-        setResumeSkills(verified);
-        localStorage.setItem("ktp_resume_skills", JSON.stringify(verified));
       }
       setGameResult(gameResult);
+      setChatVerifications(chatVerifications);
+      setGapAnalysis(gapAnalysis);
     });
     return () => {
       cancelled = true;
@@ -195,6 +253,34 @@ export default function ProfilePage() {
       value: gameResult[axis],
     }));
   }, [gameResult]);
+
+  // Real strongest/weakest axis from this candidate's own GameResult —
+  // replaces the old hardcoded "Collaboration Mindset 85%... Risk
+  // Tolerance 60%" copy that showed identically to every candidate
+  // regardless of their actual scores.
+  const strongestAxis = useMemo(
+    () => (axisChips.length === 0 ? null : axisChips.reduce((best, cur) => (cur.value > best.value ? cur : best))),
+    [axisChips],
+  );
+  const weakestAxis = useMemo(
+    () => (axisChips.length === 0 ? null : axisChips.reduce((worst, cur) => (cur.value < worst.value ? cur : worst))),
+    [axisChips],
+  );
+
+  const verifiedSkillNames = useMemo(
+    () => (chatVerifications ?? []).filter((v) => v.status === "verified").map((v) => v.skill),
+    [chatVerifications],
+  );
+
+  const [expandedGameId, setExpandedGameId] = useState<number | null>(null);
+  const [isResumePreviewOpen, setIsResumePreviewOpen] = useState(false);
+
+  // Same "enough to write a resume from" gate generateAIResume/
+  // generateResumePdfFromProfile use server-side — drives the bottom CTA's
+  // copy below (upgrade vs. create from scratch).
+  const hasResume = Boolean(
+    profile && (profile.computerSkills.length > 0 || profile.workExperience.length > 0 || profile.education.length > 0),
+  );
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -324,11 +410,8 @@ export default function ProfilePage() {
   // it. Clearly labeled as a sample, not silently pretending to be a
   // real candidate's data.
   const handleLoadSampleData = () => {
-    const sampleResumeSkills = ["React", "TypeScript"];
     const sampleAllSkills = ["React", "TypeScript", "Node.js", "PostgreSQL", "Docker"];
-    setResumeSkills(sampleResumeSkills);
     setUserSkills(sampleAllSkills);
-    localStorage.setItem("ktp_resume_skills", JSON.stringify(sampleResumeSkills));
     localStorage.setItem("ktp_hard_skills", JSON.stringify(sampleAllSkills));
   };
 
@@ -382,6 +465,27 @@ export default function ProfilePage() {
       return;
     }
     setAiResumeResult(result.summaryText);
+  };
+
+  const handleGenerateGapAnalysis = async () => {
+    setGapAnalysisError("");
+    const ids = getJobSeekerSessionIds();
+    if (!ids) {
+      setGapAnalysisError("กรุณาเข้าสู่ระบบก่อน");
+      return;
+    }
+    setIsGeneratingGapAnalysis(true);
+    const result = await generateResumeGapAnalysis(ids.jobSeekerId);
+    if ("error" in result) {
+      setIsGeneratingGapAnalysis(false);
+      setGapAnalysisError(result.error);
+      return;
+    }
+    // Refetch rather than hand-assemble the row — generateResumeGapAnalysis
+    // returns only the content fields, not the full persisted record.
+    const fresh = await getResumeGapAnalysis(ids.jobSeekerId);
+    setIsGeneratingGapAnalysis(false);
+    setGapAnalysis(fresh);
   };
 
   const handleConfirmProfileAndGoToJobs = () => {
@@ -556,17 +660,40 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Resume source — checks whether this candidate has an actual
-            uploaded PDF's extracted text, structured data from the manual
-            form, or neither, and always resolves to exactly one of those
-            three states instead of ever rendering blank/broken. Note: only
-            the PDF's extracted TEXT is stored (see /decoder's
-            extractTextFromPdf), never the original file itself — there's
-            no file storage wired up yet, so this shows the parsed text
-            rather than a literal embedded/downloadable PDF. */}
+        {/* Resume source — checks whether this candidate has a real PDF on
+            file (resumeFileUrl — either their own upload or one generated
+            from the structured form, see uploadResumeFile/
+            generateResumePdfFromProfile), just extracted text from an
+            older upload that predates that field, structured data from
+            the manual form, or neither — always resolves to exactly one
+            of those states instead of ever rendering blank/broken. Same
+            compact-card + modal pattern as HR's /company/candidates/[id]
+            report, viewed via /api/resume/[id]?self=true instead of
+            ?companyId=... — the candidate viewing their own file skips
+            the Blind Review gate that route enforces for HR. */}
         <div className="mb-6 sm:mb-8 rounded-[24px] sm:rounded-[28px] bg-[#F5F5F5] p-4 sm:p-[clamp(24px,4vw,40px)]">
           <h2 className="mb-3 text-sm font-extrabold text-[#0F0F0F]">เรซูเม่ของคุณ</h2>
-          {profile && profile.resumeRawText.trim().length > 0 ? (
+          {profile?.resumeFileUrl ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[rgba(77,124,255,0.1)]">
+                  <FileText className="h-4 w-4 text-[#4D7CFF]" strokeWidth={2} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-[#0F0F0F]">เรซูเม่ (PDF)</div>
+                  <div className="text-[10px] text-[#8A8A8A]">อัปโหลดแล้ว</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsResumePreviewOpen(true)}
+                className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-[#0F0F0F] px-3.5 py-2 text-[11px] font-bold text-white transition-opacity hover:opacity-90"
+              >
+                <FileText className="h-3 w-3" strokeWidth={2.5} />
+                เปิดไฟล์
+              </button>
+            </div>
+          ) : profile && profile.resumeRawText.trim().length > 0 ? (
             <div className="rounded-2xl bg-white p-4">
               <div className="mb-2 flex items-center gap-2 text-xs font-bold text-[#0F0F0F]">
                 <FileText className="h-4 w-4 flex-shrink-0 text-[#4D7CFF]" strokeWidth={2} />
@@ -652,7 +779,7 @@ export default function ProfilePage() {
                       room this panel now has instead of leaving it empty
                       while axis labels still crowd each other. */}
                   <div ref={chartWrapRefCallback} className="my-4 sm:my-6 flex justify-center w-full overflow-hidden">
-                    <RadarChart data={radarData} size={chartSize} theme="mono" showLabels animate />
+                    <RadarChart data={radarData} size={chartSize} theme="mono" showLabels showValues animate />
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-3">
@@ -678,7 +805,7 @@ export default function ProfilePage() {
                     เล่นมินิเกมประเมินศักยภาพให้ครบเพื่อดูกราฟ 6 ด้านของคุณ
                   </p>
                   <Link
-                    href="/game"
+                    href="/play"
                     className="mt-1 rounded-full bg-[#0F0F0F] px-4 py-2 text-[11px] font-bold text-white transition-opacity hover:opacity-90"
                   >
                     ไปเล่นเกมประเมิน →
@@ -737,39 +864,16 @@ export default function ProfilePage() {
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                {userSkills.map((skill) => {
-                  // Same Verified/Partial distinction HR sees: came from
-                  // an uploaded resume (document) vs. only ever
-                  // self-reported in chat. Read-only — hard skills only
-                  // ever come from actual extraction, never typed in
-                  // directly, so this list can't be padded.
-                  const isVerified = resumeSkills.includes(skill);
-                  return (
-                    <div
-                      key={skill}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#0F0F0F]"
-                    >
-                      <SkillIcon skill={skill} size={14} />
-                      <span>{skill}</span>
-                      <span
-                        className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                          isVerified
-                            ? "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]"
-                            : "bg-[rgba(77,124,255,0.12)] text-[#4D7CFF]"
-                        }`}
-                      >
-                        {isVerified ? "Verified" : "Partial"}
-                      </span>
-                    </div>
-                  );
-                })}
+                {userSkills.map((skill) => (
+                  <div
+                    key={skill}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#0F0F0F]"
+                  >
+                    <SkillIcon skill={skill} size={14} />
+                    <span>{skill}</span>
+                  </div>
+                ))}
               </div>
-              {userSkills.length > 0 && (
-                <p className="mt-2 text-[10px] text-[#8A8A8A]">
-                  <span className="font-bold text-[#0f5c22]">Verified</span> = มาจากเรซูเม่ที่อัปโหลด ·{" "}
-                  <span className="font-bold text-[#4D7CFF]">Partial</span> = เล่าในแชทกับน้องตรงปก
-                </p>
-              )}
               </div>
             </div>
           </div>
@@ -829,27 +933,201 @@ export default function ProfilePage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="rounded-xl border border-[rgba(59,245,92,0.3)] bg-[rgba(59,245,92,0.08)] p-4">
-                    <div className="mb-2 flex items-center gap-1.5 text-xs font-extrabold text-[#0F0F0F]">
-                      <TrendingUp className="h-3.5 w-3.5 text-[#0f5c22]" strokeWidth={2} />
-                      จุดแข็งที่โดดเด่น
+                {strongestAxis && weakestAxis ? (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="rounded-xl border border-[rgba(59,245,92,0.3)] bg-[rgba(59,245,92,0.08)] p-4">
+                      <div className="mb-2 flex items-center gap-1.5 text-xs font-extrabold text-[#0F0F0F]">
+                        <TrendingUp className="h-3.5 w-3.5 text-[#0f5c22]" strokeWidth={2} />
+                        จุดแข็งที่โดดเด่น
+                      </div>
+                      <p className="text-xs leading-[1.7] text-[#4A4A4A]">
+                        {strongestAxis.th} ทำได้ {strongestAxis.value}% — {AXIS_ADVICE[strongestAxis.key].high}
+                      </p>
                     </div>
-                    <p className="text-xs leading-[1.7] text-[#4A4A4A]">
-                      คุณทำงานร่วมกับผู้อื่นได้อย่างราบรื่นและมีการคิดวิเคราะห์ที่ชัดเจน — Collaboration
-                      Mindset ทำได้ 85% และ Critical Thinking ทำได้ 80% ซึ่งทั้งสองด้านสูงกว่าค่าเฉลี่ยของผู้สมัครทั่วไป
+
+                    <div className="rounded-xl border border-[rgba(255,110,92,0.3)] bg-[rgba(255,110,92,0.08)] p-4">
+                      <div className="mb-2 flex items-center gap-1.5 text-xs font-extrabold text-[#0F0F0F]">
+                        <Target className="h-3.5 w-3.5 text-[#d63d28]" strokeWidth={2} />
+                        จุดที่พัฒนาต่อได้
+                      </div>
+                      <p className="text-xs leading-[1.7] text-[#4A4A4A]">
+                        {weakestAxis.th} อยู่ที่ {weakestAxis.value}% — {AXIS_ADVICE[weakestAxis.key].low}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-[rgba(15,15,15,0.15)] p-6 text-center">
+                    <p className="text-xs font-bold text-[#0F0F0F]">ยังไม่มีผลประเมิน Soft Skills</p>
+                    <p className="mt-1 text-[11px] text-[#8A8A8A]">
+                      เล่นมินิเกมประเมินศักยภาพก่อน ระบบจะวิเคราะห์จุดแข็ง/จุดพัฒนาให้ที่นี่
+                    </p>
+                    <Link href="/play" className="mt-3 inline-block text-xs font-bold text-[#4D7CFF] underline">
+                      ไปเล่นมินิเกม →
+                    </Link>
+                  </div>
+                )}
+
+                {/* Per-game breakdown — accordion so all 4 games don't
+                    compete for space with the strength/growth boxes above
+                    by default. Each game's "วิเคราะห์" line uses the real
+                    score from gameResult via GAME_ID_TO_AXIS, not templated
+                    filler — null when the candidate hasn't played that
+                    game (there's no per-game GameResult row, only the 6
+                    synthesized axes, so "played" here means the row exists
+                    at all). */}
+                <div className="flex flex-col gap-2.5">
+                  <div>
+                    <h4 className="text-xs font-extrabold text-[#0F0F0F]">ผลจากแบบทดสอบที่ 1 — มินิเกม Neuroscience</h4>
+                    <p className="mt-0.5 text-[11px] text-[#8A8A8A]">เกมไหนวัดแกนใด และคะแนนที่คุณได้</p>
+                  </div>
+                  {GAME_STAGES.map((game) => {
+                    const GameIcon = GAME_ICONS[game.iconKey];
+                    const axis = GAME_ID_TO_AXIS[game.id];
+                    const score = gameResult ? gameResult[axis] : null;
+                    const isExpanded = expandedGameId === game.id;
+                    return (
+                      <div key={game.id} className="overflow-hidden rounded-xl bg-white">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedGameId(isExpanded ? null : game.id)}
+                          className="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left"
+                        >
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-[#F5F5F5]">
+                              <GameIcon className="h-3.5 w-3.5 text-[#0F0F0F]" strokeWidth={2} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="truncate text-xs font-bold text-[#0F0F0F]">{game.title}</div>
+                              <div className="truncate text-[10px] text-[#8A8A8A]">{game.subtitle}</div>
+                            </div>
+                          </div>
+                          <div className="flex flex-shrink-0 items-center gap-2">
+                            {score !== null && (
+                              <>
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${
+                                    tierLabel(score) === "จุดแข็ง"
+                                      ? "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]"
+                                      : tierLabel(score) === "ตามเกณฑ์"
+                                        ? "bg-[rgba(77,124,255,0.12)] text-[#4D7CFF]"
+                                        : "bg-[rgba(255,110,92,0.12)] text-[#d63d28]"
+                                  }`}
+                                >
+                                  {tierLabel(score)}
+                                </span>
+                                <span className="text-xs font-extrabold text-[#0F0F0F]">{score}%</span>
+                              </>
+                            )}
+                            <ChevronDown
+                              className={`h-3.5 w-3.5 text-[#8A8A8A] transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                              strokeWidth={2}
+                            />
+                          </div>
+                        </button>
+                        {isExpanded && (
+                          <div className="border-t border-[rgba(15,15,15,0.06)] px-4 py-3">
+                            {score === null ? (
+                              <p className="text-[11px] leading-[1.7] text-[#8A8A8A]">
+                                ยังไม่ได้เล่นเกมนี้ —{" "}
+                                <Link href="/play" className="font-bold text-[#4D7CFF] underline">
+                                  ไปเล่นมินิเกม
+                                </Link>
+                              </p>
+                            ) : (
+                              <div className="flex flex-col gap-2.5">
+                                <div>
+                                  <div className="text-[10px] font-bold text-[#8A8A8A]">วิเคราะห์จากพฤติกรรมการเล่น</div>
+                                  <p className="mt-0.5 text-xs leading-[1.7] text-[#4A4A4A]">
+                                    คุณทำ {SOFT_SKILL_AXIS_META[axis].th} ได้ {score}% ({tierLabel(score)}) จากการเล่น{" "}
+                                    {game.title}
+                                  </p>
+                                </div>
+                                <div>
+                                  <div className="text-[10px] font-bold text-[#8A8A8A]">คำแนะนำ</div>
+                                  <p className="mt-0.5 text-xs leading-[1.7] text-[#4A4A4A]">
+                                    {score >= 65 ? AXIS_ADVICE[axis].high : AXIS_ADVICE[axis].low}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* "ผลจากแบบทดสอบที่ 2" — Verified box is computed live
+                    from chatVerifications (no AI needed); the gap/next-steps
+                    boxes are a real Gemini comparison of resumeRawText
+                    against gameResult (see generateResumeGapAnalysis) —
+                    generated on demand, not auto-run on every page view,
+                    since it's a live API call with a real cost. */}
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <h4 className="text-xs font-extrabold text-[#0F0F0F]">
+                      ผลจากแบบทดสอบที่ 2 — เรซูเม่และบทสนทนากับน้องตรงปก
+                    </h4>
+                    <p className="mt-0.5 text-[11px] text-[#8A8A8A]">
+                      ทักษะที่สกัดได้มาจากไหน และทำไมบางรายการยังเป็น Partial
                     </p>
                   </div>
 
-                  <div className="rounded-xl border border-[rgba(255,110,92,0.3)] bg-[rgba(255,110,92,0.08)] p-4">
-                    <div className="mb-2 flex items-center gap-1.5 text-xs font-extrabold text-[#0F0F0F]">
-                      <Target className="h-3.5 w-3.5 text-[#d63d28]" strokeWidth={2} />
-                      จุดที่พัฒนาต่อได้
+                  {verifiedSkillNames.length > 0 && (
+                    <div className="rounded-xl bg-white p-4">
+                      <div className="mb-1.5 flex items-center gap-2">
+                        <span className="rounded-full bg-[rgba(59,245,92,0.15)] px-2 py-0.5 text-[10px] font-bold text-[#0f5c22]">
+                          Verified
+                        </span>
+                        <span className="text-[10px] text-[#8A8A8A]">{verifiedSkillNames.length} รายการ</span>
+                      </div>
+                      <div className="text-xs font-extrabold text-[#0F0F0F]">ทักษะที่ยืนยันได้จากเอกสาร</div>
+                      <p className="mt-1 text-xs leading-[1.7] text-[#4A4A4A]">
+                        ยืนยันแล้วจากเรซูเม่: {verifiedSkillNames.join(", ")}
+                      </p>
                     </div>
-                    <p className="text-xs leading-[1.7] text-[#4A4A4A]">
-                      Risk Tolerance ยังอยู่ที่ 60% ต่ำกว่าค่าเฉลี่ยเล็กน้อย — ลองฝึกตัดสินใจในสถานการณ์ที่ข้อมูลไม่ครบถ้วนหรือมีความเสี่ยงมากขึ้น จะช่วยยกระดับด้านนี้ได้
-                    </p>
-                  </div>
+                  )}
+
+                  {gapAnalysis ? (
+                    <>
+                      <div className="rounded-xl bg-white p-4">
+                        <div className="mb-1 text-xs font-extrabold text-[#0F0F0F]">ยังขาดอยู่</div>
+                        <div className="text-xs font-bold text-[#d63d28]">{gapAnalysis.missingTitle}</div>
+                        <p className="mt-1 text-xs leading-[1.7] text-[#4A4A4A]">{gapAnalysis.missingDetail}</p>
+                      </div>
+                      <div className="rounded-xl bg-white p-4">
+                        <div className="mb-2 text-xs font-extrabold text-[#0F0F0F]">ทำต่อ 3 ข้อ</div>
+                        <ul className="flex flex-col gap-1.5">
+                          {gapAnalysis.nextSteps.map((step, i) => (
+                            <li key={i} className="flex items-start gap-2 text-xs leading-[1.6] text-[#4A4A4A]">
+                              <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-[#F0F0F0] text-[9px] font-bold text-[#0F0F0F]">
+                                {i + 1}
+                              </span>
+                              {step}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-[rgba(15,15,15,0.15)] p-4 text-center">
+                      {gapAnalysisError && (
+                        <p className="mb-2 text-[11px] font-bold text-red-600">{gapAnalysisError}</p>
+                      )}
+                      <p className="mb-2.5 text-[11px] text-[#8A8A8A]">
+                        ยังไม่มีการวิเคราะห์เชิงลึก — ให้น้องตรงปกเทียบเรซูเม่กับผลเกมของคุณ
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleGenerateGapAnalysis}
+                        disabled={isGeneratingGapAnalysis}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[#0F0F0F] px-4 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                      >
+                        {isGeneratingGapAnalysis && <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />}
+                        {isGeneratingGapAnalysis ? "กำลังวิเคราะห์..." : "วิเคราะห์ให้หน่อย"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -916,7 +1194,11 @@ export default function ProfilePage() {
                     /company/positions/[id]/candidates): icon left, info
                     middle, match score as a plain bold number + small
                     gray label on the right — not a colored badge, so
-                    "Match" reads the same way on both sides of the app. */}
+                    "Match" reads the same way on both sides of the app.
+                    Title links to /job/[id] for full details — this is
+                    the JOBS mock catalog (real ids), not a DB Position, so
+                    it's the same detail route /job's own board already
+                    uses. */}
                 {recommendedJobs.map((job) => {
                   const isApplied = appliedJobs.includes(job.title);
                   return (
@@ -929,7 +1211,9 @@ export default function ProfilePage() {
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <span className="text-sm font-extrabold text-[#0F0F0F]">{job.title}</span>
+                        <Link href={`/job/${job.id}`} className="text-sm font-extrabold text-[#0F0F0F] hover:underline">
+                          {job.title}
+                        </Link>
                         <div className="mt-0.5 text-xs text-[#8A8A8A]">
                           {job.company} · {job.salaryNote || `฿${job.salaryMin.toLocaleString()} - ฿${job.salaryMax.toLocaleString()}`}
                         </div>
@@ -947,18 +1231,26 @@ export default function ProfilePage() {
                           <div className="text-lg font-extrabold text-[#0F0F0F]">{job.matchRate}%</div>
                           <div className="text-[9px] text-[#8A8A8A]">Match</div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmApplyJob({ title: job.title, company: job.company })}
-                          disabled={isApplied}
-                          className={`whitespace-nowrap rounded-full px-4 py-1.5 text-[11px] font-bold transition-all ${
-                            isApplied
-                              ? "bg-white text-[#8A8A8A] cursor-default"
-                              : "bg-[#0F0F0F] text-white hover:opacity-90 active:scale-[0.98]"
-                          }`}
-                        >
-                          {isApplied ? "ยื่นสมัครแล้ว" : "สมัครตำแหน่งนี้"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/job/${job.id}`}
+                            className="whitespace-nowrap rounded-full bg-white px-3.5 py-1.5 text-[11px] font-bold text-[#0F0F0F] transition-colors hover:bg-[#F0F0F0]"
+                          >
+                            ดูรายละเอียด
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmApplyJob({ title: job.title, company: job.company })}
+                            disabled={isApplied}
+                            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-[11px] font-bold transition-all ${
+                              isApplied
+                                ? "bg-white text-[#8A8A8A] cursor-default"
+                                : "bg-[#0F0F0F] text-white hover:opacity-90 active:scale-[0.98]"
+                            }`}
+                          >
+                            {isApplied ? "ยื่นสมัครแล้ว" : "สมัครตำแหน่งนี้"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -981,29 +1273,39 @@ export default function ProfilePage() {
           />
           <div className="mb-2 text-xs font-bold tracking-[0.06em] text-[#8A8A8A] uppercase">ขั้นตอนถัดไป</div>
           <h2 className="mb-2 text-[clamp(20px,2.8vw,28px)] font-extrabold tracking-[-0.02em]">
-            สร้าง Resume เพื่อยื่นสมัครงาน
+            {hasResume ? "อัปเกรด Resume ของคุณ" : "สร้าง Resume เพื่อยื่นสมัครงาน"}
           </h2>
           <p className="mx-auto mb-8 max-w-[520px] text-sm leading-[1.7] text-[#5C5C5C]">
-            เลือกสร้างแบบทั่วไป หรือให้น้องตรงปกช่วยรวมข้อมูลตัวตนและทักษะจาก Smart Profile ลงไปด้วย — ได้ Resume ที่บอกว่าคุณเป็นใคร ไม่ใช่แค่ทำอะไรมา
+            {hasResume
+              ? "ให้น้องตรงปกช่วยเขียน Resume ที่มีอยู่ให้เป็นเรื่องราวที่บอกว่าคุณเป็นใคร หรือคุยกับเมนเทอร์เพื่อวางแผนขั้นต่อไป"
+              : "ให้น้องตรงปกช่วยรวมข้อมูลตัวตนและทักษะจาก Smart Profile ลงไปด้วย — ได้ Resume ที่บอกว่าคุณเป็นใคร ไม่ใช่แค่ทำอะไรมา หรือคุยกับเมนเทอร์ก่อนถ้ายังไม่แน่ใจ"}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             {/* Real Gemini call (see generateAIResume) — "Premium" is a
                 forward-looking badge only, not an actual payment gate,
-                since none exists yet for this prototype. */}
+                since none exists yet for this prototype. Same action for
+                both HAS_RESUME states — generateAIResume already upserts,
+                so "สร้าง" and "อัปเกรด" are the same call, just relabeled. */}
             <button
               type="button"
               onClick={handleGenerateAIResume}
               className="relative inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[#0F0F0F] px-7 py-4 text-[14px] font-extrabold text-white transition-all hover:opacity-90 active:scale-[0.98]"
             >
               <Sparkle className="h-3.5 w-3.5" strokeWidth={2} />
-              ให้น้องตรงปกช่วยสร้าง
+              {hasResume ? "ให้น้องตรงปกอัปเกรดเรซูเม่นี้" : "ให้น้องตรงปกช่วยสร้าง"}
               <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold tracking-wide">Premium</span>
             </button>
+            {/* "สร้างแบบทั่วไป" (manual /decoder/manual entry) used to live
+                here — still reachable from /decoder's own upload-or-fill
+                gate, so dropping it from this CTA doesn't orphan that
+                route. "คุยกับเมนเทอร์" is now the second button
+                unconditionally, not just once a resume already exists. */}
             <Link
-              href="/decoder/manual"
-              className="cursor-pointer rounded-full bg-white px-7 py-[15px] text-[14px] font-bold text-[#0F0F0F] transition-all hover:bg-[#0F0F0F] hover:text-white active:scale-[0.98]"
+              href="/mentor"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-white px-7 py-[15px] text-[14px] font-bold text-[#0F0F0F] transition-all hover:bg-[#0F0F0F] hover:text-white active:scale-[0.98]"
             >
-              สร้างแบบทั่วไป
+              <MessageCircle className="h-3.5 w-3.5" strokeWidth={2} />
+              คุยกับเมนเทอร์
             </Link>
           </div>
           <button
@@ -1169,6 +1471,14 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {isResumePreviewOpen && profile?.jobSeekerId && (
+        <ResumePreviewModal
+          resumeUrl={`/api/resume/${profile.jobSeekerId}?self=true`}
+          candidateLabel={candidateName}
+          onClose={() => setIsResumePreviewOpen(false)}
+        />
       )}
     </div>
   );

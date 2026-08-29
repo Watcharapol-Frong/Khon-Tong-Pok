@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { Clock, Sparkle, Sparkles } from "lucide-react";
+import { Sparkle, Sparkles } from "lucide-react";
 import { RadarChart } from "@/components/RadarChart";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { AXIS_CHIPS, RADAR_DATA } from "@/lib/data";
@@ -12,9 +13,16 @@ import { AXIS_CHIPS, RADAR_DATA } from "@/lib/data";
 // own baked-in sparkles/speech-bubble props, so a sparkle placed near the
 // mascot just stacks a second, redundant set of stars on top of it — reads
 // as clutter, not accent.
+//
+// Positioned just above the column (negative px, not a percentage of the
+// column's own height) so they never land on the "AI-Powered Matching"
+// badge — that badge is the column's first child, and the column's width
+// (and therefore its height, since text reflows) varies a lot between the
+// two-column desktop layout and the single-column wrapped one, so a
+// percentage-based top coincided with the badge at some in-between widths.
 const HERO_SPARKLES = [
-  { top: "2%", left: "6%", size: 16, color: "#F5D949", rotate: -12 },
-  { top: "8%", right: "8%", size: 15, color: "#FF5CA8", rotate: -10 },
+  { top: "-14px", left: "10%", size: 16, color: "#F5D949", rotate: -12 },
+  { top: "-10px", right: "6%", size: 15, color: "#FF5CA8", rotate: -10 },
 ];
 
 // Sparkle-corner accent from AuthCard's card shell (login/register), minus
@@ -65,40 +73,62 @@ export function Hero() {
 
           <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-[#FAFAFA] px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
             <Sparkles className="h-3.5 w-3.5" strokeWidth={2} />
-            <span>AI-Powered Assessment</span>
+            <span>AI-Powered Matching</span>
           </div>
 
-          <h1 className="mb-[22px] text-[clamp(36px,6vw,60px)] leading-[1.08] font-extrabold tracking-[-0.03em]">
-            พิสูจน์ศักยภาพจริง
-            <br />
-            ด้วยตัวตนและทักษะ
+          {/* Leads with the platform's actual axis (matching people <-> orgs)
+              rather than "come play a game" — that framing sells the
+              jobseeker journey first and only reveals the HR side
+              afterward, even once the CTAs below branch into both. */}
+          <h1
+            className={`mb-[22px] max-w-[560px] text-[clamp(26px,4.2vw,42px)] leading-[1.25] font-extrabold tracking-[-0.02em] ${centerHero ? "mx-auto" : ""}`}
+          >
+            เราเปลี่ยนวิธีที่คนและองค์กรค้นหาความเหมาะสมระหว่างกัน
           </h1>
           <p
             className={`mb-8 max-w-[520px] text-[clamp(15px,1.6vw,18px)] leading-[1.7] text-[#4A4A4A] ${centerHero ? "mx-auto" : ""}`}
           >
-            ให้เรซูเม่ของคุณทรงพลังยิ่งขึ้น! รวมประวัติการทำงานของคุณ
-            เข้ากับการเล่นเกมสั้นสนุกๆของเรา
-            เพื่อดึงจุดเด่นและสไตล์การทำงานจริงที่คุณมี ให้ HR เห็นชัดเจนตั้งแต่วันแรก
+            ใช้ข้อมูลพฤติกรรมจริงจากมินิเกมประสาทวิทยาศาสตร์และการวิเคราะห์ด้วย AI
+            แทนการเดาใจกันจากเรซูเม่หรือประกาศงาน ให้ทั้งคนหางานและองค์กรเจอคนที่ใช่ได้เร็วขึ้น
           </p>
+          {/* The journey fork lives directly in Hero's CTAs, not a separate
+              ChooseYourJourney section below — it's a navigation decision
+              (each button is a hard link off this page), so it should be
+              answerable the instant someone reads the headline, not after a
+              scroll. */}
           <div
-            className={`mb-[18px] flex flex-wrap gap-3 ${centerHero ? "justify-center" : ""}`}
+            className={`flex flex-wrap gap-3 ${centerHero ? "justify-center" : ""}`}
           >
             <Link
               href="/game"
-              className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white"
+              className="flex cursor-pointer items-center gap-3 rounded-full bg-[#0F0F0F] py-2.5 pr-[26px] pl-2.5 text-[15px] font-bold text-white transition-transform hover:scale-[1.03] active:scale-95"
             >
-              เริ่มหางาน เล่นเกมเลย
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
+                <Image
+                  src="/mascot/mascot-navbar-icon.png"
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="h-6 w-6 object-contain"
+                />
+              </span>
+              สำหรับผู้หางาน
             </Link>
             <Link
               href="/company"
-              className="cursor-pointer rounded-full border-[1.5px] border-[#0F0F0F] bg-white px-7 py-[15px] text-[15px] font-bold text-[#0F0F0F]"
+              className="flex cursor-pointer items-center gap-3 rounded-full border-[1.5px] border-[#0F0F0F] bg-white py-2 pr-6 pl-2.5 text-[15px] font-bold text-[#0F0F0F] transition-transform hover:scale-[1.03] active:scale-95"
             >
-              หา Candidate (HR)
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#FAFAFA]">
+                <Image
+                  src="/mascot/mascot-navbar-icon.png"
+                  alt=""
+                  width={44}
+                  height={44}
+                  className="h-6 w-6 object-contain"
+                />
+              </span>
+              สำหรับองค์กร
             </Link>
-          </div>
-          <div className="flex items-center gap-1.5 text-[13px] text-[#8A8A8A]">
-            <Clock className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={2} />
-            ใช้เวลาไม่ถึง 10 นาที · ไม่ต้องมีประสบการณ์ก็เล่นได้
           </div>
         </div>
 

@@ -10,20 +10,81 @@ import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { getJobSeekerNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/actions/interview";
 import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
 
+// "หางาน" (direct job browsing) alongside the General Landing's own
+// audience fork (Hero's "สำหรับผู้หางาน" / "สำหรับองค์กร" CTAs), instead of
+// only the fork — the nav is shared across every page, so it should read
+// as general-audience everywhere, not just on Home, but browsing jobs
+// directly is still a distinct, common enough action to keep its own link.
 const NAV_LINKS = [
   { label: "หางาน", href: "/job" },
-  { label: "วิธีใช้งาน", href: "/#how-it-works" },
+  { label: "สำหรับผู้สมัคร", href: "/game" },
+  { label: "สำหรับองค์กร", href: "/company" },
+  { label: "วิธีการทำงาน", href: "/game#how-it-works" },
 ];
 
 export function Navbar() {
-  const { isMobile } = useBreakpoint();
+  const { isTablet } = useBreakpoint();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const open = isMobile && menuOpen;
+  const open = isTablet && menuOpen;
 
-  // "วิธีใช้งาน" explains the candidate-facing home page flow — hide it on
-  // pages that aren't that page, since the anchor has nothing to scroll to there.
-  const navLinks = pathname === "/" ? NAV_LINKS : NAV_LINKS.filter((l) => l.label !== "วิธีใช้งาน");
+  // The navbar on Home (the General Landing) is not the same navbar as the
+  // one on candidate pages, even though they're the same component —
+  // Home doesn't know who's visiting yet, so it needs the full audience
+  // fork and a role picker before login. Every other page here (/game,
+  // /job, /profile, ...) IS the candidate landing/app context already, so
+  // "สำหรับผู้สมัคร" would be redundant (you're already there) and login
+  // can skip straight to the candidate form instead of asking again. Home
+  // also has no "how it works" content of its own anymore (moved to
+  // /game's HowItWorks section), so that link only makes sense elsewhere.
+  const isGeneralLanding = pathname === "/";
+  const isLoginSelect = pathname === "/login/select";
+  const isRegisterSelect = pathname === "/register/select";
+
+  // /login/select and /register/select get a stripped-down nav: just the
+  // logo and a single link to the OTHER picker (same action the page's own
+  // cross-link at the bottom already offers) — every other nav item
+  // (หางาน, สำหรับองค์กร, วิธีการทำงาน, the pill) would either compete with
+  // or short-circuit the one choice these pages exist to walk someone
+  // through.
+  // On candidate pages, "เข้าสู่ระบบ" now sits as a normal nav link instead
+  // of living in the black pill — the pill itself leads with signup
+  // ("เริ่มต้นใช้งาน" -> /register directly, no /select needed since the
+  // candidate context already resolves the role) to match Home's pill
+  // always being the signup action.
+  const navLinks = isLoginSelect
+    ? [{ label: "สมัครใช้งานฟรี", href: "/register/select" }]
+    : isRegisterSelect
+      ? [{ label: "เข้าสู่ระบบ", href: "/login/select" }]
+      : isGeneralLanding
+        ? NAV_LINKS.filter((l) => l.label !== "วิธีการทำงาน")
+        : [...NAV_LINKS.filter((l) => l.label !== "สำหรับผู้สมัคร"), { label: "เข้าสู่ระบบ", href: "/login" }];
+
+  // On Home, the pill leads with signup ("เริ่มต้นใช้งานฟรี" -> /register/
+  // select) since a first-time visitor with unknown context is more likely
+  // to be starting than returning, matching CompanyNavbar's own
+  // "เริ่มใช้งานฟรี" pill pattern. Candidate pages also lead with signup now
+  // ("เริ่มต้นใช้งาน" -> /register), just skipping /select since the role is
+  // already known there.
+  const pillLabel = isGeneralLanding ? "เริ่มต้นใช้งานฟรี" : "เริ่มต้นใช้งาน";
+  const pillHref = isGeneralLanding ? "/register/select" : "/register";
+
+  const hidePill = isLoginSelect || isRegisterSelect;
+
+  // Gray by default, black once it's the page you're actually on — same
+  // active-state convention as CompanyAppNavbar's isActive, just a plain
+  // text-color toggle here instead of a filled pill (these are marketing
+  // nav links in a shared pill container, not app-shell tabs). Anchor
+  // links (#...) never count as active — "วิธีการทำงาน" points at
+  // /game#how-it-works, but it's a section within /game, not its own
+  // destination, so just being on /game (which "สำหรับผู้สมัคร" also treats
+  // as its own page when shown) shouldn't light it up as if it had been
+  // navigated to specifically.
+  const isActive = (href: string) => {
+    if (href.includes("#")) return false;
+    const path = href.split("?")[0];
+    return path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(`${path}/`);
+  };
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -78,36 +139,33 @@ export function Navbar() {
             </div>
           </Link>
 
-          {!isMobile && (
+          {!isTablet && (
             <div className="flex flex-wrap items-center gap-[clamp(10px,2vw,24px)]">
               {navLinks.map((link) => (
                 <a
                   key={link.href}
                   href={link.href}
-                  className="cursor-pointer whitespace-nowrap text-sm font-bold"
+                  className={`cursor-pointer whitespace-nowrap text-sm font-bold ${
+                    isActive(link.href) ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                  }`}
                 >
                   {link.label}
                 </a>
               ))}
-              <Link
-                href="/company"
-                className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
-              >
-                สำหรับองค์กร
-              </Link>
-              <Link
-                href="/login"
-                className="cursor-pointer whitespace-nowrap text-sm font-semibold text-[#5C5C5C]"
-              >
-                เข้าสู่ระบบ
-              </Link>
-              <Link
-                href="/game"
-                className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
-              >
-                เริ่มเล่นเกมเพื่อประเมิน
-              </Link>
-              {jobSeekerId && (
+              {!hidePill && (
+                <Link
+                  href={pillHref}
+                  className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
+                >
+                  {pillLabel}
+                </Link>
+              )}
+              {/* Notifications belong to the logged-in candidate experience,
+                  not this public marketing shell — Home stays notification-
+                  free even if a session persists from an earlier login,
+                  same as the HR side only ever shows them inside the
+                  authenticated CompanyAppNavbar, never on the public one. */}
+              {jobSeekerId && pathname !== "/" && (
                 <NotificationBell
                   notifications={notifications}
                   onMarkRead={handleMarkRead}
@@ -117,9 +175,9 @@ export function Navbar() {
             </div>
           )}
 
-          {isMobile && (
+          {isTablet && (
             <div className="flex flex-shrink-0 items-center gap-2">
-              {jobSeekerId && (
+              {jobSeekerId && pathname !== "/" && (
                 <NotificationBell
                   notifications={notifications}
                   onMarkRead={handleMarkRead}
@@ -167,25 +225,22 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={closeMenu}
-                  className="cursor-pointer rounded-lg px-3 py-[10px] text-sm font-bold"
+                  className={`cursor-pointer rounded-lg px-3 py-[10px] text-sm font-bold ${
+                    isActive(link.href) ? "text-[#0F0F0F]" : "text-[#5C5C5C]"
+                  }`}
                 >
                   {link.label}
                 </a>
               ))}
-              <Link
-                href="/company"
-                onClick={closeMenu}
-                className="px-3 py-[10px] text-sm font-bold"
-              >
-                สำหรับองค์กร
-              </Link>
-              <Link
-                href="/login"
-                onClick={closeMenu}
-                className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
-              >
-                เข้าสู่ระบบ
-              </Link>
+              {!hidePill && (
+                <Link
+                  href={pillHref}
+                  onClick={closeMenu}
+                  className="cursor-pointer px-3 py-[10px] text-sm font-semibold text-[#5C5C5C]"
+                >
+                  {pillLabel}
+                </Link>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

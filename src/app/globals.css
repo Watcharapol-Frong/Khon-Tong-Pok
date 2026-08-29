@@ -52,18 +52,30 @@ a {
 /* Two marquee rows stacked directly on top of each other, drifting the
    same direction at different speeds, reads as an unintentional parallax
    glitch rather than two separate pieces of content — reversing the
-   second row turns it into a deliberate opposing rhythm instead. */
+   second row turns it into a deliberate opposing rhythm instead. Idle by
+   default (paused) — only scrolls once the cursor is actually over it, so
+   the section doesn't compete with the auto-scrolling job row above it
+   for attention until someone shows interest in it specifically. */
 .animate-marquee-reverse {
   animation: marqueeScroll 26s linear infinite reverse;
+  animation-play-state: paused;
 }
 
 /* Tailwind's group-hover:[animation-play-state:paused] arbitrary-property
    variant doesn't compile in this project's Tailwind v4 setup (silently
    produces no rule) — using a plain scoped selector instead, which does. */
 .marquee-pause-on-hover:hover .animate-marquee,
-.marquee-pause-on-hover:hover .animate-marquee-slow,
-.marquee-pause-on-hover:hover .animate-marquee-reverse {
+.marquee-pause-on-hover:hover .animate-marquee-slow {
   animation-play-state: paused;
+}
+
+/* Opposite of marquee-pause-on-hover: starts paused, only runs while
+   hovered. Skipped entirely under prefers-reduced-motion so hovering can't
+   start motion someone has explicitly opted out of. */
+@media (prefers-reduced-motion: no-preference) {
+  .marquee-hover-to-scroll:hover .animate-marquee-reverse {
+    animation-play-state: running;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

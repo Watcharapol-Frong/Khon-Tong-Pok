@@ -6,7 +6,34 @@ import { Sparkle } from "lucide-react";
 // black rounded panel, sparkle accents, mascot beside the heading instead of
 // a plain light box with no character — this page's version had drifted to
 // its own lighter, mascot-less treatment.
-export function ClosingCta() {
+//
+// Copy/links are overridable (defaulting to the homepage's) since the
+// primary CTA points at /game — reused as-is on the homepage that's the
+// right next step, but on /game itself linking back to /game would be a
+// dead-end self-link.
+//
+// Secondary defaults to the Job Board, not the HR side (/company) — Home is
+// a Candidate Landing, not a general one shared with HR (see
+// ia_home_is_candidate_landing memory), so every CTA on it should stay
+// candidate-flavored. HR already has its own entry point via the navbar's
+// "สำหรับองค์กร" link.
+type ClosingCtaProps = {
+  title?: string;
+  description?: string;
+  primaryHref?: string;
+  primaryLabel?: string;
+  secondaryHref?: string;
+  secondaryLabel?: string;
+};
+
+export function ClosingCta({
+  title = "พร้อมพิสูจน์ตัวตนของคุณหรือยัง?",
+  description = "ใช้เวลาไม่ถึง 10 นาที ไม่ต้องมีประสบการณ์ก็เริ่มได้ แล้วปลดล็อกตำแหน่งงานที่แมตช์กับตัวตนจริงของคุณ",
+  primaryHref = "/game",
+  primaryLabel = "เริ่มเล่นเกมเพื่อประเมิน →",
+  secondaryHref = "/job",
+  secondaryLabel = "เรียกดู Job Board",
+}: ClosingCtaProps = {}) {
   return (
     <div className="mx-auto w-full max-w-[1240px] px-[clamp(20px,4vw,48px)] pb-[clamp(56px,7vw,80px)]">
       <div className="relative overflow-hidden rounded-[28px] bg-[#0F0F0F] p-[clamp(32px,5vw,56px)]">
@@ -38,23 +65,23 @@ export function ClosingCta() {
 
           <div className="flex-1">
             <h2 className="mb-3 text-[clamp(26px,3.6vw,40px)] font-extrabold tracking-[-0.02em] text-white">
-              พร้อมพิสูจน์ตัวตนของคุณหรือยัง?
+              {title}
             </h2>
             <p className="mb-6 text-sm leading-[1.6] text-[#B5B5B5] sm:max-w-[420px]">
-              ใช้เวลาไม่ถึง 10 นาที ไม่ต้องมีประสบการณ์ก็เริ่มได้ แล้วปลดล็อกตำแหน่งงานที่แมตช์กับตัวตนจริงของคุณ
+              {description}
             </p>
             <div className="flex flex-wrap justify-center gap-3 sm:justify-start">
               <Link
-                href="/game"
+                href={primaryHref}
                 className="inline-block cursor-pointer rounded-full bg-white px-8 py-4 text-[15px] font-bold text-[#0F0F0F] transition-all hover:opacity-90 active:scale-95"
               >
-                เริ่มหางาน เล่นเกมเลย →
+                {primaryLabel}
               </Link>
               <Link
-                href="/company"
+                href={secondaryHref}
                 className="inline-block cursor-pointer rounded-full border-[1.5px] border-white/30 px-7 py-[15px] text-[15px] font-bold text-white transition-colors hover:bg-white/10"
               >
-                หา Candidate (HR)
+                {secondaryLabel}
               </Link>
             </div>
           </div>

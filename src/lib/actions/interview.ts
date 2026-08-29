@@ -219,10 +219,13 @@ export async function getMatchCountsByPosition(companyId: string): Promise<Recor
  * company, or a stale/tampered id) — not-found rather than forbidden, same
  * reasoning as elsewhere in this file.
  *
- * nameRevealed mirrors the mock's exact rule: true once *any* of this
- * candidate's matches with this company reaches "contacted" — a candidate
- * matched to multiple positions at the same company isn't still "blind" to
- * that HR team just because one specific match hasn't converted yet.
+ * nameRevealed: true once *any* of this candidate's matches with this
+ * company has an InterviewSlot at all — HR sending the invite (sendInterviewInvite
+ * creates the slot as "pending" before the candidate has responded) is what
+ * unblinds Blind Review here, not the candidate's later confirm/decline. A
+ * candidate matched to multiple positions at the same company isn't still
+ * "blind" to that HR team just because one specific match hasn't gotten an
+ * invite yet.
  */
 export async function getCandidateReport(jobSeekerId: string, companyId: string) {
   const jobSeeker = await prisma.jobSeeker.findUnique({
@@ -242,7 +245,16 @@ export async function getCandidateReport(jobSeekerId: string, companyId: string)
 
   return {
     jobSeeker,
-    nameRevealed: jobSeeker.matches.some((m) => m.status === "contacted"),
+    nameRevealed: jobSeeker.matches.some((m) => m.interviewSlot !== null),
     isStandout: jobSeeker.matches.some((m) => m.isStandout),
   };
+}
+
+/** Same nameRevealed rule as getCandidateReport above, standalone for authorization checks (e.g. the resume-file route handler) that don't need the rest of the report. Returns false (not an error) for a jobSeeker/company pair with no Match at all — same not-found-shaped-as-false posture as elsewhere in this file. */
+export async function isNameRevealedForCompany(jobSeekerId: string, companyId: string): Promise<boolean> {
+  const match = await prisma.match.findFirst({
+    where: { jobSeekerId, position: { companyId }, interviewSlot: { isNot: null } },
+    select: { id: true },
+  });
+  return match !== null;
 }

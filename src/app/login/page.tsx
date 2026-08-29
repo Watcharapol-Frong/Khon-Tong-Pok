@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Globe } from "lucide-react";
+import { AlertCircle, Sparkle } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
 import { Footer } from "@/components/Footer";
+import { GoogleIcon } from "@/components/GoogleIcon";
 import { Navbar } from "@/components/Navbar";
 import { getJobSeekerReturnState, loginJobSeeker } from "@/lib/actions/jobSeeker";
 import { setJobSeekerSessionIds } from "@/lib/jobSeekerSession";
@@ -44,11 +45,10 @@ export default function LoginPage() {
   const [returnStage, setReturnStage] = useState<ReturnStage>("new");
   const [candidateName, setCandidateName] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const performLogin = async (loginEmail: string, loginPassword: string) => {
     setErrorMsg("");
     setIsSubmitting(true);
-    const result = await loginJobSeeker(email, password);
+    const result = await loginJobSeeker(loginEmail, loginPassword);
 
     if ("error" in result) {
       setIsSubmitting(false);
@@ -63,6 +63,11 @@ export default function LoginPage() {
     setCandidateName(result.jobSeeker.name);
     setReturnStage(isComplete ? "complete" : hasHardSkills ? "inProgress" : "new");
     setLoginSuccess(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    performLogin(email, password);
   };
 
   return (
@@ -200,23 +205,32 @@ export default function LoginPage() {
               }}
               className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#F0F0F0]"
             >
-              <Globe className="h-3.5 w-3.5" strokeWidth={2} /> เข้าสู่ระบบด้วย Google
+              <GoogleIcon className="h-3.5 w-3.5" /> เข้าสู่ระบบด้วย Google
             </button>
 
+            {/* Dev-only shortcut into the one fully-populated reference
+                candidate (see prisma/seedCompleteCandidate.ts) — real login
+                call, not a prefill, so one click lands straight in a
+                complete Smart Profile for UI review. Gated out of
+                production so a login bypass never ships to real users. */}
+            {process.env.NODE_ENV !== "production" && (
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => performLogin("complete.demo@example.com", "demo1234")}
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[rgba(15,15,15,0.2)] bg-white py-2.5 text-xs font-bold text-[#5C5C5C] transition-colors hover:bg-[#F0F0F0] disabled:opacity-60"
+              >
+                <Sparkle className="h-3.5 w-3.5" /> [Dev] เข้าสู่ระบบตัวอย่างที่ข้อมูลครบ
+              </button>
+            )}
+
+            {/* No "สำหรับองค์กร / HR? เข้าสู่ระบบที่นี่" fallback here anymore
+                — redundant now that /login/select exists as the actual
+                role picker upstream of this page. */}
             <div className="mt-4 text-center text-xs text-[#5C5C5C]">
               ยังไม่มีบัญชีสมาชิก?{" "}
               <Link href="/register" className="font-extrabold text-[#0F0F0F] underline hover:opacity-80">
                 สมัครเลย (เล่นมินิเกมฟรี)
-              </Link>
-            </div>
-
-            <div className="text-center text-xs text-[#5C5C5C]">
-              สำหรับองค์กร / HR?{" "}
-              <Link
-                href="/company/login"
-                className="font-extrabold text-[#0F0F0F] underline hover:opacity-80"
-              >
-                เข้าสู่ระบบที่นี่
               </Link>
             </div>
           </form>

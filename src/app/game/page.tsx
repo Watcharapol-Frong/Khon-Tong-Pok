@@ -1,12 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Gamepad2, Gauge, Handshake, Shuffle, Target } from "lucide-react";
+import { Gamepad2, Gauge, Handshake, Shuffle, Sparkle, Target } from "lucide-react";
+import { ClosingCta } from "@/components/ClosingCta";
 import { Footer } from "@/components/Footer";
+import { HowItWorks } from "@/components/HowItWorks";
 import { Navbar } from "@/components/Navbar";
 import { StrategyPanel } from "@/components/StrategyPanel";
-import { GAME_STAGES, STEPS } from "@/lib/data";
+import { GAME_STAGES } from "@/lib/data";
 
 const GAME_ICONS = { risk: Gauge, flexibility: Shuffle, focus: Target, collaboration: Handshake };
+
+// Same handful-not-a-shower sparkle treatment as the homepage Hero.
+const HERO_SPARKLES = [
+  { top: "2%", left: "10%", size: 16, color: "#F5D949", rotate: -12 },
+  { top: "10%", right: "10%", size: 15, color: "#FF5CA8", rotate: -10 },
+];
 
 export const metadata: Metadata = {
   title: "ประเมินด้วยมินิเกม — คนตรงปก (KhonTongPok)",
@@ -31,6 +39,19 @@ export default function GamePage() {
         />
 
         <div className="relative mx-auto w-full max-w-[900px] px-[clamp(20px,4vw,48px)] pt-[clamp(48px,8vw,88px)] pb-[clamp(28px,4vw,44px)] text-center">
+          {HERO_SPARKLES.map((s, i) => (
+            <Sparkle
+              key={i}
+              className="pointer-events-none absolute hidden sm:block"
+              style={{ top: s.top, left: s.left, right: s.right, transform: `rotate(${s.rotate}deg)` }}
+              width={s.size}
+              height={s.size}
+              fill={s.color}
+              color={s.color}
+              strokeWidth={1}
+            />
+          ))}
+
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[rgba(15,15,15,0.12)] bg-[#FAFAFA] px-4 py-1.5 text-xs font-bold tracking-wider text-[#0F0F0F] uppercase">
             <Gamepad2 className="h-3.5 w-3.5" strokeWidth={2} />
             <span>Neuroscience Game Assessment</span>
@@ -52,7 +73,7 @@ export default function GamePage() {
               href="/login"
               className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white transition-all hover:opacity-90 active:scale-95"
             >
-              เริ่มเล่นเกมเลย →
+              เริ่มเล่นเกมเพื่อประเมิน →
             </Link>
             <Link
               href="/job"
@@ -64,80 +85,55 @@ export default function GamePage() {
         </div>
       </div>
 
-      {/* 4 mini-games */}
-      <div className="mx-auto w-full max-w-[1240px] border-t border-[rgba(15,15,15,0.08)] px-[clamp(20px,4vw,48px)] py-[clamp(40px,6vw,64px)]">
-        <h2 className="mb-2 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">
-          มินิเกมของเรา
-        </h2>
-        <p className="mb-8 max-w-[560px] text-sm leading-[1.7] text-[#5C5C5C]">
-          แต่ละเกมพัฒนาจากแบบทดสอบทางจิตวิทยาและประสาทวิทยาศาสตร์ที่ใช้จริงในงานวิจัย มาตรฐานการวัดผลแต่ละด้านกำหนดไว้ชัดเจน เพื่อให้ผลลัพธ์ที่ได้สะท้อนพฤติกรรมจริง ไม่ใช่คำตอบที่เตรียมมา
-        </p>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-5">
-          {GAME_STAGES.map((game) => {
-            const GameIcon = GAME_ICONS[game.iconKey];
-            return (
-            <div
-              key={game.id}
-              className="rounded-2xl border border-[rgba(15,15,15,0.1)] bg-[#FAFAFA] p-6 transition-all hover:border-[rgba(15,15,15,0.25)]"
-            >
-              <div
-                className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl"
-                style={{ background: `${game.color}26` }}
-              >
-                <GameIcon className="h-5 w-5" style={{ color: game.color }} strokeWidth={2} />
-              </div>
-              <div className="mb-1 text-base font-extrabold tracking-[-0.01em]">{game.title}</div>
-              <div className="mb-3 text-xs font-bold" style={{ color: game.color }}>
-                {game.subtitle}
-              </div>
-              <div className="text-sm leading-[1.7] text-[#5C5C5C]">{game.desc}</div>
-            </div>
-            );
-          })}
+      {/* 4 mini-games — same dark-panel + monochrome white card composition
+          as StrategyPanel/HowItWorks below it, so all three read as one
+          design system instead of this one looking like an older page. */}
+      <div className="mx-auto w-full max-w-[1240px] border-t border-[rgba(15,15,15,0.08)] px-[clamp(20px,4vw,48px)] pt-[clamp(24px,4vw,40px)] pb-[clamp(40px,6vw,64px)]">
+        <div className="rounded-[28px] bg-[#0F0F0F] p-[clamp(32px,5vw,52px)] text-white">
+          <div className="mb-[18px] inline-flex items-center gap-2 text-xs font-bold tracking-[0.08em] text-[#9A9A9A] uppercase">
+            4 มินิเกม
+          </div>
+          <h2 className="mb-3 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">
+            มินิเกมของเรา
+          </h2>
+          <p className="mb-[30px] max-w-[640px] text-sm leading-[1.7] text-[#B5B5B5]">
+            แต่ละเกมพัฒนาจากแบบทดสอบทางจิตวิทยาและประสาทวิทยาศาสตร์ที่ใช้จริงในงานวิจัย
+            มาตรฐานการวัดผลแต่ละด้านกำหนดไว้ชัดเจน เพื่อให้ผลลัพธ์ที่ได้สะท้อนพฤติกรรมจริง ไม่ใช่คำตอบที่เตรียมมา
+          </p>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3">
+            {GAME_STAGES.map((game) => {
+              const GameIcon = GAME_ICONS[game.iconKey];
+              return (
+                <div key={game.id} className="min-w-0 rounded-2xl bg-white p-5">
+                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-[#F5F5F5]">
+                    <GameIcon className="h-4 w-4 text-[#0F0F0F]" strokeWidth={2} />
+                  </div>
+                  <div className="text-sm font-bold text-[#0F0F0F]">{game.title}</div>
+                  <div className="mt-1 mb-2 text-xs font-bold text-[#5C5C5C]">{game.subtitle}</div>
+                  <div className="text-xs leading-[1.6] text-[#5C5C5C]">{game.desc}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* What it measures */}
       <StrategyPanel />
 
-      {/* After the game */}
-      <div className="mx-auto w-full max-w-[1240px] border-t border-[rgba(15,15,15,0.08)] px-[clamp(20px,4vw,48px)] py-[clamp(40px,6vw,64px)]">
-        <h2 className="mb-8 text-[clamp(24px,3vw,32px)] font-extrabold tracking-[-0.02em]">
-          หลังเล่นจบแล้วยังไงต่อ
-        </h2>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-8">
-          {STEPS.map((step) => (
-            <div key={step.n}>
-              <div
-                className="mb-[14px] inline-flex h-10 w-10 items-center justify-center rounded-xl text-[13px] font-extrabold text-[#0F0F0F]"
-                style={{ background: step.color }}
-              >
-                {step.n}
-              </div>
-              <div className="mb-[10px] text-lg font-extrabold tracking-[-0.01em]">{step.title}</div>
-              <div className="text-sm leading-[1.7] text-[#5C5C5C]">{step.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* After the game — same "ทำงานยังไง" journey used on the homepage,
+          instead of a separate/older 3-step section drifting out of sync
+          with it. */}
+      <HowItWorks />
 
-      {/* Closing CTA */}
-      <div className="mx-auto w-full max-w-[1240px] px-[clamp(20px,4vw,48px)] pb-[clamp(56px,7vw,80px)]">
-        <div className="rounded-[28px] bg-[#F5F5F5] p-[clamp(36px,5vw,56px)] text-center">
-          <h2 className="mb-3.5 text-[clamp(24px,3.4vw,36px)] font-extrabold tracking-[-0.02em]">
-            พร้อมเล่นเกมแล้วหรือยัง?
-          </h2>
-          <p className="mx-auto mb-7 max-w-[480px] text-sm leading-[1.7] text-[#5C5C5C]">
-            ใช้เวลาไม่ถึง 10 นาที ไม่ต้องมีประสบการณ์ก็เริ่มได้ แล้วปลดล็อกตำแหน่งงานที่แมตช์กับตัวตนจริงของคุณ
-          </p>
-          <Link
-            href="/register"
-            className="inline-block cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white transition-all hover:opacity-90 active:scale-95"
-          >
-            เริ่มเล่นเกมเลย →
-          </Link>
-        </div>
-      </div>
+      {/* Closing CTA — shared with the homepage; title/primary overridden
+          since the default primary CTA points at /game, which would
+          self-link here. Secondary left at its default (Job Board). */}
+      <ClosingCta
+        title="พร้อมเล่นเกมแล้วหรือยัง?"
+        primaryHref="/register"
+        primaryLabel="เริ่มเล่นเกมเพื่อประเมิน →"
+      />
 
       <Footer />
     </div>
