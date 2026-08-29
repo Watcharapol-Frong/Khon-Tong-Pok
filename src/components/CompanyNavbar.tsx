@@ -6,7 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
-import { clearHRSessionIds, getHRSessionIds } from "@/lib/hrSession";
+import { hasHRSessionHint } from "@/lib/hrSession";
+import { signOut } from "@/lib/signOut";
 
 /**
  * Separate from Navbar on purpose — only ever rendered on /company/* pages,
@@ -34,7 +35,7 @@ export function CompanyNavbar() {
     // props/other state, which doesn't apply here; a lazy useState
     // initializer would cause a real hydration mismatch instead.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSession(getHRSessionIds() !== null);
+    setSession(hasHRSessionHint());
   }, []);
 
   const logoHref = session ? "/company/dashboard" : "/company";
@@ -42,7 +43,7 @@ export function CompanyNavbar() {
   const closeMenu = () => setMenuOpen(false);
 
   const handleLogout = () => {
-    clearHRSessionIds();
+    signOut();
     closeMenu();
     router.push("/company/login");
   };

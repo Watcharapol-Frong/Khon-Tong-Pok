@@ -7,7 +7,7 @@ import { CompanyAppNavbar } from "@/components/CompanyAppNavbar";
 import { LoadingMascot } from "@/components/LoadingMascot";
 import { getHRSessionData } from "@/lib/actions/company";
 import { CompanySessionProvider, type CompanySession } from "@/lib/companySession";
-import { clearHRSessionIds, getHRSessionIds } from "@/lib/hrSession";
+import { clearHRSessionHint } from "@/lib/hrSession";
 
 /**
  * Shared shell for every authenticated HR page (dashboard, positions,
@@ -30,16 +30,12 @@ export default function CompanyAppLayout({ children }: { children: React.ReactNo
   useEffect(() => {
     let cancelled = false;
 
-    const ids = getHRSessionIds();
-    if (!ids) {
-      router.replace("/company/login");
-      return;
-    }
-
-    getHRSessionData(ids.hrUserId, ids.companyId).then((data) => {
+    // No localStorage precondition: a Google sign-in never writes one, so
+    // gating on it here would bounce every OAuth user straight back to /login.
+    getHRSessionData().then((data) => {
       if (cancelled) return;
       if (!data) {
-        clearHRSessionIds();
+        clearHRSessionHint();
         router.replace("/company/login");
         return;
       }

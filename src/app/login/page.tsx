@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Globe } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { AlertCircle } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { getJobSeekerReturnState, loginJobSeeker } from "@/lib/actions/jobSeeker";
-import { setJobSeekerSessionIds } from "@/lib/jobSeekerSession";
+import { setJobSeekerSessionHint } from "@/lib/jobSeekerSession";
 
 // What a returning candidate sees after login — never re-runs the
 // game/onboarding step (it's optional and self-directed, not a gate), so
@@ -33,7 +35,21 @@ const STAGE_COPY: Record<ReturnStage, { subtitle: (name: string) => string; ctaL
   },
 };
 
+/**
+ * useSearchParams() opts the tree into client-side rendering, and Next
+ * requires a Suspense boundary around it — without one the build fails on this
+ * route rather than warning.
+ */
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -43,6 +59,15 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [returnStage, setReturnStage] = useState<ReturnStage>("new");
   const [candidateName, setCandidateName] = useState("");
+
+  // /auth/callback sends failures back here as ?error=... — Google being
+  // cancelled, an unverified email, an HR account that doesn't exist yet.
+  // Showing it in the same place as a wrong password keeps one error slot
+  // instead of two competing ones.
+  useEffect(() => {
+    const fromCallback = searchParams.get("error");
+    if (fromCallback) setErrorMsg(fromCallback);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,10 +81,12 @@ export default function LoginPage() {
       return;
     }
 
-    const { hasHardSkills, isComplete } = await getJobSeekerReturnState(result.jobSeeker.id);
+    const { hasHardSkills, isComplete } = await getJobSeekerReturnState();
     setIsSubmitting(false);
 
-    setJobSeekerSessionIds({ jobSeekerId: result.jobSeeker.id });
+    // The real session is an httpOnly cookie set by loginJobSeeker; this is
+    // only a flag so the navbar renders its signed-in state immediately.
+    setJobSeekerSessionHint();
     setCandidateName(result.jobSeeker.name);
     setReturnStage(isComplete ? "complete" : hasHardSkills ? "inProgress" : "new");
     setLoginSuccess(true);
@@ -192,16 +219,9 @@ export default function LoginPage() {
               <div className="h-px flex-1 bg-[rgba(15,15,15,0.08)]" />
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setEmail("demo.user@gmail.com");
-                setPassword("password123");
-              }}
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#F0F0F0]"
-            >
-              <Globe className="h-3.5 w-3.5" strokeWidth={2} /> เข้าสู่ระบบด้วย Google
-            </button>
+            {/* Was a button that filled in demo credentials — it looked like
+                Google sign-in without being it. This one actually signs in. */}
+            <GoogleSignInButton role="candidate" next="/decoder" />
 
             <div className="mt-4 text-center text-xs text-[#5C5C5C]">
               ยังไม่มีบัญชีสมาชิก?{" "}

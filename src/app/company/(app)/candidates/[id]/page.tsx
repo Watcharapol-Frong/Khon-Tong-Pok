@@ -80,13 +80,13 @@ export default function CandidateReportPage() {
   };
 
   const refresh = async () => {
-    const fresh = await getCandidateReport(jobSeekerId, session.company.id);
+    const fresh = await getCandidateReport(jobSeekerId);
     setData(fresh);
   };
 
   useEffect(() => {
     let cancelled = false;
-    getCandidateReport(jobSeekerId, session.company.id).then((fresh) => {
+    getCandidateReport(jobSeekerId).then((fresh) => {
       if (cancelled) return;
       setData(fresh);
       setIsLoading(false);
@@ -100,7 +100,7 @@ export default function CandidateReportPage() {
   const handleSendInvite = async (proposedTimes: string[]) => {
     if (!inviteTargetMatchId) return;
     setErrorMsg("");
-    const result = await sendInterviewInvite(inviteTargetMatchId, session.company.id, proposedTimes);
+    const result = await sendInterviewInvite(inviteTargetMatchId, proposedTimes);
     setInviteTargetMatchId(null);
     if ("error" in result) {
       setErrorMsg(result.error);

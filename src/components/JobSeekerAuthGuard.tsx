@@ -5,19 +5,27 @@ import { useRouter } from "next/navigation";
 import { LoadingMascot } from "@/components/LoadingMascot";
 import { getJobSeekerSessionData } from "@/lib/actions/jobSeeker";
 import { JobSeekerSessionProvider, type JobSeekerSession } from "@/lib/jobSeekerSessionContext";
-import { clearJobSeekerSessionIds, getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
+import { clearJobSeekerSessionHint } from "@/lib/jobSeekerSession";
 
 /**
- * Wraps any candidate page that requires a logged-in job seeker (currently
- * just /decoder) — centralizes the session-read + redirect-guard +
- * loading-fallback, same pattern as CompanyAppLayout on the HR side
- * (src/app/company/(app)/layout.tsx). A plain wrapper component rather than
- * a Next layout segment, since only one route needs this so far.
+ * Wraps any candidate page that requires a signed-in job seeker — centralizes
+ * the session read, the redirect guard and the loading fallback, same pattern
+ * as CompanyAppLayout on the HR side.
  *
- * Session flow: only { jobSeekerId } lives in localStorage (see
- * jobSeekerSession.ts) — real jobSeeker data is fetched fresh from the
- * database on mount via getJobSeekerSessionData, so a stale/tampered
- * localStorage value can't grant access to someone else's data.
+ * The session is resolved entirely on the server: `getJobSeekerSessionData()`
+ * takes no argument and reads the httpOnly cookie or the Supabase Auth
+ * session. Nothing the browser holds influences who it decides you are.
+ *
+ * This previously read `{ jobSeekerId }` out of localStorage and passed it to
+ * the server, which looked the row up by that id. The old comment here claimed
+ * a tampered value "can't grant access to someone else's data"; it could, and
+ * with 43 real accounts on record it was a one-line devtools exploit. The
+ * localStorage value is gone from the decision entirely — see src/lib/auth.ts.
+ *
+ * Note this is still a client-side guard: it renders a loading state, then
+ * redirects. It protects the *data* (every action re-derives identity
+ * server-side) rather than the route. Someone can still reach the URL; they
+ * just get nothing back.
  */
 export function JobSeekerAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -27,16 +35,12 @@ export function JobSeekerAuthGuard({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     let cancelled = false;
 
-    const ids = getJobSeekerSessionIds();
-    if (!ids) {
-      router.replace("/login");
-      return;
-    }
-
-    getJobSeekerSessionData(ids.jobSeekerId).then((data) => {
+    getJobSeekerSessionData().then((data) => {
       if (cancelled) return;
       if (!data) {
-        clearJobSeekerSessionIds();
+        // Clear the leftover hint so a stale value from before this change
+        // doesn't keep the navbar showing a signed-in state.
+        clearJobSeekerSessionHint();
         router.replace("/login");
         return;
       }

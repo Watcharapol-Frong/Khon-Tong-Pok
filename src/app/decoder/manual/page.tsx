@@ -336,7 +336,7 @@ function DecoderManualContent() {
   // so it can't clobber anything the candidate has already started typing.
   useEffect(() => {
     let cancelled = false;
-    getJobSeekerProfile(jobSeeker.id).then((profile) => {
+    getJobSeekerProfile().then((profile) => {
       if (cancelled || !profile) return;
       setStep1({
         firstNameTh: profile.firstNameTh ?? undefined,
@@ -427,7 +427,7 @@ function DecoderManualContent() {
         return;
       }
       setIsSubmitting(true);
-      const result = await saveProfileStep1(jobSeeker.id, step1);
+      const result = await saveProfileStep1(step1);
       setIsSubmitting(false);
       if ("error" in result) {
         setErrorMsg(result.error);
@@ -436,7 +436,7 @@ function DecoderManualContent() {
     } else if (currentStep === "education") {
       const cleaned = education.filter((e) => e.level && e.institution.trim());
       setIsSubmitting(true);
-      const result = await saveProfileEducation(jobSeeker.id, cleaned);
+      const result = await saveProfileEducation(cleaned);
       setIsSubmitting(false);
       if ("error" in result) {
         setErrorMsg(result.error);
@@ -445,7 +445,7 @@ function DecoderManualContent() {
     } else if (currentStep === "experience") {
       const cleaned = workExperience.filter((w) => w.companyName.trim() && w.jobTitle.trim());
       setIsSubmitting(true);
-      const result = await saveProfileWorkExperience(jobSeeker.id, cleaned);
+      const result = await saveProfileWorkExperience(cleaned);
       setIsSubmitting(false);
       if ("error" in result) {
         setErrorMsg(result.error);
@@ -464,7 +464,7 @@ function DecoderManualContent() {
     }
     setIsSubmitting(true);
     const cleanedLanguages = languageSkills.filter((l) => l.language.trim());
-    const result = await saveProfileSkills(jobSeeker.id, { computerSkills, languageSkills: cleanedLanguages });
+    const result = await saveProfileSkills({ computerSkills, languageSkills: cleanedLanguages });
     setIsSubmitting(false);
 
     if ("error" in result) {

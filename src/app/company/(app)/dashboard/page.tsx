@@ -27,9 +27,9 @@ export default function CompanyDashboardPage() {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      getPositionsByCompany(session.company.id),
-      getDashboardSummary(session.company.id),
-      getMatchCountsByPosition(session.company.id),
+      getPositionsByCompany(),
+      getDashboardSummary(),
+      getMatchCountsByPosition(),
     ]).then(([freshPositions, freshSummary, freshMatchCounts]) => {
       if (cancelled) return;
       setPositions(freshPositions);

@@ -16,24 +16,30 @@ datasource db {
 }
 
 model Company {
-  id       String    @id @default(cuid())
-  name     String
-  domain   String    @unique
-  hrUsers  HRUser[]
+  id        String     @id @default(cuid())
+  name      String
+  domain    String     @unique
+  hrUsers   HRUser[]
   positions Position[]
 }
 
 model HRUser {
   id            String         @id @default(cuid())
+  /// Linked Supabase Auth account. Unlike JobSeeker, a Google sign-in can only
+  /// ever *attach to* an HR row that already exists — an HRUser must belong to
+  /// a Company, and letting Google create one would mean any Google account
+  /// could join a company by matching its email domain. See
+  /// linkSupabaseUserToHRUser in src/lib/auth.ts.
+  supabaseUserId String?       @unique
   name          String
   email         String         @unique
-  /// Prototype only — plaintext, no hashing. Never returned from a Server
-  /// Action to the client (see SafeHRUser in src/lib/companySession.tsx).
-  /// Needs real hashing (bcrypt/argon2) before this touches production.
-  password      String
+  /// Null for Google-only accounts. Existing values are plaintext — see the
+  /// note on JobSeeker.password.
+  password      String?
   companyId     String
   company       Company        @relation(fields: [companyId], references: [id])
   notifications Notification[]
+  revealEvents  RevealEvent[]
 }
 
 /// Recipient is exactly one of hrUserId/jobSeekerId — enforced at the
@@ -55,52 +61,101 @@ model Notification {
 }
 
 model Position {
-  id                  String   @id @default(cuid())
-  companyId           String
-  company             Company  @relation(fields: [companyId], references: [id])
-  title               String
-  requiredHardSkills  String[]
-  requiredSoftSkills  Json
-  status              String   @default("open")
-  matches             Match[]
+  id                 String        @id @default(cuid())
+  companyId          String
+  company            Company       @relation(fields: [companyId], references: [id])
+  title              String
+  requiredHardSkills String[]
+  requiredSoftSkills Json
+  status             String        @default("open")
+  matches            Match[]
+  revealEvents       RevealEvent[]
 }
 
 model Match {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   positionId    String
-  position      Position      @relation(fields: [positionId], references: [id])
+  position      Position       @relation(fields: [positionId], references: [id])
   jobSeekerId   String
-  jobSeeker     JobSeeker     @relation(fields: [jobSeekerId], references: [id])
+  jobSeeker     JobSeeker      @relation(fields: [jobSeekerId], references: [id])
   matchScore    Int
-  isStandout    Boolean       @default(false)
-  status        String        @default("pending")
+  isStandout    Boolean        @default(false)
+  status        String         @default("pending")
   interviewSlot InterviewSlot?
 }
 
 model InterviewSlot {
-  id             String   @id @default(cuid())
-  matchId        String   @unique
-  match          Match    @relation(fields: [matchId], references: [id])
-  proposedTimes  String[]
-  status         String   @default("pending")
-  confirmedTime  String?
+  id            String   @id @default(cuid())
+  matchId       String   @unique
+  match         Match    @relation(fields: [matchId], references: [id])
+  proposedTimes String[]
+  status        String   @default("pending")
+  confirmedTime String?
 }
 
 model JobSeeker {
-  id                String            @id @default(cuid())
+  id                String             @id @default(cuid())
+  /// The `auth.users.id` of the linked Supabase Auth account (Google sign-in).
+  /// Null for the accounts that existed before Google sign-in was added, which
+  /// still authenticate with the email/password pair below.
+  ///
+  /// This is what makes RLS possible: policies compare `auth.uid()` against
+  /// this column, so Postgres itself can decide which rows a request may read
+  /// instead of trusting the application to filter correctly every time.
+  supabaseUserId    String?            @unique
   name              String
-  email             String            @unique
-  /// Prototype only — plaintext, no hashing. Never returned from a Server
-  /// Action to the client (see SafeJobSeeker in src/lib/jobSeekerSessionContext.tsx).
-  /// Needs real hashing (bcrypt/argon2) before this touches production.
-  password          String
+  email             String             @unique
+  /// Profile picture from Google. Null for password accounts.
+  avatarUrl         String?
+  /// Null for Google-only accounts, which have no password to store.
+  ///
+  /// Prototype only — the values that ARE here are plaintext, no hashing.
+  /// Never returned from a Server Action to the client (see SafeJobSeeker in
+  /// src/lib/auth.ts). Needs real hashing (bcrypt/argon2) before production;
+  /// Google sign-in reduces how many accounts depend on it but does not fix
+  /// the ones that already exist.
+  password          String?
   profile           JobSeekerProfile?
   chatVerifications ChatVerification[]
   gameResult        GameResult?
   aiSummary         AISummary?
   matches           Match[]
   notifications     Notification[]
-  createdAt         DateTime          @default(now())
+  revealEvents      RevealEvent[]
+  createdAt         DateTime           @default(now())
+}
+
+/// หลักฐานว่าแพลตฟอร์ม "ซ่อนตัวตนเพื่อลดอคติ" จริง ไม่ใช่แค่ซ่อนที่หน้าจอ
+///
+/// ด่านแรก HR เห็นเฉพาะทักษะกับผลประเมิน 6 มิติ — ชื่อจริง มหาวิทยาลัย เกรด
+/// อายุ เพศ ถูกกันไว้ พอจำเป็นต้องเปิดดูจริง (เช่นนัดสัมภาษณ์) ต้องบันทึกไว้
+/// ทุกครั้งว่า **ใครเปิดดูของใคร ตอนไหน และเพราะอะไร**
+///
+/// ทำไมต้องมีตารางนี้: คำเคลมเรื่องลดอคติที่ไม่มีหลักฐานตรวจสอบได้ ก็เป็นแค่
+/// คำพูด ตารางนี้ทำให้เปิดให้กรรมการดูสดได้ว่ากดแล้วมัน log จริง และถ้าทำต่อ
+/// เป็นผลิตภัณฑ์จริง มันคือสิ่งที่ผู้สมัครใช้ตรวจสอบได้ว่ามีใครดูข้อมูลตัวเองบ้าง
+///
+/// reason ตั้งใจให้เป็น String บังคับกรอก (ไม่ใช่ optional) — การบังคับให้พิมพ์
+/// เหตุผลทำให้คนคิดก่อนกด ซึ่งได้ผลกว่าการเก็บ log เฉย ๆ
+///
+/// หมายเหตุ: การเขียน log ควรอยู่ในทรานแซกชันเดียวกับการอ่านข้อมูลตัวตน
+/// (ดู src/lib/actions/ — ห้ามอ่านก่อนแล้วค่อย log ทีหลัง เพราะถ้า log พัง
+/// จะกลายเป็นว่าดูข้อมูลไปแล้วโดยไม่มีร่องรอย)
+model RevealEvent {
+  id          String    @id @default(cuid())
+  jobSeekerId String
+  jobSeeker   JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  hrUserId    String
+  hrUser      HRUser    @relation(fields: [hrUserId], references: [id])
+  /// ตำแหน่งงานที่เป็นเหตุให้ต้องเปิดดู — ไม่บังคับ เพราะบางครั้งเปิดดูจาก
+  /// หน้าโปรไฟล์ตรง ๆ ไม่ได้มาจากประกาศงานใดงานหนึ่ง
+  positionId  String?
+  position    Position? @relation(fields: [positionId], references: [id])
+  reason      String
+  revealedAt  DateTime  @default(now())
+
+  @@index([jobSeekerId, revealedAt])
+  @@index([hrUserId, revealedAt])
 }
 
 /// The candidate's structured profile, modeled on JobThai's own resume-form
@@ -113,25 +168,25 @@ model JobSeeker {
 /// (the /decoder gate) regardless of whether they came from a parsed PDF or
 /// the manual multi-step form.
 model JobSeekerProfile {
-  id               String    @id @default(cuid())
-  jobSeekerId      String    @unique
-  jobSeeker        JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  id          String    @id @default(cuid())
+  jobSeekerId String    @unique
+  jobSeeker   JobSeeker @relation(fields: [jobSeekerId], references: [id])
 
   // ข้อมูลส่วนบุคคล (personal information)
-  firstNameTh      String?
-  lastNameTh       String?
-  firstNameEn      String?
-  lastNameEn       String?
-  birthDate        DateTime?
-  gender           String?
-  nationality      String?
-  religion         String?
-  maritalStatus    String?
-  address          String?
-  province         String?
-  postalCode       String?
-  phone            String?
-  militaryStatus   String?
+  firstNameTh    String?
+  lastNameTh     String?
+  firstNameEn    String?
+  lastNameEn     String?
+  birthDate      DateTime?
+  gender         String?
+  nationality    String?
+  religion       String?
+  maritalStatus  String?
+  address        String?
+  province       String?
+  postalCode     String?
+  phone          String?
+  militaryStatus String?
 
   // ลักษณะงานที่ต้องการ (desired job)
   desiredPosition  String?
@@ -141,19 +196,19 @@ model JobSeekerProfile {
   desiredProvince  String?
   availableDate    DateTime?
 
-  education        EducationEntry[]
-  workExperience   WorkExperienceEntry[]
-  languageSkills   LanguageSkillEntry[]
-  certificates     CertificateEntry[]
+  education      EducationEntry[]
+  workExperience WorkExperienceEntry[]
+  languageSkills LanguageSkillEntry[]
+  certificates   CertificateEntry[]
 
   /// Validated against the O*NET dictionary via the same SkillAutocomplete
   /// component Position's own hard-skills field uses.
-  computerSkills   String[]
+  computerSkills String[]
   /// Parsed text of the most recently uploaded resume PDF, if any —
   /// defaults to "" for a candidate who only ever used the manual form.
-  resumeRawText    String    @default("")
+  resumeRawText  String   @default("")
 
-  updatedAt        DateTime  @updatedAt
+  updatedAt DateTime @updatedAt
 }
 
 model EducationEntry {
@@ -204,13 +259,13 @@ model CertificateEntry {
 }
 
 model ChatVerification {
-  id               String    @id @default(cuid())
-  jobSeekerId      String
-  jobSeeker        JobSeeker @relation(fields: [jobSeekerId], references: [id])
-  skill            String
-  status           String
-  conversationLog  Json
-  updatedAt        DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  jobSeekerId     String
+  jobSeeker       JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  skill           String
+  status          String
+  conversationLog Json
+  updatedAt       DateTime  @updatedAt
 }
 
 /// 6-axis taxonomy matches the psychometric games' radarProfile.axes output
@@ -218,24 +273,24 @@ model ChatVerification {
 /// Position.requiredSoftSkills) — overallIndex is a display-only average of
 /// the 6 axes, not consumed by matching (src/lib/matching.ts).
 model GameResult {
-  id                           String    @id @default(cuid())
-  jobSeekerId                  String    @unique
-  jobSeeker                    JobSeeker @relation(fields: [jobSeekerId], references: [id])
-  riskTolerance                Int
-  learningAgility              Int
-  criticalThinking             Int
-  decisionMakingUnderPressure  Int
-  collaborationMindset         Int
-  resilienceAndAdaptability    Int
-  overallIndex                 Int
-  updatedAt                    DateTime  @updatedAt
+  id                          String    @id @default(cuid())
+  jobSeekerId                 String    @unique
+  jobSeeker                   JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  riskTolerance               Int
+  learningAgility             Int
+  criticalThinking            Int
+  decisionMakingUnderPressure Int
+  collaborationMindset        Int
+  resilienceAndAdaptability   Int
+  overallIndex                Int
+  updatedAt                   DateTime  @updatedAt
 }
 
 model AISummary {
-  id           String    @id @default(cuid())
-  jobSeekerId  String    @unique
-  jobSeeker    JobSeeker @relation(fields: [jobSeekerId], references: [id])
-  summaryText  String
-  generatedAt  DateTime  @default(now())
-  sourceHash   String
+  id          String    @id @default(cuid())
+  jobSeekerId String    @unique
+  jobSeeker   JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  summaryText String
+  generatedAt DateTime  @default(now())
+  sourceHash  String
 }

@@ -8,7 +8,8 @@ import { AuthCard } from "@/components/AuthCard";
 import { Footer } from "@/components/Footer";
 import { CompanyNavbar } from "@/components/CompanyNavbar";
 import { loginHR } from "@/lib/actions/company";
-import { setHRSessionIds } from "@/lib/hrSession";
+import { setHRSessionHint } from "@/lib/hrSession";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 export default function CompanyLoginPage() {
   const router = useRouter();
@@ -29,7 +30,9 @@ export default function CompanyLoginPage() {
       setErrorMsg(result.error);
       return;
     }
-    setHRSessionIds({ hrUserId: result.hrUser.id, companyId: result.company.id });
+    // loginHR already set the httpOnly session cookie; this is only the
+    // navbar hint so it renders the signed-in state without a round trip.
+    setHRSessionHint();
     router.push("/company/dashboard");
   };
 
@@ -96,6 +99,18 @@ export default function CompanyLoginPage() {
           >
             {isSubmitting ? "กำลังตรวจสอบข้อมูล..." : "เข้าสู่ระบบองค์กร"}
           </button>
+
+          <div className="my-1 flex items-center gap-3">
+            <div className="h-px flex-1 bg-[rgba(15,15,15,0.08)]" />
+            <span className="text-[11px] font-bold text-[#8A8A8A]">หรือ</span>
+            <div className="h-px flex-1 bg-[rgba(15,15,15,0.08)]" />
+          </div>
+
+          {/* HR side only ever *links* a Google account to an HR row that
+              already exists — see linkSupabaseUserToHRUser. Registering the
+              company stays a deliberate, separate step, so a Google account
+              can't join a company just by sharing its email domain. */}
+          <GoogleSignInButton role="hr" next="/company/dashboard" />
 
           <div className="text-center text-xs text-[#5C5C5C]">
             ยังไม่มีบัญชีองค์กร?{" "}

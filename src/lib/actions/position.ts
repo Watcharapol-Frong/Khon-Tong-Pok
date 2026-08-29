@@ -4,6 +4,23 @@ import { Prisma } from "@prisma/client";
 import type { Position as PrismaPosition } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { PositionSoftSkillRequirements } from "@/lib/types";
+import { getHRContext } from "@/lib/auth";
+
+const NOT_SIGNED_IN = "กรุณาเข้าสู่ระบบก่อนครับ";
+
+/**
+ * The company the signed-in HR user belongs to.
+ *
+ * These functions already refused to touch a position belonging to another
+ * company — but they compared against a companyId the browser sent, so the
+ * refusal was trivially bypassed by sending a different one. The comparisons
+ * are unchanged; only the source of the id is.
+ */
+async function sessionCompanyId(): Promise<string | null> {
+  const ctx = await getHRContext();
+  return ctx?.companyId ?? null;
+}
+
 
 /** Position with requiredSoftSkills narrowed from Prisma's untyped Json column back to the shape we always write into it — we control every write below, so this cast is safe (no runtime validation needed for a prototype). */
 export type PositionWithSkills = Omit<PrismaPosition, "requiredSoftSkills"> & {
@@ -21,7 +38,9 @@ function cleanSoftSkills(input: PositionSoftSkillRequirements): Prisma.InputJson
   ) as Prisma.InputJsonValue;
 }
 
-export async function getPositionsByCompany(companyId: string): Promise<PositionWithSkills[]> {
+export async function getPositionsByCompany(): Promise<PositionWithSkills[]> {
+  const companyId = await sessionCompanyId();
+  if (!companyId) return [];
   const positions = await prisma.position.findMany({
     where: { companyId },
     orderBy: { id: "asc" }, // cuids are creation-ordered, no separate createdAt column yet
@@ -35,14 +54,15 @@ export async function getPosition(positionId: string): Promise<PositionWithSkill
 }
 
 export async function createPosition(input: {
-  companyId: string;
   title: string;
   requiredHardSkills: string[];
   requiredSoftSkills: PositionSoftSkillRequirements;
-}): Promise<PositionWithSkills> {
+}): Promise<PositionWithSkills | { error: string }> {
+  const companyId = await sessionCompanyId();
+  if (!companyId) return { error: NOT_SIGNED_IN };
   const position = await prisma.position.create({
     data: {
-      companyId: input.companyId,
+      companyId,
       title: input.title,
       requiredHardSkills: input.requiredHardSkills,
       requiredSoftSkills: cleanSoftSkills(input.requiredSoftSkills),
@@ -54,13 +74,14 @@ export async function createPosition(input: {
 /** companyId must match the position's actual owner — a mismatch (wrong company, or a tampered/stale id) is reported as "not found" rather than "forbidden", so it can't be used to probe whether a given positionId exists at all. */
 export async function updatePosition(
   positionId: string,
-  companyId: string,
   data: {
     title?: string;
     requiredHardSkills?: string[];
     requiredSoftSkills?: PositionSoftSkillRequirements;
   }
 ): Promise<PositionWithSkills | { error: string }> {
+  const companyId = await sessionCompanyId();
+  if (!companyId) return { error: NOT_SIGNED_IN };
   const existing = await prisma.position.findUnique({ where: { id: positionId } });
   if (!existing || existing.companyId !== companyId) {
     return { error: "ไม่พบตำแหน่งงานนี้ หรือคุณไม่มีสิทธิ์แก้ไข" };
@@ -80,17 +101,19 @@ export async function updatePosition(
 }
 
 export async function closePosition(
-  positionId: string,
-  companyId: string
+  positionId: string
 ): Promise<PositionWithSkills | { error: string }> {
+  const companyId = await sessionCompanyId();
+  if (!companyId) return { error: NOT_SIGNED_IN };
   return setPositionStatus(positionId, companyId, "closed");
 }
 
 /** Not part of the original spec, but the existing HR UI already lets a closed position be reopened (a single toggle button) — dropping that on migration would be a silent feature regression, not just a data-source swap. */
 export async function reopenPosition(
-  positionId: string,
-  companyId: string
+  positionId: string
 ): Promise<PositionWithSkills | { error: string }> {
+  const companyId = await sessionCompanyId();
+  if (!companyId) return { error: NOT_SIGNED_IN };
   return setPositionStatus(positionId, companyId, "open");
 }
 

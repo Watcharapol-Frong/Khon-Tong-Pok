@@ -2,19 +2,52 @@
 
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
+import { readOrFallback } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
+import { createLegacySession, getCurrentJobSeeker } from "@/lib/auth";
+import {
+  burnTimeLikeAVerify,
+  hashPassword,
+  needsRehash,
+  verifyPassword,
+} from "@/lib/password";
+import { checkRateLimit, clearRateLimit, rateLimitMessage } from "@/lib/rateLimit";
 import type { JobSeekerSession, SafeJobSeeker } from "@/lib/jobSeekerSessionContext";
+
+const NOT_SIGNED_IN = "กรุณาเข้าสู่ระบบก่อนครับ";
+
+/**
+ * The signed-in candidate's id, or null.
+ *
+ * EVERY action in this file goes through here, and none of them accept a
+ * candidate id as a parameter any more. Removing the parameter outright,
+ * rather than accepting and ignoring it, is deliberate: a parameter that looks
+ * like it selects a candidate invites the next person to "just pass the id
+ * here" and quietly reopens the hole.
+ *
+ * The reason is that the id used to come from localStorage. `getJobSeekerProfile`,
+ * `getGameResult`, `getAISummary` and `generateAIResume` all took it at face
+ * value, so editing one value in devtools let anyone read any candidate's
+ * profile, psychometric results and AI summary. On a platform whose entire
+ * claim is that it controls who sees a candidate's data, that was the whole
+ * claim undone — and it was reachable with no tooling beyond the browser's
+ * own console.
+ */
+async function sessionJobSeekerId(): Promise<string | null> {
+  const jobSeeker = await getCurrentJobSeeker();
+  return jobSeeker?.id ?? null;
+}
 
 function stripPassword(jobSeeker: {
   id: string;
   name: string;
   email: string;
-  password: string;
+  password: string | null;
   createdAt: Date;
 }): SafeJobSeeker {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructured only to exclude it from `safe`
   const { password: _password, ...safe } = jobSeeker;
-  return safe;
+  return safe as SafeJobSeeker;
 }
 
 function isUniqueConstraintOn(err: unknown, field: string): boolean {
@@ -35,10 +68,17 @@ export async function registerJobSeeker(
   if (!name.trim()) return { error: "กรุณากรอกชื่อ-นามสกุล" };
   if (!normalized) return { error: "อีเมลไม่ถูกต้อง" };
 
+  if (password.length < 6) return { error: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร" };
+
   try {
     const jobSeeker = await prisma.jobSeeker.create({
-      data: { name: name.trim(), email: normalized, password },
+      // Hashed before it ever reaches the database. Nothing from here on can
+      // read this password back, including us.
+      data: { name: name.trim(), email: normalized, password: await hashPassword(password) },
     });
+    // Issue the session here rather than letting the client remember an id.
+    // Registering is proof of identity for the account just created.
+    await createLegacySession(jobSeeker.id, "candidate");
     return { jobSeeker: stripPassword(jobSeeker) };
   } catch (err) {
     if (isUniqueConstraintOn(err, "email")) {
@@ -49,35 +89,87 @@ export async function registerJobSeeker(
   }
 }
 
+const WRONG_CREDENTIALS = "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+
 /**
- * Plaintext password comparison — prototype only, see JobSeeker.password's
- * doc comment in schema.prisma. Real hashing (bcrypt/argon2) is required
- * before this goes anywhere near production.
+ * Sets a signed, httpOnly session cookie on success.
+ *
+ * Three separate defences, each covering what the others don't:
+ *   - the rate limiter caps online guessing
+ *   - scrypt makes each guess expensive if the database ever leaks
+ *   - the identical error message and matched timing hide which emails exist
+ *
+ * Rows still holding a plaintext password verify against it and are rehashed
+ * immediately, so accounts convert as their owners log in rather than everyone
+ * being locked out at once. `npm run db:hash-passwords` converts the rest
+ * without waiting.
  */
 export async function loginJobSeeker(
   email: string,
   password: string
 ): Promise<JobSeekerSession | { error: string }> {
   const normalized = email.trim().toLowerCase();
+
+  // Counted before the lookup, not after a failure: a limiter that only counts
+  // failures still lets an attacker measure response timing on every attempt.
+  const key = `login:candidate:${normalized}`;
+  const limit = checkRateLimit(key);
+  if (!limit.allowed) return { error: rateLimitMessage(limit.retryAfterSec) };
+
   const jobSeeker = await prisma.jobSeeker.findUnique({ where: { email: normalized } });
 
-  // Same generic message for "no such email" and "wrong password" —
-  // distinguishing them lets an attacker enumerate registered emails.
-  if (!jobSeeker || jobSeeker.password !== password) {
-    return { error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" };
+  if (!jobSeeker) {
+    // Spend the same time a real verify would. Returning instantly here is what
+    // turns one identical error message into a working email-enumeration oracle.
+    await burnTimeLikeAVerify();
+    return { error: WRONG_CREDENTIALS };
   }
 
+  // A Google-only account has no password at all. Saying so is safe — it tells
+  // an attacker nothing they couldn't learn by trying to sign in with Google —
+  // and without it the owner gets "wrong password" for one they never set.
+  if (jobSeeker.password === null) {
+    return { error: "บัญชีนี้สมัครผ่าน Google ครับ กดปุ่ม \"เข้าสู่ระบบด้วย Google\" ด้านล่างได้เลย" };
+  }
+
+  if (!(await verifyPassword(password, jobSeeker.password))) {
+    return { error: WRONG_CREDENTIALS };
+  }
+
+  if (needsRehash(jobSeeker.password)) {
+    await prisma.jobSeeker.update({
+      where: { id: jobSeeker.id },
+      data: { password: await hashPassword(password) },
+    });
+  }
+
+  clearRateLimit(key);
+  await createLegacySession(jobSeeker.id, "candidate");
   return { jobSeeker: stripPassword(jobSeeker) };
 }
 
 /**
- * Rehydrates a session from the id stored client-side (see
- * src/lib/jobSeekerSession.ts) — called once on mount by JobSeekerAuthGuard.
+ * The signed-in candidate — resolved entirely from the session cookie or the
+ * Supabase Auth session. Takes no argument by design: there is nothing the
+ * caller could pass that would be safe to believe.
  */
-export async function getJobSeekerSessionData(jobSeekerId: string): Promise<JobSeekerSession | null> {
-  const jobSeeker = await prisma.jobSeeker.findUnique({ where: { id: jobSeekerId } });
+export async function getJobSeekerSessionData(): Promise<JobSeekerSession | null> {
+  const current = await getCurrentJobSeeker();
+  if (!current) return null;
+
+  // The guard calls this on every protected page, so a database blip here is
+  // what turns into a full-screen crash. Degrade to "signed out" instead.
+  const jobSeeker = await readOrFallback(
+    () => prisma.jobSeeker.findUnique({ where: { id: current.id } }),
+    null,
+  );
   if (!jobSeeker) return null;
   return { jobSeeker: stripPassword(jobSeeker) };
+}
+
+/** Lets client components ask "is anyone signed in?" without holding an id. */
+export async function getSignedInJobSeekerId(): Promise<string | null> {
+  return sessionJobSeekerId();
 }
 
 /**
@@ -92,9 +184,12 @@ export async function getJobSeekerSessionData(jobSeekerId: string): Promise<JobS
  * languageSkills, never touches resumeRawText).
  */
 export async function syncComputerSkills(
-  jobSeekerId: string,
   data: { computerSkills: string[]; resumeRawText?: string }
 ): Promise<{ ok: true } | { error: string }> {
+  // ตัวตนมาจาก session ที่เซิร์ฟเวอร์ตรวจแล้วเท่านั้น
+  // ไม่ใช่ id ที่ client ส่งมา (ดูเหตุผลเต็มใน src/lib/auth.ts)
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return { error: NOT_SIGNED_IN };
   try {
     await prisma.jobSeekerProfile.upsert({
       where: { jobSeekerId },
@@ -112,7 +207,11 @@ export async function syncComputerSkills(
 }
 
 /** Full profile with all repeatable sections, ordered for display — null if the candidate hasn't started the manual form or uploaded a resume yet. */
-export async function getJobSeekerProfile(jobSeekerId: string) {
+export async function getJobSeekerProfile() {
+  // ตัวตนมาจาก session ที่เซิร์ฟเวอร์ตรวจแล้วเท่านั้น
+  // ไม่ใช่ id ที่ client ส่งมา (ดูเหตุผลเต็มใน src/lib/auth.ts)
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return null;
   return prisma.jobSeekerProfile.findUnique({
     where: { jobSeekerId },
     include: {
@@ -125,7 +224,11 @@ export async function getJobSeekerProfile(jobSeekerId: string) {
 }
 
 /** null if the candidate hasn't played the psychometric games yet — real gameplay isn't wired up yet, so this is only non-null for seeded test candidates until that lands. */
-export async function getGameResult(jobSeekerId: string) {
+export async function getGameResult() {
+  // ตัวตนมาจาก session ที่เซิร์ฟเวอร์ตรวจแล้วเท่านั้น
+  // ไม่ใช่ id ที่ client ส่งมา (ดูเหตุผลเต็มใน src/lib/auth.ts)
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return null;
   return prisma.gameResult.findUnique({ where: { jobSeekerId } });
 }
 
@@ -160,9 +263,12 @@ function toDateOrUndefined(value: string | undefined): Date | undefined {
 
 /** Step 1 of the manual form (ข้อมูลส่วนตัว + ลักษณะงานที่ต้องการ) — always the first step, so it's the one that creates the JobSeekerProfile row that steps 2-4 then attach child rows to. */
 export async function saveProfileStep1(
-  jobSeekerId: string,
   data: ProfileStep1Input
 ): Promise<{ ok: true } | { error: string }> {
+  // ตัวตนมาจาก session ที่เซิร์ฟเวอร์ตรวจแล้วเท่านั้น
+  // ไม่ใช่ id ที่ client ส่งมา (ดูเหตุผลเต็มใน src/lib/auth.ts)
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return { error: NOT_SIGNED_IN };
   try {
     const fields = {
       firstNameTh: data.firstNameTh,
@@ -215,9 +321,12 @@ export type EducationInput = {
 
 /** Step 2 — replace-all: the client always resubmits the whole list (add/remove/reorder happen in local state), so deleting and recreating is simpler and just as correct as diffing row-by-row. */
 export async function saveProfileEducation(
-  jobSeekerId: string,
   entries: EducationInput[]
 ): Promise<{ ok: true } | { error: string }> {
+  // ตัวตนมาจาก session ที่เซิร์ฟเวอร์ตรวจแล้วเท่านั้น
+  // ไม่ใช่ id ที่ client ส่งมา (ดูเหตุผลเต็มใน src/lib/auth.ts)
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return { error: NOT_SIGNED_IN };
   const profileId = await requireProfileId(jobSeekerId);
   if (typeof profileId !== "string") return profileId;
   try {
@@ -246,9 +355,12 @@ export type WorkExperienceInput = {
 
 /** Step 3 — same replace-all reasoning as saveProfileEducation. */
 export async function saveProfileWorkExperience(
-  jobSeekerId: string,
   entries: WorkExperienceInput[]
 ): Promise<{ ok: true } | { error: string }> {
+  // ตัวตนมาจาก session ที่เซิร์ฟเวอร์ตรวจแล้วเท่านั้น
+  // ไม่ใช่ id ที่ client ส่งมา (ดูเหตุผลเต็มใน src/lib/auth.ts)
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return { error: NOT_SIGNED_IN };
   const profileId = await requireProfileId(jobSeekerId);
   if (typeof profileId !== "string") return profileId;
   try {
@@ -284,9 +396,12 @@ export type LanguageSkillInput = {
 
 /** Step 4 — computer skills (dictionary-only, via SkillAutocomplete) + language skills (replace-all, same reasoning as education/work experience). */
 export async function saveProfileSkills(
-  jobSeekerId: string,
   data: { computerSkills: string[]; languageSkills: LanguageSkillInput[] }
 ): Promise<{ ok: true } | { error: string }> {
+  // ตัวตนมาจาก session ที่เซิร์ฟเวอร์ตรวจแล้วเท่านั้น
+  // ไม่ใช่ id ที่ client ส่งมา (ดูเหตุผลเต็มใน src/lib/auth.ts)
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return { error: NOT_SIGNED_IN };
   try {
     const profile = await prisma.jobSeekerProfile.upsert({
       where: { jobSeekerId },
@@ -313,9 +428,11 @@ export async function saveProfileSkills(
  * has no completion gate of its own; see markChatFlowComplete below for
  * what "complete" means).
  */
-export async function getJobSeekerReturnState(
-  jobSeekerId: string
-): Promise<{ hasHardSkills: boolean; isComplete: boolean }> {
+export async function getJobSeekerReturnState(): Promise<{ hasHardSkills: boolean; isComplete: boolean }> {
+  // ตัวตนมาจาก session ที่เซิร์ฟเวอร์ตรวจแล้วเท่านั้น
+  // ไม่ใช่ id ที่ client ส่งมา (ดูเหตุผลเต็มใน src/lib/auth.ts)
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return { hasHardSkills: false, isComplete: false };
   const [profile, aiSummary] = await Promise.all([
     prisma.jobSeekerProfile.findUnique({ where: { jobSeekerId } }),
     prisma.aISummary.findUnique({ where: { jobSeekerId } }),
@@ -335,9 +452,12 @@ export async function getJobSeekerReturnState(
  * depending on client-only state that resets on every page load.
  */
 export async function markChatFlowComplete(
-  jobSeekerId: string,
   hardSkills: string[]
 ): Promise<{ ok: true } | { error: string }> {
+  // ตัวตนมาจาก session ที่เซิร์ฟเวอร์ตรวจแล้วเท่านั้น
+  // ไม่ใช่ id ที่ client ส่งมา (ดูเหตุผลเต็มใน src/lib/auth.ts)
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return { error: NOT_SIGNED_IN };
   try {
     const summaryText = `สรุปโปรไฟล์เบื้องต้น: มีทักษะที่ยืนยันแล้ว ${hardSkills.length} รายการ (${hardSkills.join(", ")})`;
     const sourceHash = createHash("sha256").update(JSON.stringify(hardSkills)).digest("hex");
@@ -354,7 +474,11 @@ export async function markChatFlowComplete(
 }
 
 /** Whatever's currently on record — either markChatFlowComplete's basic template or generateAIResume's real Gemini narrative below, whichever ran most recently. Used by /profile to show something instead of nothing once either has ever run. */
-export async function getAISummary(jobSeekerId: string) {
+export async function getAISummary() {
+  // ตัวตนมาจาก session ที่เซิร์ฟเวอร์ตรวจแล้วเท่านั้น
+  // ไม่ใช่ id ที่ client ส่งมา (ดูเหตุผลเต็มใน src/lib/auth.ts)
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return null;
   return prisma.aISummary.findUnique({ where: { jobSeekerId } });
 }
 
@@ -368,11 +492,17 @@ function formatProfileForPrompt(
   const lines: string[] = [`ชื่อ: ${name}`];
   if (profile.desiredPosition) lines.push(`ตำแหน่งงานที่สนใจ: ${profile.desiredPosition}`);
   if (profile.education.length > 0) {
+    // ส่งเฉพาะ "ระดับ" การศึกษา ไม่ส่งชื่อสถาบันและสาขา
+    //
+    // สรุปที่ได้จากตรงนี้ไปโผล่ที่หน้า company/candidates/[id] ซึ่ง HR อ่าน
+    // ถ้าปล่อยชื่อมหาวิทยาลัยกับสาขาเข้า prompt มันจะไหลออกมาในสรุปนั้นได้
+    // = ทำลายข้อตกลงเรื่องซ่อนสถาบันเพื่อลดอคติ ซึ่งเป็นแกนหลักของทั้งโปรเจกต์
+    //
+    // "ปริญญาตรี" อย่างเดียวไม่ใช่สัญญาณอคติ เก็บไว้ได้ แต่ชื่อสถาบันกับสาขา
+    // เป็นสองในห้าอย่างที่ทีมโหวตกันว่าต้องซ่อน (พร้อม GPA อายุ เพศ)
     lines.push(
-      "ประวัติการศึกษา:",
-      ...profile.education.map(
-        (e) => `- ${e.level} ${e.institution}${e.fieldOfStudy ? ` สาขา${e.fieldOfStudy}` : ""}`
-      )
+      "ระดับการศึกษา:",
+      ...profile.education.map((e) => `- ${e.level}`)
     );
   }
   if (profile.workExperience.length > 0) {
@@ -406,9 +536,13 @@ function formatProfileForPrompt(
  * basic template with the real generated narrative once the candidate asks
  * for it, rather than keeping two separate "summary" records.
  */
-export async function generateAIResume(jobSeekerId: string): Promise<{ summaryText: string } | { error: string }> {
+export async function generateAIResume(): Promise<{ summaryText: string } | { error: string }> {
+  // ตัวตนมาจาก session ที่เซิร์ฟเวอร์ตรวจแล้วเท่านั้น
+  // ไม่ใช่ id ที่ client ส่งมา (ดูเหตุผลเต็มใน src/lib/auth.ts)
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return { error: NOT_SIGNED_IN };
   const [profile, jobSeeker] = await Promise.all([
-    getJobSeekerProfile(jobSeekerId),
+    getJobSeekerProfile(),
     prisma.jobSeeker.findUnique({ where: { id: jobSeekerId } }),
   ]);
   if (!jobSeeker) return { error: "ไม่พบผู้ใช้" };
@@ -424,6 +558,8 @@ export async function generateAIResume(jobSeekerId: string): Promise<{ summaryTe
   const prompt = `คุณคือ "น้องตรงปก" ผู้ช่วยเขียน Resume ให้ผู้สมัครงาน เพศชาย ภาษาไทย
 เขียนสรุปโปรไฟล์ผู้สมัคร (professional summary) ความยาว 3-5 ประโยค ที่เชื่อมโยงข้อมูลด้านล่างให้เป็นเรื่องราวที่เป็นธรรมชาติ ไม่ใช่แค่ list ข้อมูลดิบทีละบรรทัด — เน้นบอกว่าผู้สมัครคนนี้ "เป็นใคร" (จุดแข็ง ทิศทางอาชีพ) ไม่ใช่แค่ "ทำอะไรมา"
 ห้ามใส่ข้อมูลที่ไม่ได้ให้มาด้านล่างนี้ (ห้ามเดาหรือแต่งเพิ่ม) น้ำเสียงมืออาชีพแต่อบอุ่น
+ห้ามกล่าวถึงชื่อมหาวิทยาลัย/สถาบัน สาขาวิชา เกรดเฉลี่ย อายุ หรือเพศ เด็ดขาด แม้จะเดาได้จากข้อมูลอื่นก็ตาม
+(สรุปนี้ HR เป็นคนอ่าน แพลตฟอร์มออกแบบให้ประเมินจากทักษะล้วนๆ เพื่อลดอคติ)
 ใช้คำลงท้ายประโยคว่า "ครับ" เท่านั้น ห้ามใช้ "ค่ะ", "คะ", หรือคำลงท้ายเพศหญิงอื่นๆ เด็ดขาด (ให้บุคลิกของน้องตรงปกสม่ำเสมอกับส่วนอื่นของแอป)
 
 ข้อมูลผู้สมัคร:

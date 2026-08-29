@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Globe, Mail, RefreshCw } from "lucide-react";
+import { AlertCircle, Mail, RefreshCw } from "lucide-react";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { Footer } from "@/components/Footer";
 import { Navbar } from "@/components/Navbar";
 import { registerJobSeeker } from "@/lib/actions/jobSeeker";
-import { setJobSeekerSessionIds } from "@/lib/jobSeekerSession";
+import { setJobSeekerSessionHint } from "@/lib/jobSeekerSession";
 
 export default function RegisterCandidatePage() {
   const router = useRouter();
@@ -128,7 +129,9 @@ export default function RegisterCandidatePage() {
       return;
     }
 
-    setJobSeekerSessionIds({ jobSeekerId: result.jobSeeker.id });
+    // registerJobSeeker already set the httpOnly session cookie server-side;
+    // this only tells the navbar to render its signed-in state right away.
+    setJobSeekerSessionHint();
     router.push("/onboarding");
   };
 
@@ -201,21 +204,14 @@ export default function RegisterCandidatePage() {
                     gets created (skipping it used to dead-end at /decoder's
                     login guard with no session). */}
                 <div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData({
-                        name: "Somchai Devtest",
-                        email: "somchai.dev@gmail.com",
-                        password: "password123",
-                        confirmPassword: "password123",
-                        consentPDPA: true,
-                      });
-                    }}
-                    className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white py-3 text-xs font-bold text-[#0F0F0F] transition-colors hover:bg-[#F5F5F5]"
-                  >
-                    <Globe className="h-3.5 w-3.5" strokeWidth={2} /> สมัครสมาชิกด่วนด้วย Google
-                  </button>
+                  {/* Was a button that pre-filled a fake account; now it really signs
+                      in. A "Google" button that only autofills a demo user is the
+                      kind of thing a judge will click first. */}
+                  <GoogleSignInButton
+                    role="candidate"
+                    next="/decoder"
+                    label="สมัครสมาชิกด่วนด้วย Google"
+                  />
                 </div>
 
                 {/* Divider */}
