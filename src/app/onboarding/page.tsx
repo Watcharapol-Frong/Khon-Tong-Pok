@@ -25,33 +25,32 @@ const CANDIDATE_ACCENT = "#3BF55C";
 
 const ROLE_GROUPS = [
   {
-    id: "student",
-    title: "นักศึกษา / เด็กจบใหม่",
-    desc: "เพิ่งจบการศึกษา หรือกำลังศึกษาอยู่ ไม่มีประสบการณ์ทำงานประจำ เน้นวัดศักยภาพและ Soft Skills แฝง",
-    mascotSrc: "/mascot/mascot-role-fresh-grad.png",
-  },
-  {
-    id: "early_career",
-    title: "Early Career (ประสบการณ์ 1 - 3 ปี)",
-    desc: "เริ่มทำงานแล้ว กำลังค้นหาตำแหน่งงานที่ตอบโจทย์ตัวตนจริงและความก้าวหน้าในสายอาชีพ",
-    mascotSrc: "/mascot/mascot-role-early-career.png",
-  },
-  {
-    id: "career_switcher",
-    title: "Career Switcher (ย้ายสายงาน)",
-    desc: "ต้องการเปลี่ยนสายงานใหม่ โดยใช้ทักษะที่ถ่ายทอดได้ (Transferable Skills) และการเรียนรู้ไวเป็นหลัก",
+    id: "career_exploration",
+    title: "Career Exploration",
+    desc: "นักศึกษาปีสุดท้ายที่กำลังค้นหาอาชีพและเตรียมเข้าสู่โลกการทำงาน",
+    // No mascot was ever drawn for this stage — career-switcher's baked-in
+    // "New Industry / New Opportunity" signpost + compass art is the
+    // closest existing visual fit for "exploring career paths" of the 4
+    // role mascots on hand, even though its badge text still literally
+    // says "Career Switcher".
     mascotSrc: "/mascot/mascot-role-career-switcher.png",
   },
   {
-    id: "upskiller",
-    title: "Upskiller (พัฒนาทักษะเพิ่มเติม)",
-    desc: "มีประสบการณ์สูง ต้องการประเมินศักยภาพรอบด้านและอัปเดตโปรไฟล์ทักษะยุคใหม่",
-    mascotSrc: "/mascot/mascot-role-upskiller.png",
+    id: "first_job_entry",
+    title: "First Job Entry",
+    desc: "Fresh Graduate ที่กำลังหางานแรกและพิสูจน์ศักยภาพ",
+    mascotSrc: "/mascot/mascot-role-fresh-grad.png",
+  },
+  {
+    id: "early_career_development",
+    title: "Early Career Development",
+    desc: "คนทำงานช่วงเริ่มต้นที่กำลังพัฒนาทักษะและสร้างเส้นทางอาชีพ",
+    mascotSrc: "/mascot/mascot-role-early-career.png",
   },
 ];
 
 export default function OnboardingPage() {
-  const [selectedRole, setSelectedRole] = useState("student");
+  const [selectedRole, setSelectedRole] = useState("career_exploration");
 
   return (
     <div className="flex min-h-screen flex-col bg-white text-[#0F0F0F]">
@@ -115,7 +114,7 @@ export default function OnboardingPage() {
 
             {/* Role Selection Grid */}
             <div className="mb-8">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {ROLE_GROUPS.map((group) => {
                   const active = selectedRole === group.id;
                   return (

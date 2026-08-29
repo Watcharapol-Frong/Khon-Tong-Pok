@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { JobSeekerSession, SafeJobSeeker } from "@/lib/jobSeekerSessionContext";
+import { SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
 
 function stripPassword(jobSeeker: {
   id: string;
@@ -59,7 +60,14 @@ export async function loginJobSeeker(
   password: string
 ): Promise<JobSeekerSession | { error: string }> {
   const normalized = email.trim().toLowerCase();
-  const jobSeeker = await prisma.jobSeeker.findUnique({ where: { email: normalized } });
+
+  let jobSeeker;
+  try {
+    jobSeeker = await prisma.jobSeeker.findUnique({ where: { email: normalized } });
+  } catch (err) {
+    console.error("loginJobSeeker failed:", err);
+    return { error: "เชื่อมต่อระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
+  }
 
   // Same generic message for "no such email" and "wrong password" —
   // distinguishing them lets an attacker enumerate registered emails.
@@ -127,6 +135,11 @@ export async function getJobSeekerProfile(jobSeekerId: string) {
 /** null if the candidate hasn't played the psychometric games yet — real gameplay isn't wired up yet, so this is only non-null for seeded test candidates until that lands. */
 export async function getGameResult(jobSeekerId: string) {
   return prisma.gameResult.findUnique({ where: { jobSeekerId } });
+}
+
+/** Real hard-skill verification rows from the /decoder chat flow — same data HR sees on /company/candidates/[id], used by /profile's "ผลจากแบบทดสอบที่ 2" to show which skills are Verified vs Partial. */
+export async function getChatVerifications(jobSeekerId: string) {
+  return prisma.chatVerification.findMany({ where: { jobSeekerId } });
 }
 
 export type ProfileStep1Input = {
@@ -395,21 +408,50 @@ function formatProfileForPrompt(
   return lines.join("\n");
 }
 
+const HARD_SKILL_VERIFICATION_LABEL: Record<string, string> = {
+  verified: "ยืนยันแล้ว",
+  partial: "ยืนยันบางส่วน",
+  unclear: "ยังไม่ชัดเจน",
+};
+
+/** Real, per-candidate hard/soft skill signals — ChatVerification rows from the /decoder chat flow and the psychometric games' GameResult, same data HR sees on /company/candidates/[id]. Returns "" when neither exists yet, so callers can drop it from the prompt entirely rather than emitting an empty section header. */
+function formatSkillsForPrompt(
+  chatVerifications: { skill: string; status: string }[],
+  gameResult: { [K in (typeof SOFT_SKILL_AXIS_ORDER)[number]]: number } | null
+): string {
+  const lines: string[] = [];
+  if (chatVerifications.length > 0) {
+    lines.push(
+      "ทักษะที่ยืนยันผ่านการสนทนา (hard skills):",
+      ...chatVerifications.map(
+        (h) => `- ${h.skill} (${HARD_SKILL_VERIFICATION_LABEL[h.status] ?? h.status})`
+      )
+    );
+  }
+  if (gameResult) {
+    lines.push(
+      "ผลประเมิน soft skills จากมินิเกม (คะแนนเต็ม 100 ต่อด้าน):",
+      ...SOFT_SKILL_AXIS_ORDER.map((axis) => `- ${SOFT_SKILL_AXIS_META[axis].th}: ${gameResult[axis]}`)
+    );
+  }
+  return lines.join("\n");
+}
+
 /**
  * The "ให้น้องตรงปกช่วยสร้าง" (Premium-badged) resume feature — asks
- * Gemini to turn the candidate's structured profile into a short narrative
- * summary instead of a raw data dump. Deliberately does NOT include
- * soft-skill/game data: GameResult isn't wired to real per-candidate data
- * yet (still the same static mock every /profile visitor sees), so folding
- * it in here would present fabricated numbers as if they were real. Reuses
- * the AISummary row markChatFlowComplete creates — this replaces that
- * basic template with the real generated narrative once the candidate asks
- * for it, rather than keeping two separate "summary" records.
+ * Gemini to turn the candidate's structured profile, verified hard skills,
+ * and soft-skill game scores into a short narrative summary instead of a
+ * raw data dump. Reuses the AISummary row markChatFlowComplete creates —
+ * this replaces that basic template with the real generated narrative once
+ * the candidate asks for it, rather than keeping two separate "summary"
+ * records.
  */
 export async function generateAIResume(jobSeekerId: string): Promise<{ summaryText: string } | { error: string }> {
-  const [profile, jobSeeker] = await Promise.all([
+  const [profile, jobSeeker, chatVerifications, gameResult] = await Promise.all([
     getJobSeekerProfile(jobSeekerId),
     prisma.jobSeeker.findUnique({ where: { id: jobSeekerId } }),
+    prisma.chatVerification.findMany({ where: { jobSeekerId } }),
+    prisma.gameResult.findUnique({ where: { jobSeekerId } }),
   ]);
   if (!jobSeeker) return { error: "ไม่พบผู้ใช้" };
   if (!profile || (profile.computerSkills.length === 0 && profile.workExperience.length === 0 && profile.education.length === 0)) {
@@ -421,13 +463,16 @@ export async function generateAIResume(jobSeekerId: string): Promise<{ summaryTe
     return { error: "ระบบ AI ยังไม่พร้อมใช้งานในขณะนี้ (ไม่ได้ตั้งค่า API key) กรุณาลองใหม่ภายหลัง" };
   }
 
+  const skillsSection = formatSkillsForPrompt(chatVerifications, gameResult);
+
   const prompt = `คุณคือ "น้องตรงปก" ผู้ช่วยเขียน Resume ให้ผู้สมัครงาน เพศชาย ภาษาไทย
 เขียนสรุปโปรไฟล์ผู้สมัคร (professional summary) ความยาว 3-5 ประโยค ที่เชื่อมโยงข้อมูลด้านล่างให้เป็นเรื่องราวที่เป็นธรรมชาติ ไม่ใช่แค่ list ข้อมูลดิบทีละบรรทัด — เน้นบอกว่าผู้สมัครคนนี้ "เป็นใคร" (จุดแข็ง ทิศทางอาชีพ) ไม่ใช่แค่ "ทำอะไรมา"
+ถ้ามีข้อมูล "ทักษะที่ยืนยันผ่านการสนทนา" หรือ "ผลประเมิน soft skills" ด้านล่าง ให้บรรยายด้วยว่าจุดแข็งด้าน hard skill และ soft skill เหล่านี้เหมาะกับการทำงานแบบไหน (ทั่วไป ไม่ต้องอิงตำแหน่งงานใดตำแหน่งหนึ่งโดยเฉพาะ)
 ห้ามใส่ข้อมูลที่ไม่ได้ให้มาด้านล่างนี้ (ห้ามเดาหรือแต่งเพิ่ม) น้ำเสียงมืออาชีพแต่อบอุ่น
 ใช้คำลงท้ายประโยคว่า "ครับ" เท่านั้น ห้ามใช้ "ค่ะ", "คะ", หรือคำลงท้ายเพศหญิงอื่นๆ เด็ดขาด (ให้บุคลิกของน้องตรงปกสม่ำเสมอกับส่วนอื่นของแอป)
 
 ข้อมูลผู้สมัคร:
-${formatProfileForPrompt(profile, jobSeeker.name)}`;
+${formatProfileForPrompt(profile, jobSeeker.name)}${skillsSection ? `\n\n${skillsSection}` : ""}`;
 
   try {
     const geminiRes = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
@@ -477,5 +522,121 @@ ${formatProfileForPrompt(profile, jobSeeker.name)}`;
   } catch (err) {
     console.error("generateAIResume failed:", err);
     return { error: "น้องตรงปกสร้าง Resume ไม่สำเร็จในขณะนี้ กรุณาลองใหม่อีกครั้ง" };
+  }
+}
+
+/** Whatever's currently on record for "ผลจากแบบทดสอบที่ 2" on /profile — null until generateResumeGapAnalysis has run at least once for this candidate. */
+export async function getResumeGapAnalysis(jobSeekerId: string) {
+  return prisma.resumeGapAnalysis.findUnique({ where: { jobSeekerId } });
+}
+
+/**
+ * "ผลจากแบบทดสอบที่ 2 — เรซูเม่และบทสนทนากับน้องตรงปก" on /profile — asks
+ * Gemini to compare the candidate's real resumeRawText against their real
+ * GameResult soft-skill strengths and point out, concretely, what the
+ * resume doesn't yet say about them (e.g. a strong Critical Thinking score
+ * with no corresponding evidence in the resume text), plus 3 next steps.
+ * Distinct from generateAIResume: that one writes prose *for* the resume;
+ * this one critiques the resume the candidate already has. Requires both a
+ * resume (resumeRawText or the structured form) and a GameResult — with
+ * only one side, there's nothing real to compare, so this returns an error
+ * rather than inventing half the analysis.
+ */
+export async function generateResumeGapAnalysis(
+  jobSeekerId: string
+): Promise<{ missingTitle: string; missingDetail: string; nextSteps: string[] } | { error: string }> {
+  const [profile, gameResult, chatVerifications] = await Promise.all([
+    getJobSeekerProfile(jobSeekerId),
+    prisma.gameResult.findUnique({ where: { jobSeekerId } }),
+    prisma.chatVerification.findMany({ where: { jobSeekerId } }),
+  ]);
+  const hasResumeContent =
+    !!profile &&
+    (profile.resumeRawText.trim().length > 0 || profile.workExperience.length > 0 || profile.education.length > 0);
+  if (!hasResumeContent) {
+    return { error: "กรุณาอัปโหลดเรซูเม่หรือกรอกข้อมูลก่อน จึงจะวิเคราะห์ช่องว่างได้" };
+  }
+  if (!gameResult) {
+    return { error: "ต้องเล่นมินิเกมประเมินศักยภาพก่อน จึงจะเทียบกับเรซูเม่ได้" };
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return { error: "ระบบ AI ยังไม่พร้อมใช้งานในขณะนี้ (ไม่ได้ตั้งค่า API key) กรุณาลองใหม่ภายหลัง" };
+  }
+
+  const resumeText =
+    profile!.resumeRawText.trim().length > 0
+      ? profile!.resumeRawText
+      : formatProfileForPrompt(profile!, "ผู้สมัคร");
+
+  const sortedAxes = [...SOFT_SKILL_AXIS_ORDER].sort((a, b) => gameResult[b] - gameResult[a]);
+  const topAxes = sortedAxes.slice(0, 2).map((axis) => `${SOFT_SKILL_AXIS_META[axis].th} (${gameResult[axis]}%)`);
+  const skillsSection = formatSkillsForPrompt(chatVerifications, gameResult);
+
+  const prompt = `คุณคือ "น้องตรงปก" โค้ชเรซูเม่ ให้ feedback ตรงไปตรงมาแต่สร้างสรรค์ เพศชาย ภาษาไทย
+เปรียบเทียบข้อความเรซูเม่ของผู้สมัครด้านล่าง กับจุดแข็ง soft skills จากผลมินิเกม (${topAxes.join(", ")}) — หาว่าเรซูเม่ "พูดถึง" จุดแข็งเหล่านี้หรือไม่ ถ้าไม่พูดถึงหรือพูดถึงน้อย ให้ชี้เฉพาะเจาะจงว่าเรซูเม่ขาดอะไร โดยอ้างอิงเนื้อหาจริงในเรซูเม่ (เช่น ถ้าเรซูเม่มีตัวเลขผลลัพธ์อยู่แล้วแต่ไม่ครอบคลุมทุกจุดแข็ง ให้บอกว่าจุดแข็งไหนยังไม่มีหลักฐานรองรับ)
+ตอบกลับเป็น JSON ตาม schema: missingTitle (หัวข้อสั้น 1 บรรทัด สรุปว่าขาดอะไร), missingDetail (คำอธิบาย 2-4 ประโยค อ้างอิงเนื้อหาจริงในเรซูเม่), nextSteps (array ยาว 3 รายการพอดี แต่ละรายการเป็นคำแนะนำที่ทำได้จริง ไม่เกิน 1 ประโยค)
+ห้ามใส่ข้อมูลที่ไม่ได้ให้มาด้านล่างนี้ (ห้ามเดาหรือแต่งเพิ่ม) ใช้คำลงท้ายประโยคว่า "ครับ" เท่านั้น ห้ามใช้ "ค่ะ", "คะ"
+
+เรซูเม่ของผู้สมัคร:
+${resumeText}${skillsSection ? `\n\n${skillsSection}` : ""}`;
+
+  try {
+    const geminiRes = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              missingTitle: { type: "string" },
+              missingDetail: { type: "string" },
+              nextSteps: { type: "array", items: { type: "string" } },
+            },
+            required: ["missingTitle", "missingDetail", "nextSteps"],
+          },
+        },
+      }),
+      signal: AbortSignal.timeout(20_000),
+    });
+
+    if (!geminiRes.ok) {
+      const errText = await geminiRes.text();
+      console.error("generateResumeGapAnalysis: Gemini API error", geminiRes.status, errText);
+      return { error: "น้องตรงปกวิเคราะห์ไม่สำเร็จในขณะนี้ กรุณาลองใหม่อีกครั้ง" };
+    }
+
+    const data = await geminiRes.json();
+    const rawText: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) {
+      console.error("generateResumeGapAnalysis: Gemini returned an empty response", data);
+      return { error: "น้องตรงปกวิเคราะห์ไม่สำเร็จในขณะนี้ กรุณาลองใหม่อีกครั้ง" };
+    }
+
+    const parsed: { missingTitle?: unknown; missingDetail?: unknown; nextSteps?: unknown } = JSON.parse(rawText);
+    const missingTitle = typeof parsed.missingTitle === "string" ? parsed.missingTitle.trim() : "";
+    const missingDetail = typeof parsed.missingDetail === "string" ? parsed.missingDetail.trim() : "";
+    const nextSteps = Array.isArray(parsed.nextSteps)
+      ? parsed.nextSteps.filter((s): s is string => typeof s === "string" && s.trim().length > 0).slice(0, 3)
+      : [];
+    if (!missingTitle || !missingDetail || nextSteps.length === 0) {
+      return { error: "น้องตรงปกวิเคราะห์ไม่สำเร็จในขณะนี้ กรุณาลองใหม่อีกครั้ง" };
+    }
+
+    const sourceHash = createHash("sha256").update(resumeText + JSON.stringify(gameResult)).digest("hex");
+    await prisma.resumeGapAnalysis.upsert({
+      where: { jobSeekerId },
+      create: { jobSeekerId, missingTitle, missingDetail, nextSteps, sourceHash },
+      update: { missingTitle, missingDetail, nextSteps, sourceHash, generatedAt: new Date() },
+    });
+
+    return { missingTitle, missingDetail, nextSteps };
+  } catch (err) {
+    console.error("generateResumeGapAnalysis failed:", err);
+    return { error: "น้องตรงปกวิเคราะห์ไม่สำเร็จในขณะนี้ กรุณาลองใหม่อีกครั้ง" };
   }
 }

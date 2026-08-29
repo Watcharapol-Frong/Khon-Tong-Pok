@@ -98,6 +98,7 @@ model JobSeeker {
   chatVerifications ChatVerification[]
   gameResult        GameResult?
   aiSummary         AISummary?
+  gapAnalysis       ResumeGapAnalysis?
   matches           Match[]
   notifications     Notification[]
   createdAt         DateTime          @default(now())
@@ -152,6 +153,13 @@ model JobSeekerProfile {
   /// Parsed text of the most recently uploaded resume PDF, if any —
   /// defaults to "" for a candidate who only ever used the manual form.
   resumeRawText    String    @default("")
+  /// Vercel Blob URL (private access) of the resume PDF HR sees on
+  /// /company/candidates/[id] once Blind Review unblinds — the candidate's
+  /// own uploaded file if they used /decoder, otherwise a PDF generated
+  /// server-side from this profile's structured fields (see
+  /// generateResumePdfFromProfile in src/lib/actions/resumeFile.ts). Null
+  /// until either of those has run at least once.
+  resumeFileUrl    String?
 
   updatedAt        DateTime  @updatedAt
 }
@@ -238,4 +246,21 @@ model AISummary {
   summaryText  String
   generatedAt  DateTime  @default(now())
   sourceHash   String
+}
+
+/// "ผลจากแบบทดสอบที่ 2" on /profile — a real Gemini comparison of the
+/// candidate's actual resumeRawText against their real GameResult soft-skill
+/// strengths, surfacing what the resume doesn't yet say about them and 3
+/// concrete next steps. Distinct from AISummary (a resume narrative) — this
+/// is coaching feedback, a different kind of content. See
+/// generateResumeGapAnalysis in src/lib/actions/jobSeeker.ts.
+model ResumeGapAnalysis {
+  id            String    @id @default(cuid())
+  jobSeekerId   String    @unique
+  jobSeeker     JobSeeker @relation(fields: [jobSeekerId], references: [id])
+  missingTitle  String
+  missingDetail String
+  nextSteps     String[]
+  generatedAt   DateTime  @default(now())
+  sourceHash    String
 }

@@ -10,6 +10,7 @@ import { Footer } from "@/components/Footer";
 import { JobSeekerAuthGuard } from "@/components/JobSeekerAuthGuard";
 import { Navbar } from "@/components/Navbar";
 import { getJobSeekerProfile, markChatFlowComplete, syncComputerSkills } from "@/lib/actions/jobSeeker";
+import { uploadResumeFile } from "@/lib/actions/resumeFile";
 import { extractTextFromPdf } from "@/lib/pdf";
 import { expandKnownAliases, matchSkills } from "@/lib/ahoCorasick";
 import { useJobSeekerSession } from "@/lib/jobSeekerSessionContext";
@@ -391,11 +392,8 @@ function DecoderContent() {
     }
   };
 
-  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    const inputEl = e.target;
-    if (!file) return;
-
+  /** Shared by the real file-input handler below and the dev-only "sample resume" shortcut — same parsing/upload path regardless of where the File object came from. */
+  const processResumeFile = async (file: File) => {
     setUploadedFile(file.name);
     setIsParsingResume(true);
 
@@ -413,6 +411,17 @@ function DecoderContent() {
       // Triggers the DB-sync effect above to persist this resume's raw
       // text into the profile along with the current skill union.
       setResumeRawText(text);
+
+      // Fire-and-forget: uploads the actual PDF (not just its extracted
+      // text) so HR sees the real file once Blind Review unblinds, instead
+      // of the text-only fallback. Doesn't block the chat flow or surface
+      // an error here — a failed upload just means that fallback stays in
+      // effect, not a broken resume submission.
+      const uploadFormData = new FormData();
+      uploadFormData.set("file", file);
+      uploadResumeFile(jobSeeker.id, uploadFormData).catch((err) => {
+        console.error("uploadResumeFile failed:", err);
+      });
 
       setMessages((prev) => [
         ...prev,
@@ -439,7 +448,30 @@ function DecoderContent() {
       ]);
     } finally {
       setIsParsingResume(false);
-      inputEl.value = "";
+    }
+  };
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const inputEl = e.target;
+    if (!file) return;
+    await processResumeFile(file);
+    inputEl.value = "";
+  };
+
+  // Dev-only: fetches the bundled sample PDF (public/sample-resume) and
+  // runs it through the exact same parse/upload path as a real file-input
+  // pick, so testing the chat flow doesn't require a real resume on hand
+  // each time. Gated out of production the same way as /login's quick-login
+  // shortcut.
+  const handleUseSampleResume = async () => {
+    try {
+      const res = await fetch("/sample-resume/daniel-gan-frontend-developer.pdf");
+      const blob = await res.blob();
+      const file = new File([blob], "Daniel_Gan_-_Resume_-_Front_End_Developer.pdf", { type: "application/pdf" });
+      await processResumeFile(file);
+    } catch (err) {
+      console.error("handleUseSampleResume failed:", err);
     }
   };
 
@@ -546,6 +578,22 @@ function DecoderContent() {
                     <span className="text-[10px] text-[#8A8A8A]">เลือกทักษะที่คุณถนัดเอง</span>
                   </Link>
                 </div>
+
+                {/* Dev-only: skips picking a real file for testing — runs
+                    the bundled sample PDF through the exact same
+                    processResumeFile path as a real upload. Gated out of
+                    production the same way as /login's quick-login. */}
+                {process.env.NODE_ENV !== "production" && (
+                  <button
+                    type="button"
+                    onClick={handleUseSampleResume}
+                    disabled={isParsingResume}
+                    className="mx-auto mt-3 flex cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-[rgba(15,15,15,0.2)] px-3.5 py-2 text-[11px] font-bold text-[#5C5C5C] transition-colors hover:bg-[#F5F5F5] disabled:opacity-60"
+                  >
+                    <Sparkle className="h-3 w-3" strokeWidth={2} />
+                    [Dev] ใช้เรซูเม่ตัวอย่าง (Daniel Gan)
+                  </button>
+                )}
               </div>
             ) : (
               <>

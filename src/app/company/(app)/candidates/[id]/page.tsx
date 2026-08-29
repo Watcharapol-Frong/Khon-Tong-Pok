@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, Briefcase, Check, Clock, EyeOff, FileText, Mail, MapPin, Phone, Star, X } from "lucide-react";
 import { InterviewInviteModal } from "@/components/InterviewInviteModal";
 import { RadarChart } from "@/components/RadarChart";
+import { ResumePreviewModal } from "@/components/ResumePreviewModal";
 import { getCandidateReport, sendInterviewInvite } from "@/lib/actions/interview";
 import { useCompanySession } from "@/lib/companySession";
 import { SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
@@ -18,14 +19,6 @@ const INTERVIEW_STATUS_META = {
   pending: { label: "รอผู้สมัครยืนยัน", icon: Clock, className: "bg-[rgba(77,124,255,0.12)] text-[#4D7CFF]" },
   confirmed: { label: "ยืนยันนัดแล้ว", icon: Check, className: "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]" },
   declined: { label: "ปฏิเสธคำเชิญ", icon: X, className: "bg-[#F0F0F0] text-[#8A8A8A]" },
-} as const;
-
-// partial uses blue, not amber — amber is reserved for the "ช้างเผือก"
-// standout badge above, which can appear on the same page.
-const HARD_SKILL_STATUS_META = {
-  verified: { label: "Verified", className: "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]" },
-  partial: { label: "Partial", className: "bg-[rgba(77,124,255,0.12)] text-[#4D7CFF]" },
-  unclear: { label: "Unclear", className: "bg-[#F0F0F0] text-[#8A8A8A]" },
 } as const;
 
 /** Same short-and-stable convention as /company/positions/[id]/candidates. */
@@ -41,6 +34,7 @@ export default function CandidateReportPage() {
   const [data, setData] = useState<ReportData>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [inviteTargetMatchId, setInviteTargetMatchId] = useState<string | null>(null);
+  const [isResumePreviewOpen, setIsResumePreviewOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   // RadarChart takes a pixel `size` prop, not a CSS width — it computes
@@ -245,16 +239,45 @@ export default function CandidateReportPage() {
 
           {/* Resume — same Blind Review gate as contact info above, since
               work history/education can identify a candidate almost as
-              directly as a name (company names, dates). Only the PDF's
-              extracted TEXT is stored, never the original file (see
-              /decoder's extractTextFromPdf) — there's no file storage wired
-              up, so this shows the parsed text rather than an embedded PDF,
-              same "resolves to exactly one of three states" logic already
-              used on the candidate's own /profile page. */}
+              directly as a name (company names, dates). resumeFileUrl (a
+              private Vercel Blob — see generateResumePdfFromProfile /
+              uploadResumeFile in src/lib/actions/resumeFile.ts) is either
+              the candidate's own uploaded PDF or one synthesized from their
+              structured profile; either way it's streamed through the
+              authenticated /api/resume/[id] route, never the bare Blob URL,
+              so an unauthorized HR account or a copied link can't read it.
+              Falls back to the old text/structured display only for a
+              profile that predates that field. */}
           {nameRevealed && (
             <div className="mb-6 rounded-2xl bg-[#FAFAFA] p-4">
               <h2 className="mb-3 text-xs font-extrabold text-[#0F0F0F]">เรซูเม่</h2>
-              {jobSeeker.profile && jobSeeker.profile.resumeRawText.trim().length > 0 ? (
+              {jobSeeker.profile?.resumeFileUrl ? (
+                // Compact attachment card, same pattern as a normal job
+                // board (LinkedIn/JobThai-style "Resume.pdf — View") — an
+                // inline-embedded iframe here used to push the whole page
+                // down by 600px before HR even got to Matches/Skills below.
+                // "ดูเรซูเม่" opens ResumePreviewModal in place instead of a
+                // new tab — HR stays on this report, closes back to it.
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[rgba(77,124,255,0.1)]">
+                      <FileText className="h-4 w-4 text-[#4D7CFF]" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-[#0F0F0F]">เรซูเม่ (PDF)</div>
+                      <div className="text-[10px] text-[#8A8A8A]">ไฟล์เรซูเม่ของผู้สมัครคนนี้</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsResumePreviewOpen(true)}
+                    className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-full bg-[#0F0F0F] px-3.5 py-2 text-[11px] font-bold text-white transition-opacity hover:opacity-90"
+                  >
+                    <FileText className="h-3 w-3" strokeWidth={2.5} />
+                    ดูเรซูเม่
+                  </button>
+                </div>
+              ) : jobSeeker.profile && jobSeeker.profile.resumeRawText.trim().length > 0 ? (
                 <div className="rounded-xl bg-white p-3.5">
                   <div className="mb-2 flex items-center gap-2 text-xs font-bold text-[#0F0F0F]">
                     <FileText className="h-4 w-4 flex-shrink-0 text-[#4D7CFF]" strokeWidth={2} />
@@ -309,6 +332,40 @@ export default function CandidateReportPage() {
             </div>
           )}
 
+          {/* AI Summary — kept right next to the resume above since both
+              describe the candidate's background, but rendered
+              unconditionally (unlike the resume block above it): the
+              candidate's own AI-generated summary isn't gated by Blind
+              Review, so it must stay visible before nameRevealed too. */}
+          <div className="mb-6">
+            {jobSeeker.aiSummary ? (
+              <div className="rounded-2xl bg-[rgba(77,124,255,0.06)] p-4 sm:p-5">
+                <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:gap-5 sm:text-left">
+                  <Image
+                    src="/mascot/mascot-ai-summary.png"
+                    alt=""
+                    width={100}
+                    height={100}
+                    className="h-[clamp(64px,20vw,100px)] w-[clamp(64px,20vw,100px)] flex-shrink-0 object-contain"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                      <h2 className="text-sm font-extrabold text-[#0F0F0F]">AI Summary</h2>
+                      <span className="inline-flex max-w-full items-center rounded-full bg-white px-2.5 py-1 text-[10px] font-bold whitespace-normal text-[#4D7CFF]">
+                        วิเคราะห์โดยน้องตรงปก
+                      </span>
+                    </div>
+                    <p className="text-xs leading-relaxed break-words text-[#0F0F0F]">{jobSeeker.aiSummary.summaryText}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[rgba(15,15,15,0.15)] p-4 text-center text-xs text-[#8A8A8A]">
+                ยังไม่มี AI Summary — ผู้สมัครยังไม่ได้ให้น้องตรงปกช่วยสร้างเรซูเม่
+              </div>
+            )}
+          </div>
+
           {/* Matches / interview actions */}
           <div className="mb-6 rounded-2xl bg-[#FAFAFA] p-4">
             <h2 className="mb-3 text-xs font-extrabold text-[#0F0F0F]">ตำแหน่งที่ Match ({jobSeeker.matches.length})</h2>
@@ -360,16 +417,14 @@ export default function CandidateReportPage() {
             {jobSeeker.chatVerifications.length === 0 ? (
               <p className="text-xs text-[#8A8A8A]">ไม่มีข้อมูล</p>
             ) : (
-              <div className="flex flex-col gap-1.5 rounded-2xl bg-[#FAFAFA] p-3">
+              <div className="flex flex-wrap gap-2 rounded-2xl bg-[#FAFAFA] p-3">
                 {jobSeeker.chatVerifications.map((h) => (
-                  <div key={h.skill} className="flex items-center justify-between rounded-xl bg-white px-3.5 py-2">
-                    <span className="text-xs font-semibold text-[#0F0F0F]">{h.skill}</span>
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${HARD_SKILL_STATUS_META[h.status as keyof typeof HARD_SKILL_STATUS_META].className}`}
-                    >
-                      {HARD_SKILL_STATUS_META[h.status as keyof typeof HARD_SKILL_STATUS_META].label}
-                    </span>
-                  </div>
+                  <span
+                    key={h.skill}
+                    className="rounded-full bg-white px-3.5 py-2 text-xs font-semibold text-[#0F0F0F]"
+                  >
+                    {h.skill}
+                  </span>
                 ))}
               </div>
             )}
@@ -414,37 +469,6 @@ export default function CandidateReportPage() {
           )}
         </div>
 
-        <div className="mx-auto w-full max-w-[720px]">
-          {/* AI Summary */}
-          <div className="mb-6">
-            {jobSeeker.aiSummary ? (
-              <div className="rounded-2xl bg-[rgba(77,124,255,0.06)] p-4 sm:p-5">
-                <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:gap-5 sm:text-left">
-                  <Image
-                    src="/mascot/mascot-ai-summary.png"
-                    alt=""
-                    width={100}
-                    height={100}
-                    className="h-[clamp(64px,20vw,100px)] w-[clamp(64px,20vw,100px)] flex-shrink-0 object-contain"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                      <h2 className="text-sm font-extrabold text-[#0F0F0F]">AI Summary</h2>
-                      <span className="inline-flex max-w-full items-center rounded-full bg-white px-2.5 py-1 text-[10px] font-bold whitespace-normal text-[#4D7CFF]">
-                        วิเคราะห์โดยน้องตรงปก
-                      </span>
-                    </div>
-                    <p className="text-xs leading-relaxed break-words text-[#0F0F0F]">{jobSeeker.aiSummary.summaryText}</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-[rgba(15,15,15,0.15)] p-4 text-center text-xs text-[#8A8A8A]">
-                ยังไม่มี AI Summary — ผู้สมัครยังไม่ได้ให้น้องตรงปกช่วยสร้างเรซูเม่
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       {inviteTarget && (
@@ -452,6 +476,14 @@ export default function CandidateReportPage() {
           candidateLabel={displayName}
           onClose={() => setInviteTargetMatchId(null)}
           onSubmit={handleSendInvite}
+        />
+      )}
+
+      {isResumePreviewOpen && (
+        <ResumePreviewModal
+          resumeUrl={`/api/resume/${jobSeekerId}?companyId=${session.company.id}`}
+          candidateLabel={displayName}
+          onClose={() => setIsResumePreviewOpen(false)}
         />
       )}
     </>
