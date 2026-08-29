@@ -11,6 +11,11 @@
  * และ **ไม่พิมพ์รหัสผ่านออกมา** เพราะทีมส่งสกรีนช็อตหากันตลอด
  */
 
+// โหลด .env เอง — tsx ไม่ได้โหลดให้อัตโนมัติ ถ้าไม่มีบรรทัดนี้
+// DATABASE_URL จะเป็น undefined แล้ว Prisma จะฟ้องคนละเรื่องกับที่พังจริง
+// (แพตเทิร์นเดียวกับ prisma/seed.ts)
+import "dotenv/config";
+
 import net from "node:net";
 
 import { PrismaClient } from "@prisma/client";

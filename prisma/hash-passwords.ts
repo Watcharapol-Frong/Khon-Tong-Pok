@@ -16,6 +16,11 @@
  * รันซ้ำได้ ไม่พัง — แถวที่แฮชแล้วจะถูกข้าม
  */
 
+// โหลด .env เอง — tsx ไม่ได้โหลดให้อัตโนมัติ ถ้าไม่มีบรรทัดนี้
+// DATABASE_URL จะเป็น undefined แล้ว Prisma จะฟ้องคนละเรื่องกับที่พังจริง
+// (แพตเทิร์นเดียวกับ prisma/seed.ts)
+import "dotenv/config";
+
 import { PrismaClient } from "@prisma/client";
 
 import { hashPassword, isHashed } from "../src/lib/password";
