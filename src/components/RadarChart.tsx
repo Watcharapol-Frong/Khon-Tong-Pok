@@ -9,6 +9,7 @@ type RadarChartProps = {
   size?: number;
   theme?: Theme;
   showLabels?: boolean;
+  showValues?: boolean;
   animate?: boolean;
   label?: string;
 };
@@ -34,6 +35,7 @@ export function RadarChart({
   size = 320,
   theme = "teal",
   showLabels = true,
+  showValues = false,
   animate = true,
 }: RadarChartProps) {
   const chartData = data.length ? data : DEFAULT_DATA;
@@ -129,6 +131,23 @@ export function RadarChart({
             {valuePts.map((p, i) => (
               <circle key={i} cx={p.x} cy={p.y} r={dotR} fill={accent} />
             ))}
+            {showValues &&
+              valuePts.map((p, i) => (
+                <text
+                  key={i}
+                  x={p.x}
+                  y={p.y - dotR - 5}
+                  textAnchor="middle"
+                  fontSize={Math.max(9, labelSize - 1)}
+                  fontWeight={800}
+                  fill={accent}
+                  stroke="#fff"
+                  strokeWidth={3}
+                  paintOrder="stroke"
+                >
+                  {Math.round(chartData[i].value)}
+                </text>
+              ))}
           </g>
         </svg>
         {showLabels &&

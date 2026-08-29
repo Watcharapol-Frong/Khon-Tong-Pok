@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { JobSeekerSession, SafeJobSeeker } from "@/lib/jobSeekerSessionContext";
 import { SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
+import type { RadarChartOutput } from "@/lib/games/analytics/pipeline";
 
 function stripPassword(jobSeeker: {
   id: string;
@@ -132,9 +133,22 @@ export async function getJobSeekerProfile(jobSeekerId: string) {
   });
 }
 
-/** null if the candidate hasn't played the psychometric games yet — real gameplay isn't wired up yet, so this is only non-null for seeded test candidates until that lands. */
+/** null if the candidate hasn't played the psychometric games yet (see /play, saveGameResult below). */
 export async function getGameResult(jobSeekerId: string) {
   return prisma.gameResult.findUnique({ where: { jobSeekerId } });
+}
+
+/** Persists the 6-axis radar profile /play's game session computes (src/lib/games/runtime.ts's renderSessionSummary, via calculateRadarProfile) once all 4 mini-games are done. Re-playing overwrites the previous result — there's only ever one GameResult per candidate. */
+export async function saveGameResult(
+  jobSeekerId: string,
+  radar: RadarChartOutput
+) {
+  const data = { ...radar.axes, overallIndex: Math.round(radar.overallIndex) };
+  return prisma.gameResult.upsert({
+    where: { jobSeekerId },
+    create: { jobSeekerId, ...data },
+    update: data,
+  });
 }
 
 /** Real hard-skill verification rows from the /decoder chat flow — same data HR sees on /company/candidates/[id], used by /profile's "ผลจากแบบทดสอบที่ 2" to show which skills are Verified vs Partial. */
