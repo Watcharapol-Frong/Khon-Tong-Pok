@@ -779,7 +779,7 @@ export default function ProfilePage() {
                       room this panel now has instead of leaving it empty
                       while axis labels still crowd each other. */}
                   <div ref={chartWrapRefCallback} className="my-4 sm:my-6 flex justify-center w-full overflow-hidden">
-                    <RadarChart data={radarData} size={chartSize} theme="mono" showLabels animate />
+                    <RadarChart data={radarData} size={chartSize} theme="mono" showLabels showValues animate />
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-3">
@@ -805,7 +805,7 @@ export default function ProfilePage() {
                     เล่นมินิเกมประเมินศักยภาพให้ครบเพื่อดูกราฟ 6 ด้านของคุณ
                   </p>
                   <Link
-                    href="/game"
+                    href="/play"
                     className="mt-1 rounded-full bg-[#0F0F0F] px-4 py-2 text-[11px] font-bold text-white transition-opacity hover:opacity-90"
                   >
                     ไปเล่นเกมประเมิน →
@@ -961,7 +961,7 @@ export default function ProfilePage() {
                     <p className="mt-1 text-[11px] text-[#8A8A8A]">
                       เล่นมินิเกมประเมินศักยภาพก่อน ระบบจะวิเคราะห์จุดแข็ง/จุดพัฒนาให้ที่นี่
                     </p>
-                    <Link href="/game" className="mt-3 inline-block text-xs font-bold text-[#4D7CFF] underline">
+                    <Link href="/play" className="mt-3 inline-block text-xs font-bold text-[#4D7CFF] underline">
                       ไปเล่นมินิเกม →
                     </Link>
                   </div>
@@ -1029,7 +1029,7 @@ export default function ProfilePage() {
                             {score === null ? (
                               <p className="text-[11px] leading-[1.7] text-[#8A8A8A]">
                                 ยังไม่ได้เล่นเกมนี้ —{" "}
-                                <Link href="/game" className="font-bold text-[#4D7CFF] underline">
+                                <Link href="/play" className="font-bold text-[#4D7CFF] underline">
                                   ไปเล่นมินิเกม
                                 </Link>
                               </p>
