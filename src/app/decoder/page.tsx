@@ -9,8 +9,9 @@ import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { JobSeekerAuthGuard } from "@/components/JobSeekerAuthGuard";
 import { Navbar } from "@/components/Navbar";
+import VoiceInput from "@/components/VoiceInput";
 import { getJobSeekerProfile, markChatFlowComplete, syncComputerSkills } from "@/lib/actions/jobSeeker";
-import { extractTextFromPdf } from "@/lib/pdf";
+import { ingestResume, isServerIngestConfigured } from "@/lib/resumeUpload";
 import { expandKnownAliases, matchSkills } from "@/lib/ahoCorasick";
 import { useJobSeekerSession } from "@/lib/jobSeekerSessionContext";
 import onetSkills from "@/data/onet_skills_dictionary_full.json";
@@ -80,6 +81,17 @@ function pickMostRecentJob(
   if (current) return current;
   return [...workExperience].sort((a, b) => (b.startDate?.getTime() ?? 0) - (a.startDate?.getTime() ?? 0))[0];
 }
+
+// Scans, photos and .docx can only be read by the Python service — pdf.js in
+// the browser sees nothing but an empty text layer. Offering those formats
+// when the service isn't configured would just produce a confusing failure
+// after the candidate has already picked a file.
+const ACCEPTED_UPLOAD_TYPES = isServerIngestConfigured()
+  ? ".pdf,.docx,.png,.jpg,.jpeg,.webp"
+  : ".pdf";
+const ACCEPTED_UPLOAD_LABEL = isServerIngestConfigured()
+  ? "PDF · รูปภาพ · DOCX ไม่เกิน 10MB"
+  : "PDF ไม่เกิน 10MB";
 
 function nowLabel() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -162,7 +174,7 @@ function DecoderContent() {
   useEffect(() => {
     if (!isConversationComplete || hasMarkedCompleteRef.current) return;
     hasMarkedCompleteRef.current = true;
-    markChatFlowComplete(jobSeeker.id, confirmedSkills);
+    markChatFlowComplete(confirmedSkills);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only re-checking when isConversationComplete flips; confirmedSkills is read at that moment via closure, not tracked as a re-trigger
   }, [isConversationComplete]);
   // True once the current stage has already been probed for skills once
@@ -175,7 +187,15 @@ function DecoderContent() {
   // after upload) so a chat-only skill update doesn't need to special-case
   // "was there ever a resume"; the upsert in syncComputerSkills leaves
   // resumeRawText untouched when this is empty.
+  // Despite the name, what goes in here is the REDACTED text — name, phone,
+  // email, address and the bias fields are already stripped by the time it's
+  // set (see handleResumeUpload). It keeps its old name because
+  // JobSeekerProfile.resumeRawText is what the column is called; renaming the
+  // column is a migration for another day. Never assign unredacted text to it.
   const [resumeRawText, setResumeRawText] = useState("");
+  // Short digest of the resume, sent with every chat turn so น้องตรงปก can ask
+  // about what the candidate actually wrote instead of starting cold.
+  const [resumeContext, setResumeContext] = useState("");
   // True once this candidate's existing JobSeekerProfile (if any) has been
   // fetched — the DB-sync effect below must not fire before this, or it
   // would overwrite real prior data with the empty initial state.
@@ -191,7 +211,7 @@ function DecoderContent() {
 
   useEffect(() => {
     let cancelled = false;
-    getJobSeekerProfile(jobSeeker.id).then((profile) => {
+    getJobSeekerProfile().then((profile) => {
       if (cancelled) return;
       if (profile) {
         // Seeded into chatSkills (which only ever accumulates) rather than
@@ -224,7 +244,7 @@ function DecoderContent() {
     localStorage.setItem("ktp_hard_skills", JSON.stringify(union));
     localStorage.setItem("ktp_resume_skills", JSON.stringify(resumeSkills));
     if (!isHydrated) return;
-    syncComputerSkills(jobSeeker.id, {
+    syncComputerSkills({
       computerSkills: union,
       ...(resumeRawText ? { resumeRawText } : {}),
     });
@@ -345,6 +365,16 @@ function DecoderContent() {
           // Thinking") since it's instructed to only return verbatim matches
           // from whatever list it's given.
           hardSkills: [...onetSkills.hardSkills, ...onetSkills.softSkills],
+          // Already redacted before it ever reached this state. The route
+          // treats it as data, never as instructions — an uploaded file is
+          // attacker-controlled text as far as the model is concerned.
+          resumeContext,
+          // Prior turns, so the interviewer can build on what was already
+          // covered instead of re-asking. The system prompt tells it to ask
+          // about tools "ที่ยังไม่ได้พูดถึง" — impossible without this.
+          // `messages` still excludes userQuery at this point (state updates
+          // are async), so it's appended server-side as the latest user turn.
+          history: messages.map(({ sender, text }) => ({ sender, text })),
         }),
       });
 
@@ -400,42 +430,82 @@ function DecoderContent() {
     setIsParsingResume(true);
 
     try {
-      const text = await extractTextFromPdf(file);
-      if (text.trim().length < 20) {
-        throw new Error("PDF has no extractable text layer");
-      }
+      // Goes to the Python service when it's configured (Typhoon OCR reads
+      // scans and photos, and the result is saved to Supabase), otherwise
+      // parses in the browser. Either way what comes back is already
+      // redacted — see lib/resumeUpload.ts.
+      const result = await ingestResume(file, jobSeeker.id);
 
-      const matchedSkills = matchSkills(expandKnownAliases(text), onetSkills.hardSkills);
+      // The dictionary match runs against the REDACTED text on purpose: a
+      // candidate's surname or street name can no longer be mistaken for a
+      // skill, because it isn't in the string any more.
+      const matchedSkills = matchSkills(
+        expandKnownAliases(result.redactedText),
+        onetSkills.hardSkills,
+      );
       // A new resume replaces the previous resume's skills (not a union) —
       // an old file's stale skills shouldn't linger once it's been swapped
       // out. Chat-derived skills are untouched.
       setResumeSkills(matchedSkills);
-      // Triggers the DB-sync effect above to persist this resume's raw
-      // text into the profile along with the current skill union.
-      setResumeRawText(text);
+      // Triggers the DB-sync effect above. This used to persist the raw
+      // text — real name, phone number, email and home address included —
+      // straight into the profile row.
+      setResumeRawText(result.redactedText);
+      // The server's LLM digest when there is one; otherwise a slice of the
+      // redacted text, capped so it doesn't inflate every chat turn.
+      setResumeContext(result.summary || result.redactedText.slice(0, 2000));
+
+      const howItWasRead =
+        result.method === "typhoon_ocr"
+          ? " (อ่านด้วย Typhoon OCR)"
+          : result.method === "tesseract"
+            ? " (อ่านด้วย OCR)"
+            : "";
 
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
           sender: "ai",
-          text: matchedSkills.length
-            ? `น้องตรงปกวิเคราะห์ไฟล์ PDF "${file.name}" เรียบร้อยแล้ว! พบและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้วครับ`
-            : `น้องตรงปกอ่านไฟล์ PDF "${file.name}" ได้แล้วครับ แต่ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะ ลองพิมพ์ชื่อเครื่องมือให้ชัดเจนและสะกดถูกต้อง เช่น Python, NumPy, scikit-learn ในแชทได้เลยครับ`,
+          text:
+            (matchedSkills.length
+              ? `น้องตรงปกอ่านไฟล์ "${file.name}" เรียบร้อยแล้วครับ${howItWasRead} พบและเพิ่มทักษะที่เกี่ยวข้อง ${matchedSkills.length} รายการให้อัตโนมัติแล้วครับ`
+              : `น้องตรงปกอ่านไฟล์ "${file.name}" ได้แล้วครับ${howItWasRead} แต่ยังไม่พบคำที่ตรงกับฐานข้อมูลทักษะ ลองพิมพ์ชื่อเครื่องมือให้ชัดเจนและสะกดถูกต้อง เช่น Python, NumPy, scikit-learn ในแชทได้เลยครับ`) +
+            // Say it out loud rather than only doing it. A candidate who
+            // uploads a document with their home address on it deserves to
+            // be told it was dropped, not left to assume it wasn't.
+            (result.redaction.total
+              ? `\n\n🔒 เพื่อความเป็นส่วนตัว ระบบลบข้อมูลส่วนตัวออกก่อนบันทึกแล้วครับ — ${result.redactionSummary}`
+              : ""),
           time: nowLabel(),
           ...(matchedSkills.length ? { extractedSkills: matchedSkills } : {}),
         },
       ]);
+
+      // Only the server path produces this: an opening question that refers
+      // to something the candidate actually wrote, which is a far better
+      // start than a generic "เล่าประสบการณ์หน่อยครับ".
+      if (result.openingMessage) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            sender: "ai",
+            text: result.openingMessage,
+            time: nowLabel(),
+          },
+        ]);
+      }
     } catch (err) {
-      console.error("Resume PDF parsing failed:", err);
+      console.error("Resume parsing failed:", err);
+      // `userFacing` errors are written for the candidate and say something
+      // specific about their file; anything else gets the generic advice.
+      const message = (err as { userFacing?: boolean })?.userFacing
+        ? (err as Error).message
+        : `น้องตรงปกไม่สามารถอ่านข้อความจากไฟล์ "${file.name}" ได้ครับ (ไฟล์อาจเป็นภาพสแกนที่ไม่มีข้อความ หรือไฟล์เสียหาย) ลองแนบไฟล์อื่น หรือพิมพ์เล่าประสบการณ์ในแชทแทนได้เลยครับ`;
       setMessages((prev) => [
         ...prev,
-        {
-          id: Date.now().toString(),
-          sender: "ai",
-          text: `น้องตรงปกไม่สามารถอ่านข้อความจากไฟล์ "${file.name}" ได้ครับ (ไฟล์อาจเป็นภาพสแกนที่ไม่มีข้อความ หรือไฟล์เสียหาย) ลองแนบไฟล์ PDF อื่น หรือพิมพ์เล่าประสบการณ์ในแชทแทนได้เลยครับ`,
-          time: nowLabel(),
-        },
+        { id: Date.now().toString(), sender: "ai", text: message, time: nowLabel() },
       ]);
     } finally {
       setIsParsingResume(false);
@@ -521,12 +591,12 @@ function DecoderContent() {
                       <FileText className="h-6 w-6 text-[#8A8A8A]" strokeWidth={1.75} />
                     )}
                     <span className="text-xs font-bold text-[#0F0F0F]">
-                      {isParsingResume ? `กำลังอ่านไฟล์ "${uploadedFile}"...` : "อัปโหลดเรซูเม่ PDF"}
+                      {isParsingResume ? `กำลังอ่านไฟล์ "${uploadedFile}"...` : "อัปโหลดเรซูเม่"}
                     </span>
-                    <span className="text-[10px] text-[#8A8A8A]">รองรับ PDF ไม่เกิน 10MB</span>
+                    <span className="text-[10px] text-[#8A8A8A]">รองรับ {ACCEPTED_UPLOAD_LABEL}</span>
                     <input
                       type="file"
-                      accept=".pdf"
+                      accept={ACCEPTED_UPLOAD_TYPES}
                       disabled={isParsingResume}
                       onChange={handleResumeUpload}
                       className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
@@ -631,7 +701,7 @@ function DecoderContent() {
                         ลากวาง หรือ คลิกอัปโหลด (รองรับ PDF ไม่เกิน 10MB)
                       </span>
                       <span className="inline sm:hidden text-[10px] text-[#8A8A8A]">
-                        คลิกเพื่อเลือกไฟล์ (PDF ≤ 10MB)
+                        คลิกเพื่อเลือกไฟล์ ({ACCEPTED_UPLOAD_LABEL})
                       </span>
                     </div>
                   </div>
@@ -640,7 +710,7 @@ function DecoderContent() {
                   </span>
                   <input
                     type="file"
-                    accept=".pdf"
+                    accept={ACCEPTED_UPLOAD_TYPES}
                     disabled={isParsingResume}
                     onChange={handleResumeUpload}
                     className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
@@ -750,9 +820,33 @@ function DecoderContent() {
                         type="text"
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
-                        placeholder="พิมพ์คำตอบของคุณ..."
+                        placeholder="พิมพ์คำตอบ หรือกดไมค์แล้วพูดได้เลย..."
                         disabled={isChatLoading}
                         className="min-w-0 flex-1 rounded-xl border border-[rgba(15,15,15,0.12)] bg-white px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs outline-none focus:border-[#0F0F0F] disabled:opacity-60"
+                      />
+                      {/* Speech lands in the input rather than sending on its
+                          own. Thai recognition mishears often enough that
+                          auto-sending would burn one of the candidate's
+                          bounded turns on a garbled sentence they never got
+                          to read — they press Enter once it looks right. */}
+                      <VoiceInput
+                        disabled={isChatLoading}
+                        onInterim={setInputText}
+                        onResult={(text) => {
+                          setInputText(text);
+                          inputRef.current?.focus();
+                        }}
+                        onError={(message) =>
+                          setMessages((prev) => [
+                            ...prev,
+                            {
+                              id: Date.now().toString(),
+                              sender: "ai",
+                              text: message,
+                              time: nowLabel(),
+                            },
+                          ])
+                        }
                       />
                       <button
                         type="submit"
