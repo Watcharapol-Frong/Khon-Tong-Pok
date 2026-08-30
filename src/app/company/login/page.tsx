@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
 import { Footer } from "@/components/Footer";
 import { CompanyNavbar } from "@/components/CompanyNavbar";
-import { loginHR } from "@/lib/actions/company";
+import { createGuestHR, loginHR } from "@/lib/actions/company";
 import { setHRSessionIds } from "@/lib/hrSession";
 
 export default function CompanyLoginPage() {
@@ -15,16 +15,33 @@ export default function CompanyLoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [isGuestLoading, setIsGuestLoading] = useState(false);
 
+  // Real form submit removed here too — same "กดข้ามได้เลย" treatment as
+  // the job-seeker /login page. A fresh Company + HRUser pair per click
+  // (see createGuestHR), not a shared account, so concurrent visitors get
+  // their own isolated dashboard/positions instead of colliding.
+  const handleGuestSkip = async () => {
+    setErrorMsg("");
+    setIsGuestLoading(true);
+    const result = await createGuestHR();
+    if ("error" in result) {
+      setIsGuestLoading(false);
+      setErrorMsg(result.error);
+      return;
+    }
+    setHRSessionIds({ hrUserId: result.hrUser.id, companyId: result.company.id });
+    router.push("/company/dashboard");
+  };
+
+  // No visible submit button anymore (see below), but the form itself
+  // still wires real email/password login through to Enter-key submit,
+  // same as /login's own precedent.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
-    setIsSubmitting(true);
-
     const result = await loginHR(email, password);
-    setIsSubmitting(false);
     if ("error" in result) {
       setErrorMsg(result.error);
       return;
@@ -90,11 +107,13 @@ export default function CompanyLoginPage() {
           </div>
 
           <button
-            type="submit"
-            disabled={isSubmitting}
-            className="mt-1 flex w-full cursor-pointer items-center justify-center rounded-full bg-[#0F0F0F] py-3.5 text-xs font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
+            type="button"
+            disabled={isGuestLoading}
+            onClick={handleGuestSkip}
+            className="mt-1 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-full bg-[#0F0F0F] py-3.5 text-xs font-extrabold text-white transition-opacity hover:opacity-90 active:scale-[0.99] disabled:opacity-50"
           >
-            {isSubmitting ? "กำลังตรวจสอบข้อมูล..." : "เข้าสู่ระบบองค์กร"}
+            {isGuestLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />}
+            กดข้ามได้เลย ไม่ต้องกรอกข้อมูล →
           </button>
 
           <div className="text-center text-xs text-[#5C5C5C]">

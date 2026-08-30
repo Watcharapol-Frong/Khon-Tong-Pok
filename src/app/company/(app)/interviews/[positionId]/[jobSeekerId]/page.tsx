@@ -1,24 +1,19 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock, Pencil, User, X } from "lucide-react";
 import {
   cancelInterviewInvite,
-  confirmInterviewTime,
-  getInterviewSlotsForCompanySnapshot,
-  subscribeToStore,
-} from "@/lib/companyStore";
+  getInterviewSlotsForCompany,
+  setInterviewConfirmedTime,
+} from "@/lib/actions/interview";
 import { useCompanySession } from "@/lib/companySession";
-import type { InterviewSlotStatus } from "@/lib/types";
 
-const EMPTY_SLOTS: never[] = [];
+type Slots = Awaited<ReturnType<typeof getInterviewSlotsForCompany>>;
 
-const STATUS_META: Record<
-  InterviewSlotStatus,
-  { label: string; icon: typeof Clock; className: string }
-> = {
+const STATUS_META: Record<string, { label: string; icon: typeof Clock; className: string }> = {
   pending: { label: "รอผู้สมัครยืนยัน", icon: Clock, className: "bg-[rgba(77,124,255,0.12)] text-[#4D7CFF]" },
   confirmed: { label: "ยืนยันนัดแล้ว", icon: Check, className: "bg-[rgba(59,245,92,0.15)] text-[#0f5c22]" },
   declined: { label: "ปฏิเสธคำเชิญ", icon: X, className: "bg-[#F0F0F0] text-[#8A8A8A]" },
@@ -33,12 +28,28 @@ export default function InterviewDetailPage() {
 
   // getInterviewSlotsForCompany already scopes to this HR's own company, so
   // reusing it here (same as the list page) doubles as the authorization
-  // check — a matchId for another company's interview just won't be in it.
-  const slots = useSyncExternalStore(
-    subscribeToStore,
-    () => getInterviewSlotsForCompanySnapshot(session.company.id),
-    () => EMPTY_SLOTS
-  );
+  // check — a positionId/jobSeekerId pair for another company's interview
+  // just won't be in it.
+  const [slots, setSlots] = useState<Slots>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refresh = async () => {
+    const fresh = await getInterviewSlotsForCompany(session.company.id);
+    setSlots(fresh);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    getInterviewSlotsForCompany(session.company.id).then((fresh) => {
+      if (cancelled) return;
+      setSlots(fresh);
+      setIsLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- session.company.id stable for this page's lifetime
+  }, []);
 
   // Times are informational by default — editing (to reschedule or set the
   // confirmed time) is an explicit action behind "แก้ไข", not the default
@@ -47,10 +58,17 @@ export default function InterviewDetailPage() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customTime, setCustomTime] = useState("");
   const [armedCancel, setArmedCancel] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  if (!session) return null;
+  if (isLoading) {
+    return (
+      <div className="mx-auto w-full max-w-[1200px] px-4 py-10 sm:px-6 md:px-10">
+        <div className="py-16 text-center text-sm text-[#8A8A8A]">กำลังโหลด...</div>
+      </div>
+    );
+  }
 
-  const slot = slots.find((s) => s.matchId === `${positionId}::${jobSeekerId}`) ?? null;
+  const slot = slots.find((s) => s.positionId === positionId && s.jobSeekerId === jobSeekerId) ?? null;
 
   if (!slot) {
     return (
@@ -80,18 +98,30 @@ export default function InterviewDetailPage() {
     setIsEditing(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!timeToSave) return;
-    confirmInterviewTime(positionId, jobSeekerId, timeToSave);
+    setErrorMsg("");
+    const result = await setInterviewConfirmedTime(positionId, jobSeekerId, session.company.id, timeToSave);
+    if ("error" in result) {
+      setErrorMsg(result.error);
+      return;
+    }
     setIsEditing(false);
+    await refresh();
   };
 
-  const handleCancelInvite = () => {
+  const handleCancelInvite = async () => {
     if (!armedCancel) {
       setArmedCancel(true);
       return;
     }
-    cancelInterviewInvite(positionId, jobSeekerId);
+    setErrorMsg("");
+    const result = await cancelInterviewInvite(positionId, jobSeekerId, session.company.id);
+    if ("error" in result) {
+      setArmedCancel(false);
+      setErrorMsg(result.error);
+      return;
+    }
     router.push("/company/interviews");
   };
 
@@ -106,10 +136,16 @@ export default function InterviewDetailPage() {
           กลับไปหน้านัดสัมภาษณ์ทั้งหมด
         </Link>
 
+        {errorMsg && (
+          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-600">
+            {errorMsg}
+          </div>
+        )}
+
         <div className="mt-2 mb-6 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-[clamp(20px,3.5vw,26px)] font-extrabold tracking-[-0.02em]">
-              {slot.jobSeeker.realName}
+              {slot.jobSeekerName}
             </h1>
             <p className="mt-0.5 text-xs text-[#8A8A8A]">{slot.positionTitle}</p>
           </div>

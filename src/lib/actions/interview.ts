@@ -258,3 +258,73 @@ export async function isNameRevealedForCompany(jobSeekerId: string, companyId: s
   });
   return match !== null;
 }
+
+/** For /company/interviews — every interview invite this company has ever sent, real DB data (this used to read from the old localStorage companyStore mock). */
+export async function getInterviewSlotsForCompany(companyId: string) {
+  const slots = await prisma.interviewSlot.findMany({
+    where: { match: { position: { companyId } } },
+    include: { match: { include: { jobSeeker: true, position: true } } },
+    orderBy: { id: "desc" },
+  });
+  return slots.map((slot) => ({
+    id: slot.id,
+    positionId: slot.match.positionId,
+    positionTitle: slot.match.position.title,
+    jobSeekerId: slot.match.jobSeekerId,
+    jobSeekerName: slot.match.jobSeeker.name,
+    proposedTimes: slot.proposedTimes,
+    confirmedTime: slot.confirmedTime,
+    status: slot.status,
+  }));
+}
+
+/**
+ * HR directly setting/editing the confirmed interview time — distinct from
+ * respondToInterviewInvite (the candidate's own confirm/decline). Same
+ * not-found-not-forbidden scoping via position→companyId as the rest of
+ * this file. Match.status moves to "contacted" too, same as the candidate
+ * confirming would do, so nameRevealed/dashboard logic stay consistent
+ * regardless of which side set the time.
+ */
+export async function setInterviewConfirmedTime(
+  positionId: string,
+  jobSeekerId: string,
+  companyId: string,
+  confirmedTime: string
+): Promise<{ ok: true } | { error: string }> {
+  const match = await prisma.match.findFirst({
+    where: { positionId, jobSeekerId, position: { companyId } },
+    include: { interviewSlot: true },
+  });
+  if (!match || !match.interviewSlot) {
+    return { error: "ไม่พบนัดสัมภาษณ์นี้ หรือคุณไม่มีสิทธิ์เข้าถึง" };
+  }
+  await prisma.$transaction([
+    prisma.interviewSlot.update({
+      where: { id: match.interviewSlot.id },
+      data: { status: "confirmed", confirmedTime },
+    }),
+    prisma.match.update({ where: { id: match.id }, data: { status: "contacted" } }),
+  ]);
+  return { ok: true };
+}
+
+/** HR withdrawing an interview invite entirely — deletes the InterviewSlot and reverts the Match to "pending", so the candidate list treats this position/candidate pair as not-yet-invited again. */
+export async function cancelInterviewInvite(
+  positionId: string,
+  jobSeekerId: string,
+  companyId: string
+): Promise<{ ok: true } | { error: string }> {
+  const match = await prisma.match.findFirst({
+    where: { positionId, jobSeekerId, position: { companyId } },
+    include: { interviewSlot: true },
+  });
+  if (!match || !match.interviewSlot) {
+    return { error: "ไม่พบนัดสัมภาษณ์นี้ หรือคุณไม่มีสิทธิ์เข้าถึง" };
+  }
+  await prisma.$transaction([
+    prisma.interviewSlot.delete({ where: { id: match.interviewSlot.id } }),
+    prisma.match.update({ where: { id: match.id }, data: { status: "pending" } }),
+  ]);
+  return { ok: true };
+}

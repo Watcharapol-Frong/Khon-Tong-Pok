@@ -305,7 +305,7 @@ export default function CompanyPage() {
             </p>
             <div className="mb-[18px] flex flex-wrap gap-3">
               <Link
-                href="/company/register"
+                href="/company/login"
                 className="cursor-pointer rounded-full bg-[#0F0F0F] px-[30px] py-4 text-[15px] font-bold text-white transition-all hover:opacity-90 active:scale-95"
               >
                 เริ่มใช้งานฟรี
@@ -421,7 +421,7 @@ export default function CompanyPage() {
               </p>
 
               <Link
-                href="/company/register"
+                href="/company/login"
                 className="inline-block cursor-pointer rounded-full bg-white px-8 py-4 text-[15px] font-bold text-[#0F0F0F] transition-all hover:opacity-90 active:scale-95"
               >
                 เริ่มใช้งานฟรี →

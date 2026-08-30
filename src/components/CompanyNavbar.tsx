@@ -160,13 +160,14 @@ export function CompanyNavbar() {
                       เข้าสู่ระบบ
                     </Link>
                   )}
-                  {/* Not straight to /company/register — someone landing on
-                      this public HR page isn't necessarily committed to the
-                      HR side yet, so the black-pill CTA offers both roles
-                      via the same picker pattern as /login/select. */}
+                  {/* /company/login, not /register/select — that page's own
+                      "กดข้ามได้เลย" guest button is now the fastest way in
+                      (real Positions/Matches/interviews pre-seeded, see
+                      createGuestHR), so this CTA skips the role picker and
+                      the registration form entirely. */}
                   {!hideAuthLinks && (
                     <Link
-                      href="/register/select"
+                      href="/company/login"
                       className="flex-shrink-0 cursor-pointer whitespace-nowrap rounded-full bg-[#0F0F0F] px-[18px] py-[11px] text-[13px] font-extrabold text-white"
                     >
                       เริ่มต้นใช้งาน
@@ -288,7 +289,7 @@ export function CompanyNavbar() {
                   )}
                   {!hideAuthLinks && (
                     <Link
-                      href="/register/select"
+                      href="/company/login"
                       onClick={closeMenu}
                       className="px-3 py-[10px] text-sm font-bold"
                     >
