@@ -533,21 +533,15 @@ function DecoderContent() {
                   className="mx-auto h-[88px] w-[88px] object-contain"
                 />
                 <p className="mx-auto mt-3 max-w-[440px] text-xs leading-relaxed text-[#5C5C5C] sm:text-sm">
-                  กดด้านล่างเพื่อให้น้องตรงปกเริ่มคุยกับคุณได้เลย
+                  กรุณาอัปโหลดเรซูเม่หรือกรอกข้อมูลก่อน เพื่อให้น้องตรงปกเริ่มคุยกับคุณได้
                 </p>
 
-                {/* Only entry point into the chat now — real PDF upload and
-                    the manual form (/decoder/manual) were cut from this
-                    gate on purpose, so every visitor (registered or guest)
-                    lands in the chat the same, fastest way. Same
-                    processResumeFile path a real upload used to go
-                    through. */}
-                <div className="mx-auto mt-5 max-w-[320px]">
-                  <button
-                    type="button"
-                    onClick={handleUseSampleResume}
-                    disabled={isParsingResume}
-                    className={`flex w-full cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-colors ${
+                <div className="mx-auto mt-5 grid max-w-[560px] grid-cols-1 gap-3 sm:grid-cols-2">
+                  {/* Option 1: upload resume PDF — same handleResumeUpload
+                      used post-unlock for re-uploads, so there's only one
+                      parsing code path regardless of when it's triggered. */}
+                  <label
+                    className={`relative flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-5 text-center transition-colors ${
                       isParsingResume
                         ? "cursor-not-allowed border-[rgba(15,15,15,0.15)] bg-[#FAFAFA]"
                         : "border-[rgba(15,15,15,0.2)] hover:border-[#0F0F0F] hover:bg-[#FAFAFA]"
@@ -556,14 +550,50 @@ function DecoderContent() {
                     {isParsingResume ? (
                       <Loader2 className="h-6 w-6 animate-spin text-[#8A8A8A]" strokeWidth={1.75} />
                     ) : (
-                      <Sparkle className="h-6 w-6 text-[#8A8A8A]" strokeWidth={1.75} />
+                      <FileText className="h-6 w-6 text-[#8A8A8A]" strokeWidth={1.75} />
                     )}
                     <span className="text-xs font-bold text-[#0F0F0F]">
-                      {isParsingResume ? "กำลังอ่านเรซูเม่ตัวอย่าง..." : "ลองด้วยเรซูเม่ตัวอย่าง"}
+                      {isParsingResume ? `กำลังอ่านไฟล์ "${uploadedFile}"...` : "อัปโหลดเรซูเม่ PDF"}
                     </span>
-                    <span className="text-[10px] text-[#8A8A8A]">Daniel Gan, Front End Developer</span>
-                  </button>
+                    <span className="text-[10px] text-[#8A8A8A]">รองรับ PDF ไม่เกิน 10MB</span>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      disabled={isParsingResume}
+                      onChange={handleResumeUpload}
+                      className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                    />
+                  </label>
+
+                  {/* Option 2: manual entry form (/decoder/manual) — writes
+                      straight to the same JobSeekerProfile row, so
+                      returning here immediately satisfies hasAnySkill and
+                      unlocks chat. */}
+                  <Link
+                    href="/decoder/manual"
+                    className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-[rgba(15,15,15,0.12)] p-5 text-center transition-colors hover:border-[#0F0F0F] hover:bg-[#FAFAFA]"
+                  >
+                    <Sparkle className="h-6 w-6 text-[#8A8A8A]" strokeWidth={1.75} />
+                    <span className="text-xs font-bold text-[#0F0F0F]">กรอกฟอร์มด้วยตัวเอง</span>
+                    <span className="text-[10px] text-[#8A8A8A]">เลือกทักษะที่คุณถนัดเอง</span>
+                  </Link>
                 </div>
+
+                {/* Public — not gated to dev/localhost. Lets a visitor
+                    (especially one who came in through the "กดข้ามได้เลย"
+                    guest shortcut on /login or /register) see the whole
+                    upload → skill-extraction → Smart Profile journey
+                    without needing a real resume on hand, via the exact
+                    same processResumeFile path a real upload uses. */}
+                <button
+                  type="button"
+                  onClick={handleUseSampleResume}
+                  disabled={isParsingResume}
+                  className="mx-auto mt-3 flex cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-[rgba(15,15,15,0.2)] px-3.5 py-2 text-[11px] font-bold text-[#5C5C5C] transition-colors hover:bg-[#F5F5F5] disabled:opacity-60"
+                >
+                  <Sparkle className="h-3 w-3" strokeWidth={2} />
+                  ยังไม่มีเรซูเม่ตอนนี้? ลองด้วยเรซูเม่ตัวอย่าง
+                </button>
               </div>
             ) : (
               <>
