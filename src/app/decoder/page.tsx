@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { FileText, Loader2, MessageCircle, Send, Sparkle } from "lucide-react";
+import { FileText, Loader2, Send, Sparkle } from "lucide-react";
 import { AssessmentStepBar } from "@/components/AssessmentStepBar";
 import { Footer } from "@/components/Footer";
 import { JobSeekerAuthGuard } from "@/components/JobSeekerAuthGuard";
@@ -110,7 +110,6 @@ function DecoderContent() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
   const [isParsingResume, setIsParsingResume] = useState(false);
-  const [activeMobileTab, setActiveMobileTab] = useState<"chat" | "skills">("chat");
   // Resume skills are replaced wholesale on each new upload (a new resume
   // supersedes the old one); chat skills accumulate across the conversation.
   // The panel shows the union of both, deduped.
@@ -597,40 +596,15 @@ function DecoderContent() {
               </div>
             ) : (
               <>
-            {/* Mobile View Tab Switcher (Chat vs Confirmed Skills) */}
-            <div className="mb-3 flex lg:hidden gap-1 rounded-xl bg-[rgba(15,15,15,0.05)] p-1">
-              <button
-                type="button"
-                onClick={() => setActiveMobileTab("chat")}
-                className={`flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-center text-xs font-extrabold transition-all ${
-                  activeMobileTab === "chat"
-                    ? "bg-white text-[#0F0F0F]"
-                    : "text-[#8A8A8A] hover:text-[#0F0F0F]"
-                }`}
-              >
-                <MessageCircle className="h-3.5 w-3.5" strokeWidth={2} /> ห้องแชทน้องตรงปก
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveMobileTab("skills")}
-                className={`flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg py-2 text-center text-xs font-extrabold transition-all ${
-                  activeMobileTab === "skills"
-                    ? "bg-white text-[#0F0F0F]"
-                    : "text-[#8A8A8A] hover:text-[#0F0F0F]"
-                }`}
-              >
-                <Sparkle className="h-3.5 w-3.5" strokeWidth={2} /> ทักษะที่สกัดได้ ({confirmedSkills.length})
-              </button>
-            </div>
 
             {/* UNIFIED CHATROOM INTERFACE */}
             <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-10">
-              {/* Left: Chat & Upload Area */}
-              <div
-                className={`flex flex-col rounded-2xl bg-white p-2.5 sm:p-4 lg:col-span-7 ${
-                  activeMobileTab === "chat" ? "block" : "hidden lg:flex"
-                }`}
-              >
+              {/* Left: Chat & Upload Area — always visible, stacked above
+                  the skills panel on mobile (no tab switch hiding it), side
+                  by side with it from lg up. Was previously tab-gated,
+                  which buried the "ไปที่ Smart Profile" CTA below in a tab
+                  a mobile candidate might not think to open. */}
+              <div className="flex flex-col rounded-2xl bg-white p-2.5 sm:p-4 lg:col-span-7">
                 {/* Conversation header — identifies exactly who/what the
                     candidate is talking to (an AI chatbot), the same way a
                     real messaging app labels the other party in a thread. */}
@@ -815,12 +789,8 @@ function DecoderContent() {
                 )}
               </div>
 
-              {/* Right: Confirmed Skill Statements Sidebar */}
-              <div
-                className={`flex flex-col justify-between rounded-2xl bg-[#FAFAFA] p-3 sm:p-4 lg:col-span-3 ${
-                  activeMobileTab === "skills" ? "block" : "hidden lg:flex"
-                }`}
-              >
+              {/* Right: Confirmed Skill Statements Sidebar — always visible now, see the chat panel's comment above. */}
+              <div className="flex flex-col justify-between rounded-2xl bg-[#FAFAFA] p-3 sm:p-4 lg:col-span-3">
                 <div>
                   <div className="mb-1 flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-xs font-extrabold text-[#0F0F0F]">
