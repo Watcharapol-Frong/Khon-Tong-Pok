@@ -66,13 +66,13 @@ export default function PositionCandidatesPage() {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const refresh = async () => {
-    const fresh = await getMatchesForPosition(positionId, session.company.id);
+    const fresh = await getMatchesForPosition(positionId);
     setData(fresh);
   };
 
   useEffect(() => {
     let cancelled = false;
-    getMatchesForPosition(positionId, session.company.id).then((fresh) => {
+    getMatchesForPosition(positionId).then((fresh) => {
       if (cancelled) return;
       setData(fresh);
       setIsLoading(false);
@@ -108,7 +108,7 @@ export default function PositionCandidatesPage() {
   const handleSendInvite = async (proposedTimes: string[]) => {
     if (!inviteTargetId) return;
     setErrorMsg("");
-    const result = await sendInterviewInvite(inviteTargetId, session.company.id, proposedTimes);
+    const result = await sendInterviewInvite(inviteTargetId, proposedTimes);
     setInviteTargetId(null);
     if ("error" in result) {
       setErrorMsg(result.error);

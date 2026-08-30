@@ -9,10 +9,14 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
-    "db:seed:clean": "tsx prisma/seed.ts --clean"
+    "db:seed:clean": "tsx prisma/seed.ts --clean",
+    "db:hash-passwords": "tsx prisma/hash-passwords.ts",
+    "db:check": "tsx prisma/check-db.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4",
     "boring-avatars": "^2.0.4",
     "clsx": "^2.1.1",
     "framer-motion": "^12.43.0",
@@ -22,6 +26,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.10.1",
+    "server-only": "^0.0.1",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {

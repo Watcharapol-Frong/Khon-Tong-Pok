@@ -1,43 +1,41 @@
-// Client-side storage for the job seeker auth session — deliberately
-// minimal: just the id needed to re-fetch the real session data from the
-// database (see getJobSeekerSessionData in src/lib/actions/jobSeeker.ts),
-// not a JWT/session token. JobSeekerAuthGuard treats this id as an
-// untrusted hint, not proof of identity — getJobSeekerSessionData re-fetches
-// the row server-side rather than trusting anything about it client-side.
+/**
+ * A cosmetic hint about whether someone is signed in — NOT a credential.
+ *
+ * This file used to hold `{ jobSeekerId }` and that id was, in effect, the
+ * password: every server action took it and looked the row up directly, so
+ * pasting another candidate's id here made you them. The real session now
+ * lives in an httpOnly cookie the browser cannot read, and identity is
+ * re-derived server-side on every call (see src/lib/auth.ts).
+ *
+ * What's left is a flag the navbar reads to decide whether to render the
+ * notification bell before its server round-trip resolves, so the UI doesn't
+ * flicker between logged-out and logged-in on every page load. Nothing here is
+ * trusted for access decisions, and nothing here should ever grow back into an
+ * identifier — if you find yourself wanting to store the id again, the thing
+ * you actually want is a server action that returns it.
+ */
 
-const SESSION_KEY = "ktp_jobseeker_session";
-
-export type JobSeekerSessionIds = { jobSeekerId: string };
+const HINT_KEY = "ktp_signed_in";
 
 function isBrowser() {
   return typeof window !== "undefined";
 }
 
-export function setJobSeekerSessionIds(ids: JobSeekerSessionIds) {
+export function setJobSeekerSessionHint() {
   if (!isBrowser()) return;
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(ids));
+  window.localStorage.setItem(HINT_KEY, "1");
+  // Remove the pre-change key so an old id can't linger in a returning
+  // visitor's browser storage.
+  window.localStorage.removeItem("ktp_jobseeker_session");
 }
 
-export function getJobSeekerSessionIds(): JobSeekerSessionIds | null {
-  if (!isBrowser()) return null;
-  const raw = window.localStorage.getItem(SESSION_KEY);
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      typeof (parsed as JobSeekerSessionIds).jobSeekerId === "string"
-    ) {
-      return parsed as JobSeekerSessionIds;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+export function hasJobSeekerSessionHint(): boolean {
+  if (!isBrowser()) return false;
+  return window.localStorage.getItem(HINT_KEY) === "1";
 }
 
-export function clearJobSeekerSessionIds() {
+export function clearJobSeekerSessionHint() {
   if (!isBrowser()) return;
-  window.localStorage.removeItem(SESSION_KEY);
+  window.localStorage.removeItem(HINT_KEY);
+  window.localStorage.removeItem("ktp_jobseeker_session");
 }

@@ -26,7 +26,7 @@ import { SkillIcon } from "@/components/SkillIcon";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { generateAIResume, getGameResult, getJobSeekerProfile, getJobSeekerSessionData } from "@/lib/actions/jobSeeker";
 import { JOBS, SOFT_SKILL_AXIS_META, SOFT_SKILL_AXIS_ORDER } from "@/lib/data";
-import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
+
 import type { RadarAxisDatum } from "@/lib/types";
 
 type JobSeekerProfileData = Awaited<ReturnType<typeof getJobSeekerProfile>>;
@@ -148,13 +148,11 @@ export default function ProfilePage() {
   // uploaded at some point, so the whole current list is treated as
   // Verified rather than showing everything as Partial by default.
   useEffect(() => {
-    const ids = getJobSeekerSessionIds();
-    if (!ids) return;
     let cancelled = false;
     Promise.all([
-      getJobSeekerSessionData(ids.jobSeekerId),
-      getJobSeekerProfile(ids.jobSeekerId),
-      getGameResult(ids.jobSeekerId),
+      getJobSeekerSessionData(),
+      getJobSeekerProfile(),
+      getGameResult(),
     ]).then(([session, profile, gameResult]) => {
       if (cancelled) return;
       if (session) {
@@ -369,13 +367,10 @@ export default function ProfilePage() {
     setShowAiModal(true);
     setAiResumeError("");
     setAiResumeResult(null);
-    const ids = getJobSeekerSessionIds();
-    if (!ids) {
-      setAiResumeError("กรุณาเข้าสู่ระบบก่อน");
-      return;
-    }
+    // No client-side sign-in check: generateAIResume resolves the candidate
+    // from the session itself and returns its own error if nobody is signed in.
     setIsGeneratingResume(true);
-    const result = await generateAIResume(ids.jobSeekerId);
+    const result = await generateAIResume();
     setIsGeneratingResume(false);
     if ("error" in result) {
       setAiResumeError(result.error);

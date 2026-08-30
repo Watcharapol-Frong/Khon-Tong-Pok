@@ -35,13 +35,13 @@ function ApplicationsContent() {
   const [declineArmedId, setDeclineArmedId] = useState<string | null>(null);
 
   const refresh = async () => {
-    const fresh = await getMyApplications(jobSeeker.id);
+    const fresh = await getMyApplications();
     setApplications(fresh);
   };
 
   useEffect(() => {
     let cancelled = false;
-    getMyApplications(jobSeeker.id).then((fresh) => {
+    getMyApplications().then((fresh) => {
       if (cancelled) return;
       setApplications(fresh);
       setIsLoading(false);
@@ -54,7 +54,7 @@ function ApplicationsContent() {
 
   const handleConfirm = async (interviewSlotId: string, confirmedTime: string) => {
     setErrorMsg("");
-    const result = await respondToInterviewInvite(interviewSlotId, jobSeeker.id, "confirm", confirmedTime);
+    const result = await respondToInterviewInvite(interviewSlotId, "confirm", confirmedTime);
     if ("error" in result) {
       setErrorMsg(result.error);
       return;
@@ -69,7 +69,7 @@ function ApplicationsContent() {
     }
     setDeclineArmedId(null);
     setErrorMsg("");
-    const result = await respondToInterviewInvite(interviewSlotId, jobSeeker.id, "decline");
+    const result = await respondToInterviewInvite(interviewSlotId, "decline");
     if ("error" in result) {
       setErrorMsg(result.error);
       return;

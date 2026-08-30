@@ -1,44 +1,37 @@
-// Client-side storage for the HR auth session — deliberately minimal: just
-// the two ids needed to re-fetch the real session data from the database
-// (see getHRSessionData in src/lib/actions/company.ts), not a JWT/session
-// token. CompanyAppLayout treats these ids as untrusted hints, not proof of
-// identity — getHRSessionData re-verifies hrUserId actually belongs to
-// companyId server-side before trusting either.
+/**
+ * A cosmetic hint about whether an HR user is signed in — NOT a credential.
+ *
+ * This used to hold `{ hrUserId, companyId }`, and every HR action took those
+ * two ids from here and used them to scope its queries. The action layer
+ * "verified" that hrUserId belonged to companyId, but both came out of this
+ * same object, so the check only confirmed the caller had been consistent with
+ * themselves: substituting another company's pair returned that company's
+ * candidates, matches and dashboard.
+ *
+ * The real session is an httpOnly cookie (or a Supabase Auth session) and the
+ * company is derived server-side on every call — see src/lib/auth.ts.
+ */
 
-const SESSION_KEY = "ktp_hr_session";
-
-export type HRSessionIds = { hrUserId: string; companyId: string };
+const HINT_KEY = "ktp_hr_signed_in";
 
 function isBrowser() {
   return typeof window !== "undefined";
 }
 
-export function setHRSessionIds(ids: HRSessionIds) {
+export function setHRSessionHint() {
   if (!isBrowser()) return;
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(ids));
+  window.localStorage.setItem(HINT_KEY, "1");
+  // Drop the pre-change key so old ids don't linger in returning browsers.
+  window.localStorage.removeItem("ktp_hr_session");
 }
 
-export function getHRSessionIds(): HRSessionIds | null {
-  if (!isBrowser()) return null;
-  const raw = window.localStorage.getItem(SESSION_KEY);
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      typeof (parsed as HRSessionIds).hrUserId === "string" &&
-      typeof (parsed as HRSessionIds).companyId === "string"
-    ) {
-      return parsed as HRSessionIds;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+export function hasHRSessionHint(): boolean {
+  if (!isBrowser()) return false;
+  return window.localStorage.getItem(HINT_KEY) === "1";
 }
 
-export function clearHRSessionIds() {
+export function clearHRSessionHint() {
   if (!isBrowser()) return;
-  window.localStorage.removeItem(SESSION_KEY);
+  window.localStorage.removeItem(HINT_KEY);
+  window.localStorage.removeItem("ktp_hr_session");
 }

@@ -1,6 +1,37 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentJobSeeker, getHRContext } from "@/lib/auth";
+const NOT_SIGNED_IN = "กรุณาเข้าสู่ระบบก่อนครับ";
+
+/**
+ * Which company this request is allowed to see, and which HR user made it.
+ *
+ * Every function below used to take `companyId` (and sometimes `hrUserId` or
+ * `jobSeekerId`) as a parameter from the browser. The ownership checks were
+ * already correct — `position.companyId !== companyId` and friends — but the
+ * value they compared against was chosen by the caller, so the check only
+ * confirmed the caller was consistent with themselves. Changing one string in
+ * devtools returned another company's matched candidates, dashboard and
+ * reports.
+ *
+ * The checks are unchanged. What changed is where the id comes from.
+ */
+async function sessionCompanyId(): Promise<string | null> {
+  const ctx = await getHRContext();
+  return ctx?.companyId ?? null;
+}
+
+async function sessionHrUserId(): Promise<string | null> {
+  const ctx = await getHRContext();
+  return ctx?.hrUserId ?? null;
+}
+
+async function sessionJobSeekerId(): Promise<string | null> {
+  const jobSeeker = await getCurrentJobSeeker();
+  return jobSeeker?.id ?? null;
+}
+
 
 /**
  * HR-initiated: proposes interview times for a real Match. Creates the
@@ -13,9 +44,10 @@ import { prisma } from "@/lib/prisma";
  */
 export async function sendInterviewInvite(
   matchId: string,
-  companyId: string,
   proposedTimes: string[]
 ): Promise<{ ok: true } | { error: string }> {
+  const companyId = await sessionCompanyId();
+  if (!companyId) return { error: NOT_SIGNED_IN };
   if (proposedTimes.length === 0) {
     return { error: "กรุณาเลือกวัน-เวลาอย่างน้อย 1 ช่วง" };
   }
@@ -57,10 +89,11 @@ export async function sendInterviewInvite(
  */
 export async function respondToInterviewInvite(
   interviewSlotId: string,
-  jobSeekerId: string,
   response: "confirm" | "decline",
   confirmedTime?: string
 ): Promise<{ ok: true } | { error: string }> {
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return { error: NOT_SIGNED_IN };
   if (response === "confirm" && !confirmedTime) {
     return { error: "กรุณาเลือกวัน-เวลาที่สะดวก" };
   }
@@ -103,7 +136,9 @@ export async function respondToInterviewInvite(
   return { ok: true };
 }
 
-export async function getHRNotifications(hrUserId: string) {
+export async function getHRNotifications() {
+  const hrUserId = await sessionHrUserId();
+  if (!hrUserId) return [];
   return prisma.notification.findMany({
     where: { hrUserId },
     orderBy: { createdAt: "desc" },
@@ -111,7 +146,9 @@ export async function getHRNotifications(hrUserId: string) {
   });
 }
 
-export async function getJobSeekerNotifications(jobSeekerId: string) {
+export async function getJobSeekerNotifications() {
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return [];
   return prisma.notification.findMany({
     where: { jobSeekerId },
     orderBy: { createdAt: "desc" },
@@ -119,20 +156,52 @@ export async function getJobSeekerNotifications(jobSeekerId: string) {
   });
 }
 
+/**
+ * Marks one notification read — only if it belongs to the caller.
+ *
+ * `updateMany` rather than `update` on purpose: it applies the ownership
+ * condition inside the WHERE clause, so a notification belonging to someone
+ * else simply matches nothing. `update` would need a separate read first, and
+ * a read-then-write is both slower and a race.
+ *
+ * Marking a stranger's notification read is minor next to reading it, but it is
+ * still writing to another user's data on their behalf, and the fix costs one line.
+ */
 export async function markNotificationRead(notificationId: string): Promise<{ ok: true }> {
-  await prisma.notification.update({ where: { id: notificationId }, data: { isRead: true } });
+  const [jobSeekerId, hrUserId] = await Promise.all([
+    sessionJobSeekerId(),
+    sessionHrUserId(),
+  ]);
+  if (!jobSeekerId && !hrUserId) return { ok: true };
+
+  await prisma.notification.updateMany({
+    where: {
+      id: notificationId,
+      ...(jobSeekerId ? { jobSeekerId } : { hrUserId: hrUserId as string }),
+    },
+    data: { isRead: true },
+  });
   return { ok: true };
 }
 
-export async function markAllNotificationsRead(
-  recipient: { hrUserId: string } | { jobSeekerId: string }
-): Promise<{ ok: true }> {
+export async function markAllNotificationsRead(): Promise<{ ok: true }> {
+  // Whose notifications get marked read is decided by who is signed in, not by
+  // a recipient the caller names.
+  const [jobSeekerId, hrUserId] = await Promise.all([
+    sessionJobSeekerId(),
+    sessionHrUserId(),
+  ]);
+  const recipient = jobSeekerId ? { jobSeekerId } : hrUserId ? { hrUserId } : null;
+  if (!recipient) return { ok: true };
+
   await prisma.notification.updateMany({ where: recipient, data: { isRead: true } });
   return { ok: true };
 }
 
 /** For /applications — every Match this candidate has, with its Position/Company and interview status, most recent first. */
-export async function getMyApplications(jobSeekerId: string) {
+export async function getMyApplications() {
+  const jobSeekerId = await sessionJobSeekerId();
+  if (!jobSeekerId) return [];
   return prisma.match.findMany({
     where: { jobSeekerId },
     include: { position: { include: { company: true } }, interviewSlot: true },
@@ -149,7 +218,9 @@ export async function getMyApplications(jobSeekerId: string) {
  * companyId mismatch (wrong company or a stale/tampered positionId),
  * treated as not-found by the caller.
  */
-export async function getMatchesForPosition(positionId: string, companyId: string) {
+export async function getMatchesForPosition(positionId: string) {
+  const companyId = await sessionCompanyId();
+  if (!companyId) return null;
   const position = await prisma.position.findUnique({ where: { id: positionId } });
   if (!position || position.companyId !== companyId) return null;
 
@@ -172,7 +243,9 @@ export async function getMatchesForPosition(positionId: string, companyId: strin
  * caller can render the same "Candidate #XXXXXX" Blind Review label the
  * candidates list uses — no name/email is fetched here.
  */
-export async function getDashboardSummary(companyId: string) {
+export async function getDashboardSummary() {
+  const companyId = await sessionCompanyId();
+  if (!companyId) return { totalMatchesCount: 0, standoutCandidates: [] };
   const matches = await prisma.match.findMany({
     where: { position: { companyId } },
     select: { matchScore: true },
@@ -203,7 +276,9 @@ export async function getDashboardSummary(companyId: string) {
 }
 
 /** positionId -> Match count, for the dashboard's "N ผู้สมัคร Match" line per recent position. */
-export async function getMatchCountsByPosition(companyId: string): Promise<Record<string, number>> {
+export async function getMatchCountsByPosition(): Promise<Record<string, number>> {
+  const companyId = await sessionCompanyId();
+  if (!companyId) return {};
   const grouped = await prisma.match.groupBy({
     by: ["positionId"],
     where: { position: { companyId } },
@@ -224,7 +299,11 @@ export async function getMatchCountsByPosition(companyId: string): Promise<Recor
  * matched to multiple positions at the same company isn't still "blind" to
  * that HR team just because one specific match hasn't converted yet.
  */
-export async function getCandidateReport(jobSeekerId: string, companyId: string) {
+export async function getCandidateReport(jobSeekerId: string) {
+  // jobSeekerId stays a parameter — HR legitimately picks which candidate to
+  // open. What they may see is still bounded by their own company below.
+  const companyId = await sessionCompanyId();
+  if (!companyId) return null;
   const jobSeeker = await prisma.jobSeeker.findUnique({
     where: { id: jobSeekerId },
     include: {

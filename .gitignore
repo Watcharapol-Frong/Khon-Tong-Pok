@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...ยกเว้นไฟล์ตัวอย่างของ ai-service ที่บอกว่าต้องตั้งตัวแปรอะไรบ้าง
+# (.env* ข้างบนแมตช์ทุกระดับ ไม่ใช่แค่ราก เลยบังไฟล์นี้ไปด้วยถ้าไม่เขียนบรรทัดนี้)
+!ai-service/.env.example
 
 # vercel
 .vercel

@@ -11,7 +11,7 @@ import { useBreakpoint } from "@/hooks/useBreakpoint";
 import type { Company } from "@prisma/client";
 import { getHRNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/actions/interview";
 import type { SafeHRUser } from "@/lib/companySession";
-import { clearHRSessionIds } from "@/lib/hrSession";
+import { signOut } from "@/lib/signOut";
 
 const NAV_ITEMS = [
   { label: "แดชบอร์ด", href: "/company/dashboard", icon: LayoutDashboard },
@@ -42,7 +42,7 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
 
   useEffect(() => {
     let cancelled = false;
-    getHRNotifications(hrUser.id).then((data) => {
+    getHRNotifications().then((data) => {
       if (!cancelled) setNotifications(data);
     });
     return () => {
@@ -57,13 +57,13 @@ export function CompanyAppNavbar({ hrUser, company }: CompanyAppNavbarProps) {
   };
   const handleMarkAllRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    markAllNotificationsRead({ hrUserId: hrUser.id });
+    markAllNotificationsRead();
   };
 
   const closeMenu = () => setMenuOpen(false);
 
   const handleLogout = () => {
-    clearHRSessionIds();
+    signOut();
     closeMenu();
     router.push("/company/login");
   };

@@ -8,7 +8,7 @@ import { AuthCard } from "@/components/AuthCard";
 import { Footer } from "@/components/Footer";
 import { CompanyNavbar } from "@/components/CompanyNavbar";
 import { checkCompanyByDomain, createCompany, joinExistingCompany } from "@/lib/actions/company";
-import { setHRSessionIds } from "@/lib/hrSession";
+import { setHRSessionHint } from "@/lib/hrSession";
 import type { Company } from "@prisma/client";
 
 // "create" used to be one step with 5 fields (company name, industry, HR
@@ -107,7 +107,7 @@ export default function CompanyRegisterPage() {
       setErrorMsg(result.error);
       return;
     }
-    setHRSessionIds({ hrUserId: result.hrUser.id, companyId: result.company.id });
+    setHRSessionHint();
     router.push("/company/dashboard");
   };
 

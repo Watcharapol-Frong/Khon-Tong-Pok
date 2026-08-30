@@ -80,8 +80,8 @@ function CompanyPositionsContent() {
 
   const refreshPositions = async () => {
     const [fresh, freshMatchCounts] = await Promise.all([
-      getPositionsByCompany(session.company.id),
-      getMatchCountsByPosition(session.company.id),
+      getPositionsByCompany(),
+      getMatchCountsByPosition(),
     ]);
     setPositions(fresh);
     setMatchCounts(freshMatchCounts);
@@ -89,7 +89,7 @@ function CompanyPositionsContent() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getPositionsByCompany(session.company.id), getMatchCountsByPosition(session.company.id)]).then(
+    Promise.all([getPositionsByCompany(), getMatchCountsByPosition()]).then(
       ([fresh, freshMatchCounts]) => {
         if (cancelled) return;
         setPositions(fresh);
@@ -140,13 +140,15 @@ function CompanyPositionsContent() {
 
     setIsSubmitting(true);
     const result = editingPositionId
-      ? await updatePosition(editingPositionId, session.company.id, {
+      ? await updatePosition(editingPositionId, {
           title: form.title.trim(),
           requiredHardSkills: form.hardSkills,
           requiredSoftSkills,
         })
       : await createPosition({
-          companyId: session.company.id,
+          // No companyId: the action reads it from the signed-in HR user's
+          // session, so a tampered value can't file a position under another
+          // company's account.
           title: form.title.trim(),
           requiredHardSkills: form.hardSkills,
           requiredSoftSkills,
@@ -171,12 +173,12 @@ function CompanyPositionsContent() {
       return;
     }
     setCloseArmedId(null);
-    await closePosition(position.id, session.company.id);
+    await closePosition(position.id);
     await refreshPositions();
   };
 
   const handleReopen = async (position: PositionWithSkills) => {
-    await reopenPosition(position.id, session.company.id);
+    await reopenPosition(position.id);
     await refreshPositions();
   };
 

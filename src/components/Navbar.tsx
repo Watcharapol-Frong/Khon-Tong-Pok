@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import { NotificationBell, type NotificationItem } from "@/components/NotificationBell";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { getJobSeekerNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/actions/interview";
-import { getJobSeekerSessionIds } from "@/lib/jobSeekerSession";
+import { getSignedInJobSeekerId } from "@/lib/actions/jobSeeker";
 
 const NAV_LINKS = [
   { label: "หางาน", href: "/job" },
@@ -35,16 +35,17 @@ export function Navbar() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   useEffect(() => {
-    const ids = getJobSeekerSessionIds();
-    if (!ids) return;
-    // Reading a browser-only source (localStorage) the server can't see,
-    // not state derivable from props/other state — same exception already
-    // established for this pattern elsewhere (e.g. /profile).
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setJobSeekerId(ids.jobSeekerId);
     let cancelled = false;
-    getJobSeekerNotifications(ids.jobSeekerId).then((data) => {
-      if (!cancelled) setNotifications(data);
+    // Asks the server who is signed in rather than reading an id the browser
+    // stored. The old version took the id straight out of localStorage and
+    // passed it to getJobSeekerNotifications, so editing that value showed you
+    // somebody else's interview invitations.
+    getSignedInJobSeekerId().then((id) => {
+      if (cancelled || !id) return;
+      setJobSeekerId(id);
+      return getJobSeekerNotifications().then((data) => {
+        if (!cancelled) setNotifications(data);
+      });
     });
     return () => {
       cancelled = true;
@@ -58,7 +59,7 @@ export function Navbar() {
   const handleMarkAllRead = () => {
     if (!jobSeekerId) return;
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    markAllNotificationsRead({ jobSeekerId });
+    markAllNotificationsRead();
   };
 
   return (
