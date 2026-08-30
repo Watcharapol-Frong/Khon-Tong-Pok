@@ -19,7 +19,12 @@
 // โหลด .env เอง — tsx ไม่ได้โหลดให้อัตโนมัติ ถ้าไม่มีบรรทัดนี้
 // DATABASE_URL จะเป็น undefined แล้ว Prisma จะฟ้องคนละเรื่องกับที่พังจริง
 // (แพตเทิร์นเดียวกับ prisma/seed.ts)
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
+
+// .env.local มาก่อน .env — dotenv ไม่เขียนทับตัวแปรที่ตั้งไปแล้ว
+// ไฟล์ที่โหลดก่อนจึงชนะ ซึ่งเป็นลำดับเดียวกับที่ Next.js ใช้
+loadEnv({ path: ".env.local" });
+loadEnv({ path: ".env" });
 
 import { PrismaClient } from "@prisma/client";
 

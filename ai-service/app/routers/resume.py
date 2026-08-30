@@ -81,8 +81,24 @@ def _pipeline(data: bytes, filename: str, external_user_id: str | None) -> dict:
     red = redact(doc.text)
 
     # ---- สกัดทักษะจากข้อความที่ลบแล้ว พิกัดจึงตรงกับที่เก็บลง DB ----
-    result = get_extractor().extract(red.text)
-    spans = [s.to_dict() for s in result.spans]
+    #
+    # ชั้นนี้ล้มได้โดยไม่ทำให้ทั้งการอัปโหลดพัง
+    #
+    # ตอนแรกเขียนไว้ให้โยน exception ออกไปเลย ผลคือเครื่องที่ยังไม่มี
+    # sentencepiece ครบ อัปโหลดไม่ได้เลยสักไฟล์ ทั้งที่โมเดลตัวนี้ยัง
+    # base-untrained อยู่ — มันคืน spans ว่างอยู่แล้ว ไม่ได้ให้อะไรเลย
+    # แต่กลับพาส่วนที่ใช้งานได้จริง (อ่านไฟล์ + ลบข้อมูลส่วนตัว) ตายไปด้วย
+    #
+    # ของที่ยังไม่พร้อมไม่ควรมีสิทธิ์ล้มของที่พร้อมแล้ว
+    try:
+        result = get_extractor().extract(red.text)
+        spans = [s.to_dict() for s in result.spans]
+        model_version, trained, note = result.model_version, result.trained, result.note
+    except Exception as exc:  # noqa: BLE001
+        log.warning("ตัวสกัดทักษะใช้ไม่ได้ (%s) — ข้ามไป การอัปโหลดยังสำเร็จ", exc)
+        spans = []
+        model_version, trained = "unavailable", False
+        note = "ตัวสกัดทักษะยังโหลดไม่ได้ในเครื่องนี้ — ข้อความและการลบข้อมูลส่วนตัวยังทำงานปกติ"
 
     source_id = store.save_resume(
         external_user_id=external_user_id,
@@ -93,15 +109,19 @@ def _pipeline(data: bytes, filename: str, external_user_id: str | None) -> dict:
         n_pages=doc.pages,
         redaction_report=red.report,
         spans=spans,
-        model_version=result.model_version,
+        model_version=model_version,
     )
 
+    # ส่งค่าที่แยกออกมาแล้ว ไม่ส่งอ็อบเจกต์ result ทั้งก้อน
+    # เพราะเส้นทาง except ข้างบนไม่มี result ให้ส่ง
     return {
         "doc": doc,
         "failed": False,
         "red": red,
-        "result": result,
         "spans": spans,
+        "model_version": model_version,
+        "trained": trained,
+        "extractor_note": note,
         "source_id": source_id,
     }
 
@@ -179,7 +199,7 @@ async def upload_resume(
             ),
         )
 
-    red, result = out["red"], out["result"]
+    red = out["red"]
 
     summary, opening = ("", "")
     if summarize:
@@ -204,11 +224,11 @@ async def upload_resume(
         redactionSummary=red.summary_th(),
         spans=[SkillSpanOut(**s) for s in out["spans"]],
         skills=sorted({s["surface_text"] for s in out["spans"]}),
-        modelVersion=result.model_version,
-        trained=result.trained,
+        modelVersion=out["model_version"],
+        trained=out["trained"],
         summary=summary,
         openingMessage=opening,
-        note=doc.note or result.note,
+        note=doc.note or out["extractor_note"],
     )
 
 

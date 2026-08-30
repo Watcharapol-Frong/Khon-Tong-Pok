@@ -100,6 +100,13 @@ export default function VoiceInput({
   const [isListening, setIsListening] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
 
+  // Whether the Python service can transcribe for us. Tracked separately from
+  // `mode` because a browser can advertise speech support and still need this.
+  const [serverAvailable, setServerAvailable] = useState(false);
+  // Assigned once startServer exists further down, so the browser path can hand
+  // off to it without reordering the two callbacks around each other.
+  const startServerRef = useRef<(() => void) | null>(null);
+
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -108,12 +115,20 @@ export default function VoiceInput({
   const finalTextRef = useRef("");
 
   useEffect(() => {
-    if (getSpeechRecognition()) {
-      setMode("browser");
-      return;
-    }
+    const hasBrowserApi = Boolean(getSpeechRecognition());
+    if (hasBrowserApi) setMode("browser");
+
+    // The server is probed even when the browser API exists, so the fallback
+    // is ready before it's needed.
+    //
+    // Chromium forks are the reason. Opera GX, Brave and Vivaldi all define
+    // `webkitSpeechRecognition` — feature detection says yes — but the actual
+    // recognition runs on a Google service that ships with Chrome's own API
+    // key, which those builds don't have. So `start()` succeeds and then fails
+    // with `network`, seconds later. Detecting support up front cannot catch
+    // that; only trying it can.
     if (!AI_SERVICE_URL) {
-      setMode("none");
+      if (!hasBrowserApi) setMode("none");
       return;
     }
 
@@ -122,10 +137,12 @@ export default function VoiceInput({
       .then((r) => (r.ok ? r.json() : null))
       .then((caps) => {
         if (cancelled) return;
-        setMode(caps?.serverTranscription ? "server" : "none");
+        const ok = Boolean(caps?.serverTranscription);
+        setServerAvailable(ok);
+        if (!hasBrowserApi) setMode(ok ? "server" : "none");
       })
       .catch(() => {
-        if (!cancelled) setMode("none");
+        if (!cancelled && !hasBrowserApi) setMode("none");
       });
 
     return () => {
@@ -173,6 +190,34 @@ export default function VoiceInput({
       // Aborting on purpose (unmount, second click) reports as "aborted" —
       // that isn't something to tell the candidate about.
       if (event.error === "aborted") return;
+
+      // `network` and `service-not-allowed` mean the browser's own speech
+      // service refused or is unreachable — the normal outcome on Opera GX,
+      // Brave and Vivaldi, which expose the API without the Google backing it
+      // needs. Nothing is wrong with the microphone, so switch to the server
+      // and carry on recording rather than telling the candidate it failed.
+      //
+      // Deliberately NOT applied to `not-allowed`: that one means the person
+      // denied microphone permission, and quietly starting a different
+      // recorder would be working around a "no" they just gave.
+      const browserServiceUnavailable =
+        event.error === "network" || event.error === "service-not-allowed";
+
+      if (browserServiceUnavailable && serverAvailable && startServerRef.current) {
+        setMode("server");
+        onError?.("เบราว์เซอร์นี้ใช้ระบบถอดเสียงของ Google ไม่ได้ครับ สลับไปใช้ของเซิร์ฟเวอร์ให้แล้ว พูดต่อได้เลย");
+        startServerRef.current();
+        return;
+      }
+
+      if (browserServiceUnavailable && !serverAvailable) {
+        onError?.(
+          "เบราว์เซอร์นี้ไม่รองรับการพูดครับ (Opera/Brave/Firefox มักเป็นแบบนี้) " +
+            "ลองเปิดด้วย Chrome หรือ Edge หรือพิมพ์แทนได้เลยครับ",
+        );
+        return;
+      }
+
       onError?.(ERROR_MESSAGE[event.error] ?? `ใช้ไมค์ไม่ได้ครับ (${event.error})`);
     };
 
@@ -186,7 +231,7 @@ export default function VoiceInput({
     recognitionRef.current = recognition;
     setIsListening(true);
     recognition.start();
-  }, [onInterim, onError, onResult]);
+  }, [onInterim, onError, onResult, serverAvailable]);
 
   const startServer = useCallback(async () => {
     try {
@@ -232,6 +277,10 @@ export default function VoiceInput({
       onError?.(ERROR_MESSAGE["not-allowed"]);
     }
   }, [onResult, onError]);
+
+  // ผูกไว้หลัง startServer ถูกสร้างแล้ว เพื่อให้ onerror ของฝั่งเบราว์เซอร์
+  // เรียกใช้ได้ โดยไม่ต้องสลับลำดับ useCallback สองตัวนี้
+  startServerRef.current = startServer;
 
   const toggle = useCallback(() => {
     if (isListening) {

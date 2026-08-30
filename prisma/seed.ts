@@ -20,7 +20,12 @@
  * database — that migration was explicitly deferred. This seed populates
  * real rows for testing via Prisma Studio / psql, not via those pages yet.
  */
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
+
+// .env.local มาก่อน .env — dotenv ไม่เขียนทับตัวแปรที่ตั้งไปแล้ว
+// ไฟล์ที่โหลดก่อนจึงชนะ ซึ่งเป็นลำดับเดียวกับที่ Next.js ใช้
+loadEnv({ path: ".env.local" });
+loadEnv({ path: ".env" });
 import { PrismaClient } from "@prisma/client";
 import onetSkillsData from "../src/data/onet_skills_dictionary_full.json" with { type: "json" };
 import { computeHardSkillScore, computeMatchScore, computeSoftSkillScore } from "../src/lib/matching";
