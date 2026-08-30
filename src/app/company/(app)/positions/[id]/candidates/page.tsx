@@ -249,6 +249,13 @@ export default function PositionCandidatesPage() {
               const top = topSoftSkill(m.jobSeeker.gameResult);
               const slot = m.interviewSlot;
               const InterviewStatusIcon = slot ? INTERVIEW_STATUS_META[slot.status as keyof typeof INTERVIEW_STATUS_META].icon : null;
+              // Same rule as getCandidateReport/isNameRevealedForCompany —
+              // an InterviewSlot existing at all (HR sent the invite)
+              // unblinds this candidate, not just a confirmed one. This
+              // card was previously always showing the blind mascot/label
+              // regardless of slot, so revealed matches never looked any
+              // different here even after inviting them.
+              const revealed = slot !== null;
 
               return (
                 // A plain div (not <Link>) because the "นัดสัมภาษณ์" button
@@ -260,19 +267,27 @@ export default function PositionCandidatesPage() {
                   onClick={() => router.push(`/company/candidates/${m.jobSeekerId}`)}
                   className="flex flex-wrap items-center gap-3 rounded-2xl bg-[#FAFAFA] p-4 transition-colors hover:bg-[#F0F0F0] cursor-pointer"
                 >
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F0F0F0]">
-                    <Image
-                      src="/mascot/mascot-blind-candidate.png"
-                      alt="ผู้สมัครที่ยังไม่เปิดเผยตัวตน (Blind Review)"
-                      width={40}
-                      height={40}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
+                  {revealed ? (
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#0F0F0F] text-sm font-extrabold text-white">
+                      {m.jobSeeker.name.trim().charAt(0).toUpperCase()}
+                    </div>
+                  ) : (
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#F0F0F0]">
+                      <Image
+                        src="/mascot/mascot-blind-candidate.png"
+                        alt="ผู้สมัครที่ยังไม่เปิดเผยตัวตน (Blind Review)"
+                        width={40}
+                        height={40}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-extrabold text-[#0F0F0F]">{blindLabel(m.jobSeekerId)}</span>
+                      <span className="text-xs font-extrabold text-[#0F0F0F]">
+                        {revealed ? m.jobSeeker.name : blindLabel(m.jobSeekerId)}
+                      </span>
                       {m.isStandout && (
                         <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-[rgba(245,217,73,0.25)] px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap text-[#856700]">
                           <Star className="h-2.5 w-2.5 fill-current" strokeWidth={1.75} />
